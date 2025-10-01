@@ -1,0 +1,389 @@
+openapi: 3.0.3
+info:
+  title: VVD-mimic Planning AI API
+  description: API contract for AI Planning workflow - session planning chat and immediate knowledge graph updates
+  version: 1.0.0
+  contact:
+    name: Feature 005 - AI Import & Planning Workflows
+
+servers:
+  - url: http://localhost:3000/api
+    description: Local development server
+
+tags:
+  - name: planning
+    description: Planning AI workflow endpoints
+
+paths:
+  /planning/session:
+    post:
+      tags:
+        - planning
+      summary: Create a new Planning session
+      operationId: createPlanningSession
+      description: |
+        Creates a new Planning session for the specified campaign. The GM will chat with
+        the Planning AI to discuss upcoming session plans, and the AI will update knowledge
+        graphs immediately (no approval workflow).
+
+        FR-043: Planning AI updates graphs immediately upon GM chat.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - campaignId
+              properties:
+                campaignId:
+                  type: string
+                  format: uuid
+                  description: Campaign to plan for
+                initialPrompt:
+                  type: string
+                  description: Optional initial prompt to start the planning chat
+                  maxLength: 5000
+              example:
+                campaignId: "550e8400-e29b-41d4-a716-446655440000"
+                initialPrompt: "I'm planning session 13. The party is about to enter the Shadowfell."
+      responses:
+        '201':
+          description: Planning session created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanningSession'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Campaign not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      tags:
+        - planning
+      summary: List Planning sessions for a campaign
+      operationId: listPlanningSessions
+      description: |
+        Retrieves all Planning sessions for the specified campaign, ordered by creation date (newest first).
+      parameters:
+        - name: campaignId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Campaign ID
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [active, completed]
+          description: Filter by session status
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Maximum number of sessions to return
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: Offset for pagination
+      responses:
+        '200':
+          description: Planning sessions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - sessions
+                  - total
+                properties:
+                  sessions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PlanningSession'
+                  total:
+                    type: integer
+                    description: Total number of sessions matching the filter
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /planning/chat:
+    post:
+      tags:
+        - planning
+      summary: Send chat message to Planning AI
+      operationId: sendPlanningChat
+      description: |
+        Sends a chat message to the Planning AI within an active Planning session.
+        The AI will respond with planning suggestions and immediately update knowledge graphs.
+
+        FR-043: Planning AI updates graphs immediately (no approval workflow).
+        FR-066: Planning AI suggests graph updates as it chats.
+        FR-003: Streaming response using Server-Sent Events (SSE).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - sessionId
+                - message
+              properties:
+                sessionId:
+                  type: string
+                  format: uuid
+                  description: Planning session ID
+                message:
+                  type: string
+                  description: User message to Planning AI
+                  maxLength: 5000
+              example:
+                sessionId: "660e8400-e29b-41d4-a716-446655440001"
+                message: "What NPCs should I introduce in the Shadowfell?"
+      responses:
+        '200':
+          description: Streaming chat response with graph updates
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                enum: [text/event-stream]
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: |
+                  Server-Sent Events stream with the following event types:
+                  - "chunk": Partial LLM response text
+                  - "graph_update": Knowledge graph update applied
+                  - "done": Final message indicating completion
+                  - "error": Error during processing
+                example: |
+                  data: {"type": "chunk", "content": "For the Shadowfell, I recommend introducing..."}
+
+                  data: {"type": "graph_update", "update": {"type": "node_add", "graphType": "political_web", "nodeId": "uuid-123", "data": {"name": "Raven Queen's Herald", "type": "npc"}}}
+
+                  data: {"type": "chunk", "content": " the Raven Queen's Herald as a guide."}
+
+                  data: {"type": "done", "sessionId": "660e8400-e29b-41d4-a716-446655440001"}
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Planning session not found or not in active state
+
+  /planning/session/{sessionId}:
+    get:
+      tags:
+        - planning
+      summary: Get Planning session details
+      operationId: getPlanningSession
+      description: |
+        Retrieves the full Planning session with chat history and all graph updates.
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Planning session ID
+      responses:
+        '200':
+          description: Planning session retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanningSession'
+        '404':
+          description: Planning session not found
+
+    patch:
+      tags:
+        - planning
+      summary: Update Planning session status
+      operationId: updatePlanningSession
+      description: |
+        Updates the Planning session status (e.g., mark as completed).
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Planning session ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum: [completed]
+                  description: New status (only 'completed' transition is supported)
+              example:
+                status: "completed"
+      responses:
+        '200':
+          description: Planning session updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanningSession'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Planning session not found
+
+components:
+  schemas:
+    PlanningSession:
+      type: object
+      required:
+        - id
+        - campaignId
+        - status
+        - chatHistory
+        - graphUpdates
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        campaignId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [active, completed]
+          description: Current state of the Planning session
+        chatHistory:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatMessage'
+          description: Full chat history with the Planning AI
+        graphUpdates:
+          type: array
+          items:
+            $ref: '#/components/schemas/GraphUpdate'
+          description: All knowledge graph updates made during this session
+        createdAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    ChatMessage:
+      type: object
+      required:
+        - role
+        - content
+        - timestamp
+      properties:
+        role:
+          type: string
+          enum: [user, assistant, system]
+        content:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+
+    GraphUpdate:
+      type: object
+      required:
+        - type
+        - graphType
+        - data
+        - appliedAt
+      properties:
+        type:
+          type: string
+          enum: [node_add, node_update, edge_add, edge_delete]
+          description: Type of graph update operation
+        graphType:
+          $ref: '#/components/schemas/KnowledgeGraphType'
+        nodeId:
+          type: string
+          format: uuid
+          nullable: true
+          description: GraphNode ID (required for node_update, edge_delete)
+        edgeId:
+          type: string
+          format: uuid
+          nullable: true
+          description: GraphEdge ID (required for edge_add, edge_delete)
+        data:
+          type: object
+          additionalProperties: true
+          description: |
+            Update payload, varies by type:
+            - node_add: {name, type, attributes}
+            - node_update: {attributes} (partial update)
+            - edge_add: {sourceNodeId, targetNodeId, relationshipType, attributes}
+            - edge_delete: {} (empty, uses edgeId)
+        appliedAt:
+          type: string
+          format: date-time
+          description: When the update was applied to the knowledge graph
+
+    KnowledgeGraphType:
+      type: string
+      enum: [geographical, political_web, world_foundations, campaign_story]
+      description: |
+        Knowledge graph type:
+        - geographical: Locations, travel routes, spatial relationships
+        - political_web: Factions, NPCs, allegiances, rivalries
+        - world_foundations: Lore, cosmology, magic systems, historical events
+        - campaign_story: Plot threads, session recaps, story arcs
+
+    Error:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error code
+        message:
+          type: string
+          description: Human-readable error message
+        details:
+          type: object
+          additionalProperties: true
+          description: Additional error context
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "INVALID_REQUEST"
+            message: "Missing required field: sessionId"

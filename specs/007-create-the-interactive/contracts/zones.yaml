@@ -1,0 +1,301 @@
+openapi: 3.0.3
+info:
+  title: Zone Cards API
+  description: API for creating and managing zone cards (polygon areas) on maps
+  version: 1.0.0
+
+paths:
+  /api/cards/{cardId}/maps/{mapId}/zones:
+    post:
+      summary: Create zone on map
+      operationId: createZone
+      tags:
+        - zones
+      parameters:
+        - name: cardId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Parent card UUID
+        - name: mapId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Map image UUID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - coordinates
+                - color
+              properties:
+                coordinates:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - x
+                      - y
+                    properties:
+                      x:
+                        type: integer
+                        description: Pixel X coordinate
+                      y:
+                        type: integer
+                        description: Pixel Y coordinate
+                  minItems: 3
+                  description: Polygon vertices (minimum 3 for triangle)
+                color:
+                  type: string
+                  pattern: '^#[0-9A-F]{6}$'
+                  example: "#FF0000"
+                  description: Hex color code
+                purpose:
+                  type: string
+                  maxLength: 500
+                  description: Free-form zone purpose
+                metadata:
+                  type: object
+                  additionalProperties: true
+                  description: Optional user-defined metadata
+                layer_id:
+                  type: string
+                  format: uuid
+                  nullable: true
+                  description: Optional layer assignment
+      responses:
+        '201':
+          description: Zone created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ZoneCard'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    get:
+      summary: List zones for map
+      operationId: listZones
+      tags:
+        - zones
+      parameters:
+        - name: cardId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Parent card UUID
+        - name: mapId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Map image UUID
+      responses:
+        '200':
+          description: List of zones
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  zones:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ZoneCard'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/cards/{cardId}/maps/{mapId}/zones/{zoneId}:
+    patch:
+      summary: Update zone (coordinates, color, purpose)
+      operationId: updateZone
+      tags:
+        - zones
+      parameters:
+        - name: cardId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Parent card UUID
+        - name: mapId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Map image UUID
+        - name: zoneId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Zone card UUID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                coordinates:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - x
+                      - y
+                    properties:
+                      x:
+                        type: integer
+                      y:
+                        type: integer
+                  minItems: 3
+                color:
+                  type: string
+                  pattern: '^#[0-9A-F]{6}$'
+                purpose:
+                  type: string
+                  maxLength: 500
+                  nullable: true
+                metadata:
+                  type: object
+                  additionalProperties: true
+                  nullable: true
+                layer_id:
+                  type: string
+                  format: uuid
+                  nullable: true
+      responses:
+        '200':
+          description: Zone updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ZoneCard'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Delete zone
+      operationId: deleteZone
+      tags:
+        - zones
+      parameters:
+        - name: cardId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Parent card UUID
+        - name: mapId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Map image UUID
+        - name: zoneId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Zone card UUID
+      responses:
+        '204':
+          description: Zone deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  schemas:
+    ZoneCard:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        card_type:
+          type: string
+          enum:
+            - zone
+        parent_id:
+          type: string
+          format: uuid
+          description: Parent card ID (map-enabled card)
+        zone_map_image_id:
+          type: string
+          format: uuid
+        zone_coordinates:
+          type: array
+          items:
+            type: object
+            properties:
+              x:
+                type: integer
+              y:
+                type: integer
+          description: Polygon vertices
+        zone_color:
+          type: string
+          example: "#FF0000"
+          description: Hex color code
+        zone_purpose:
+          type: string
+          nullable: true
+        zone_metadata:
+          type: object
+          additionalProperties: true
+          nullable: true
+        zone_layer_id:
+          type: string
+          format: uuid
+          nullable: true
+        created_at:
+          type: integer
+          description: Unix timestamp
+        updated_at:
+          type: integer
+          description: Unix timestamp
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        details:
+          type: string
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid authentication token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

@@ -1,0 +1,280 @@
+openapi: 3.0.3
+info:
+  title: Layer Cards API
+  description: API for creating and managing layer cards (organizational containers) on maps
+  version: 1.0.0
+
+paths:
+  /api/cards/{cardId}/maps/{mapId}/layers:
+    post:
+      summary: Create layer on map
+      operationId: createLayer
+      tags:
+        - layers
+      parameters:
+        - name: cardId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Parent card UUID
+        - name: mapId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Map image UUID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - layer_name
+              properties:
+                layer_name:
+                  type: string
+                  maxLength: 100
+                  example: "Secret Locations"
+                toggle_state:
+                  type: boolean
+                  default: true
+                  description: Layer on/off state
+      responses:
+        '201':
+          description: Layer created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LayerCard'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    get:
+      summary: List layers for map
+      operationId: listLayers
+      tags:
+        - layers
+      parameters:
+        - name: cardId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Parent card UUID
+        - name: mapId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Map image UUID
+      responses:
+        '200':
+          description: List of layers
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  layers:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LayerCard'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/cards/{cardId}/maps/{mapId}/layers/{layerId}:
+    patch:
+      summary: Update layer (name, toggle state)
+      operationId: updateLayer
+      tags:
+        - layers
+      parameters:
+        - name: cardId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Parent card UUID
+        - name: mapId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Map image UUID
+        - name: layerId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Layer card UUID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                layer_name:
+                  type: string
+                  maxLength: 100
+                toggle_state:
+                  type: boolean
+                  description: Turn layer on/off
+      responses:
+        '200':
+          description: Layer updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LayerCard'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Delete layer
+      operationId: deleteLayer
+      tags:
+        - layers
+      parameters:
+        - name: cardId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Parent card UUID
+        - name: mapId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Map image UUID
+        - name: layerId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Layer card UUID
+      responses:
+        '204':
+          description: Layer deleted successfully (pins/zones unassigned but not deleted)
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/cards/{cardId}/maps/{mapId}/layers/{layerId}/toggle:
+    post:
+      summary: Toggle layer on/off
+      operationId: toggleLayer
+      tags:
+        - layers
+      parameters:
+        - name: cardId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Parent card UUID
+        - name: mapId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Map image UUID
+        - name: layerId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Layer card UUID
+      responses:
+        '200':
+          description: Layer toggle state changed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  layer_id:
+                    type: string
+                    format: uuid
+                  toggle_state:
+                    type: boolean
+                    description: New toggle state
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  schemas:
+    LayerCard:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        card_type:
+          type: string
+          enum:
+            - layer
+        parent_id:
+          type: string
+          format: uuid
+          description: Parent card ID (map-enabled card)
+        layer_map_image_id:
+          type: string
+          format: uuid
+        layer_name:
+          type: string
+          example: "Secret Locations"
+        layer_toggle_state:
+          type: boolean
+          description: Layer on/off state
+        layer_display_order:
+          type: integer
+          description: UI ordering
+        created_at:
+          type: integer
+          description: Unix timestamp
+        updated_at:
+          type: integer
+          description: Unix timestamp
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        details:
+          type: string
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid authentication token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

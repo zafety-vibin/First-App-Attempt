@@ -1,0 +1,208 @@
+openapi: 3.0.3
+info:
+  title: Public Sharing API
+  description: API for managing public campaign sharing configuration
+  version: 1.0.0
+
+paths:
+  /api/campaigns/{campaignId}/public-sharing:
+    get:
+      summary: Get public sharing configuration
+      description: Retrieves the public sharing configuration for a campaign
+      tags:
+        - Public Sharing
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Campaign ID
+      responses:
+        '200':
+          description: Public sharing configuration retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicSharingConfig'
+        '404':
+          description: Campaign not found or public sharing not configured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      summary: Enable public sharing
+      description: Enables public sharing for a campaign and generates random ID URL
+      tags:
+        - Public Sharing
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Campaign ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                password:
+                  type: string
+                  nullable: true
+                  description: Optional password for public access
+              example:
+                password: "dragonborn"
+      responses:
+        '201':
+          description: Public sharing enabled successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicSharingConfig'
+        '400':
+          description: Bad request (e.g., public sharing already enabled)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Campaign not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    patch:
+      summary: Update public sharing configuration
+      description: Updates public sharing configuration (toggle, password)
+      tags:
+        - Public Sharing
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Campaign ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                public_access_enabled:
+                  type: boolean
+                  description: Enable or disable public access
+                password:
+                  type: string
+                  nullable: true
+                  description: Set or remove password (null removes)
+              example:
+                public_access_enabled: false
+      responses:
+        '200':
+          description: Public sharing configuration updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicSharingConfig'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Campaign or public sharing config not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    PublicSharingConfig:
+      type: object
+      properties:
+        campaign_id:
+          type: string
+          description: Campaign ID
+        public_access_enabled:
+          type: boolean
+          description: Whether public access is enabled
+        random_id:
+          type: string
+          description: Random ID for public URL (e.g., "a8f3d92k4p1m")
+          minLength: 12
+        password:
+          type: string
+          nullable: true
+          description: Optional password for public access
+        published_version_id:
+          type: string
+          nullable: true
+          description: ID of currently published version (null if never published)
+        last_published_at:
+          type: integer
+          nullable: true
+          description: Unix timestamp of last publish (null if never published)
+        created_at:
+          type: integer
+          description: Unix timestamp when public sharing first enabled
+        updated_at:
+          type: integer
+          description: Unix timestamp of last configuration change
+      required:
+        - campaign_id
+        - public_access_enabled
+        - random_id
+        - created_at
+        - updated_at
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+        details:
+          type: string
+          description: Additional error details
+      required:
+        - error

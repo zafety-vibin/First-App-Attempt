@@ -158,7 +158,7 @@ A Game Master has been running their Waterdeep campaign for 10 sessions. They've
 - **FR-082**: Each player conversation MUST be isolated and private from other players
 - **FR-083**: Player identities MUST be tracked separately per player
 - **FR-084**: Concurrent conversations MUST not interfere with each other
-- **FR-085**: System MUST handle potential conflicts if multiple players claim same character name with [NEEDS CLARIFICATION: allow duplicates, force unique names, or GM resolves?]
+- **FR-085**: System MUST reject duplicate character names with error: "Character name already in use. Please choose a different name."
 
 #### Trust-Based Usage Model
 - **FR-086**: System MUST NOT implement automatic rate limiting per player
@@ -199,6 +199,15 @@ A Game Master has been running their Waterdeep campaign for 10 sessions. They've
 
 ---
 
+## Clarifications (Session 2025-10-01)
+
+### Q1: Duplicate Character Name Handling (FR-085)
+**Decision**: Force unique names - reject duplicate character names with error message.
+**Rationale**: Prevents confusion in monitoring panel and conversation tracking. Campaigns don't typically have multiple players with identical character names. Simple validation at identity creation time.
+**Implementation**: When player submits "Who are you in-game?" response, check if name already exists in portal_players table for that campaign. If exists, reject with error: "Character name already in use. Please choose a different name."
+
+---
+
 ## Review & Acceptance Checklist
 
 ### Content Quality
@@ -208,7 +217,7 @@ A Game Master has been running their Waterdeep campaign for 10 sessions. They've
 - [x] All mandatory sections completed
 
 ### Requirement Completeness
-- [ ] No [NEEDS CLARIFICATION] markers remain (1 clarification needed)
+- [x] No [NEEDS CLARIFICATION] markers remain (all resolved)
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Scope is clearly bounded

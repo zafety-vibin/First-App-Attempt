@@ -1,0 +1,311 @@
+openapi: 3.0.3
+info:
+  title: VVD-mimic View Mode API
+  description: API endpoints affected by view mode filtering (DM View vs Player/General View)
+  version: 1.0.0
+  contact:
+    name: VVD-mimic Team
+
+servers:
+  - url: http://localhost:3001/api
+    description: Local development server
+
+security:
+  - bearerAuth: []
+
+paths:
+  /cards:
+    get:
+      summary: List cards (view mode filtered)
+      description: Returns cards for campaign, filtered by view mode header. DM View shows all, Player View hides hierarchical levels.
+      operationId: listCardsFiltered
+      tags: [View Mode]
+      parameters:
+        - name: campaign_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: X-View-Mode
+          in: header
+          required: false
+          schema:
+            type: string
+            enum: [dm, player]
+            default: dm
+          description: Current view mode (dm shows all, player hides hierarchical)
+      responses:
+        '200':
+          description: Filtered list of cards
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cards:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Card'
+                  filtered_count:
+                    type: integer
+                    description: Number of cards hidden by view mode filter
+                    example: 15
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /cards/{id}:
+    get:
+      summary: Get single card (view mode filtered)
+      description: Returns card if visible in current view mode, 404 if hidden by hierarchical filter
+      operationId: getCardFiltered
+      tags: [View Mode]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: X-View-Mode
+          in: header
+          required: false
+          schema:
+            type: string
+            enum: [dm, player]
+            default: dm
+      responses:
+        '200':
+          description: Card details (if visible in view mode)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Card'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Card not found (or hidden by view mode filter)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Card not found
+
+  /cards/{database_id}/entries:
+    get:
+      summary: List database entries (view mode filtered)
+      description: Returns database entries filtered by view mode. Hierarchical columns hidden in Player View. Secret entries with Player Knowledge field show partial visibility.
+      operationId: listDatabaseEntriesFiltered
+      tags: [View Mode]
+      parameters:
+        - name: database_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: X-View-Mode
+          in: header
+          required: false
+          schema:
+            type: string
+            enum: [dm, player]
+            default: dm
+      responses:
+        '200':
+          description: Filtered list of database entries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  entries:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DatabaseEntry'
+                  schema:
+                    $ref: '#/components/schemas/FilteredDatabaseSchema'
+                  partial_visibility_count:
+                    type: integer
+                    description: Number of entries showing partial visibility (Player Knowledge field only)
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /view-mode/toggle:
+    post:
+      summary: Toggle view mode (client-side convenience endpoint)
+      description: Returns the opposite view mode for client-side toggle. Actual filtering happens via X-View-Mode header on other endpoints.
+      operationId: toggleViewMode
+      tags: [View Mode]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [current_mode]
+              properties:
+                current_mode:
+                  type: string
+                  enum: [dm, player]
+      responses:
+        '200':
+          description: New view mode
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  new_mode:
+                    type: string
+                    enum: [dm, player]
+                    example: player
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Keycloak access token (OAuth 2.0 with PKCE)
+
+  schemas:
+    Card:
+      type: object
+      required: [id, type, information_level_id, campaign_id]
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [page, database, text, image]
+        information_level_id:
+          type: string
+          description: Reference to information level
+          example: system
+        campaign_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          nullable: true
+        content:
+          type: object
+          nullable: true
+          description: ProseMirror JSON
+        metadata:
+          type: object
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    DatabaseEntry:
+      type: object
+      required: [id, database_id, information_level_id]
+      properties:
+        id:
+          type: string
+          format: uuid
+        database_id:
+          type: string
+          format: uuid
+        information_level_id:
+          type: string
+          description: Entry's information level
+        title:
+          type: string
+        values:
+          type: object
+          description: Column ID → value mapping (hierarchical columns filtered in Player View)
+          additionalProperties: true
+        partial_visibility:
+          type: boolean
+          description: If true, only shows Player Knowledge field (secret entry with partial visibility)
+          example: false
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    FilteredDatabaseSchema:
+      type: object
+      description: Database schema with hierarchical columns removed in Player View
+      required: [columns]
+      properties:
+        columns:
+          type: array
+          items:
+            $ref: '#/components/schemas/DatabaseColumn'
+          description: Visible columns (hierarchical columns removed in Player View)
+
+    DatabaseColumn:
+      type: object
+      required: [id, name, type]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        type:
+          type: string
+          enum: [text, number, date, select, multi-select, entity-reference, player-knowledge-text]
+        hierarchical:
+          type: boolean
+          description: Only present in DM View (removed in Player View to not reveal secret columns)
+        required:
+          type: boolean
+        options:
+          type: object
+          nullable: true
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+
+    Unauthorized:
+      description: Missing or invalid authentication token
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Unauthorized
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Database not found

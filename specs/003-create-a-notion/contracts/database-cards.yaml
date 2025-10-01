@@ -1,0 +1,767 @@
+openapi: 3.0.3
+info:
+  title: VVD-mimic Database Card API
+  description: RESTful API for database card operations (schema management, entry CRUD, view operations)
+  version: 1.0.0
+  contact:
+    name: VVD-mimic Team
+
+servers:
+  - url: http://localhost:3001/api
+    description: Local development server
+
+security:
+  - bearerAuth: []
+
+paths:
+  /cards/{database_id}/schema:
+    get:
+      summary: Get database schema
+      description: Returns schema configuration for database card (columns, views)
+      operationId: getDatabaseSchema
+      tags: [Database Cards]
+      parameters:
+        - name: database_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Database card ID
+      responses:
+        '200':
+          description: Database schema
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatabaseSchema'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Card is not a database
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Card is not a database (type='page')
+
+    put:
+      summary: Update database schema
+      description: Updates columns and/or views. Validates column references in views.
+      operationId: updateDatabaseSchema
+      tags: [Database Cards]
+      parameters:
+        - name: database_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                columns:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/DatabaseColumn'
+                views:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/DatabaseView'
+                defaultViewId:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Schema updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatabaseSchema'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: View references non-existent column ID
+
+  /cards/{database_id}/columns:
+    post:
+      summary: Add column to database
+      description: Adds new column to database schema
+      operationId: addDatabaseColumn
+      tags: [Database Cards]
+      parameters:
+        - name: database_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DatabaseColumn'
+      responses:
+        '201':
+          description: Column added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatabaseSchema'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /cards/{database_id}/columns/{column_id}:
+    put:
+      summary: Update database column
+      description: Updates column name, type, or options. Changing type may require data migration.
+      operationId: updateDatabaseColumn
+      tags: [Database Cards]
+      parameters:
+        - name: database_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: column_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DatabaseColumn'
+      responses:
+        '200':
+          description: Column updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatabaseSchema'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      summary: Delete database column
+      description: Removes column and all entry values for that column
+      operationId: deleteDatabaseColumn
+      tags: [Database Cards]
+      parameters:
+        - name: database_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: column_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: confirm
+          in: query
+          required: true
+          schema:
+            type: boolean
+          description: Must be true to confirm deletion
+      responses:
+        '200':
+          description: Column deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatabaseSchema'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /cards/{database_id}/views:
+    post:
+      summary: Add view to database
+      description: Creates new view with filter, sort, groupBy configuration
+      operationId: addDatabaseView
+      tags: [Database Cards]
+      parameters:
+        - name: database_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DatabaseView'
+      responses:
+        '201':
+          description: View added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatabaseSchema'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /cards/{database_id}/views/{view_id}:
+    put:
+      summary: Update database view
+      description: Updates view configuration (filter, sort, groupBy)
+      operationId: updateDatabaseView
+      tags: [Database Cards]
+      parameters:
+        - name: database_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: view_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DatabaseView'
+      responses:
+        '200':
+          description: View updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatabaseSchema'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      summary: Delete database view
+      description: Removes view from database
+      operationId: deleteDatabaseView
+      tags: [Database Cards]
+      parameters:
+        - name: database_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: view_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: View deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatabaseSchema'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /cards/{database_id}/entries:
+    get:
+      summary: List database entries
+      description: Returns page cards that are children of database card, optionally filtered and sorted by view
+      operationId: listDatabaseEntries
+      tags: [Database Cards]
+      parameters:
+        - name: database_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: view_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: Apply view's filter/sort configuration
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 10
+          description: Maximum entries to return
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: Pagination offset
+      responses:
+        '200':
+          description: List of database entries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  entries:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DatabaseEntry'
+                  total:
+                    type: integer
+                    description: Total entries (before pagination)
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      summary: Create database entry
+      description: Creates page card as child of database card with column values
+      operationId: createDatabaseEntry
+      tags: [Database Cards]
+      parameters:
+        - name: database_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [values]
+              properties:
+                title:
+                  type: string
+                  maxLength: 500
+                  description: Entry title (optional if schema has Title column)
+                values:
+                  type: object
+                  description: Column ID → value mapping
+                  additionalProperties: true
+                  example:
+                    "col-1": "Gandalf"
+                    "col-2": 2019
+                    "col-3": ["choice-1", "choice-2"]
+                content:
+                  type: object
+                  nullable: true
+                  description: ProseMirror JSON for entry body
+      responses:
+        '201':
+          description: Entry created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatabaseEntry'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Validation error (missing required column, invalid value)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Missing required column 'Name'
+
+  /cards/{database_id}/entries/{entry_id}:
+    get:
+      summary: Get database entry
+      description: Returns single entry with column values and content
+      operationId: getDatabaseEntry
+      tags: [Database Cards]
+      parameters:
+        - name: database_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: entry_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Entry details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatabaseEntry'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      summary: Update database entry
+      description: Updates entry column values and/or content
+      operationId: updateDatabaseEntry
+      tags: [Database Cards]
+      parameters:
+        - name: database_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: entry_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  maxLength: 500
+                values:
+                  type: object
+                  description: Column ID → value mapping (partial update supported)
+                  additionalProperties: true
+                content:
+                  type: object
+                  nullable: true
+                  description: ProseMirror JSON
+      responses:
+        '200':
+          description: Entry updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatabaseEntry'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      summary: Delete database entry
+      description: Deletes entry page card (and its subtree via CASCADE)
+      operationId: deleteDatabaseEntry
+      tags: [Database Cards]
+      parameters:
+        - name: database_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: entry_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Entry deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Keycloak access token (OAuth 2.0 with PKCE)
+
+  schemas:
+    DatabaseSchema:
+      type: object
+      required: [columns, views, defaultViewId]
+      properties:
+        columns:
+          type: array
+          items:
+            $ref: '#/components/schemas/DatabaseColumn'
+        views:
+          type: array
+          items:
+            $ref: '#/components/schemas/DatabaseView'
+        defaultViewId:
+          type: string
+          format: uuid
+
+    DatabaseColumn:
+      type: object
+      required: [id, name, type, required]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 255
+          example: Character Name
+        type:
+          type: string
+          enum: [text, number, date, select, multi-select, entity-reference]
+        required:
+          type: boolean
+        defaultValue:
+          description: Default value (type-dependent)
+        options:
+          type: object
+          description: For select/multi-select types
+          properties:
+            choices:
+              type: array
+              items:
+                type: object
+                required: [id, label]
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  label:
+                    type: string
+                    example: Active
+                  color:
+                    type: string
+                    example: green
+        entityType:
+          type: string
+          enum: [card]
+          description: For entity-reference type
+
+    DatabaseView:
+      type: object
+      required: [id, name, type]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 255
+          example: Active Characters
+        type:
+          type: string
+          enum: [table, list, gallery, kanban]
+        filter:
+          type: array
+          items:
+            $ref: '#/components/schemas/FilterRule'
+        sort:
+          type: array
+          items:
+            $ref: '#/components/schemas/SortRule'
+        groupBy:
+          type: string
+          format: uuid
+          nullable: true
+          description: Column ID for kanban grouping
+
+    FilterRule:
+      type: object
+      required: [columnId, operator, value]
+      properties:
+        columnId:
+          type: string
+          format: uuid
+        operator:
+          type: string
+          enum: [equals, contains, greater, less, is-empty]
+        value:
+          description: Filter value (type-dependent)
+          example: Active
+
+    SortRule:
+      type: object
+      required: [columnId, direction]
+      properties:
+        columnId:
+          type: string
+          format: uuid
+        direction:
+          type: string
+          enum: [asc, desc]
+
+    DatabaseEntry:
+      type: object
+      description: Page card with database entry metadata
+      required: [id, database_id, title, values, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Entry card ID
+        database_id:
+          type: string
+          format: uuid
+          description: Parent database card ID
+        title:
+          type: string
+          maxLength: 500
+          example: Gandalf the Grey
+        values:
+          type: object
+          description: Column ID → value mapping
+          additionalProperties: true
+          example:
+            "col-1": "Gandalf"
+            "col-2": 2019
+            "col-3": ["choice-1", "choice-2"]
+        content:
+          type: object
+          nullable: true
+          description: ProseMirror JSON for entry body
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+
+    Unauthorized:
+      description: Missing or invalid authentication token
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Unauthorized
+
+    Forbidden:
+      description: User does not have permission to access this resource
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: You do not own this campaign
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Database card not found

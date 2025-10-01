@@ -1,0 +1,293 @@
+openapi: 3.0.3
+info:
+  title: VVD-mimic Authentication API
+  description: |
+    Authentication endpoints using Keycloak OAuth 2.0 Authorization Code Flow.
+    Handles login, logout, token validation, and session management.
+  version: 1.0.0
+  contact:
+    name: VVD-mimic Development
+servers:
+  - url: http://localhost:3001
+    description: Local development server
+
+tags:
+  - name: Authentication
+    description: User authentication and session management
+
+paths:
+  /api/auth/login:
+    post:
+      summary: Initiate login flow
+      description: |
+        Initiates Keycloak OAuth login flow. Frontend handles this via keycloak-js,
+        but this endpoint validates the resulting token and creates a session.
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+              properties:
+                token:
+                  type: string
+                  description: Keycloak access token (JWT) from frontend
+                  example: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
+      responses:
+        '200':
+          description: Login successful, session created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  session:
+                    $ref: '#/components/schemas/Session'
+        '401':
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/logout:
+    post:
+      summary: Logout and destroy session
+      description: |
+        Invalidates the current session and removes tokens from database.
+        Frontend should also call keycloak.logout() to clear Keycloak session.
+      tags:
+        - Authentication
+      security:
+        - BearerAuth: []
+      responses:
+        '204':
+          description: Logout successful, session destroyed
+        '401':
+          description: Not authenticated or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/validate:
+    get:
+      summary: Validate current session
+      description: |
+        Checks if the current access token is valid and session is active.
+        Returns user information if valid.
+      tags:
+        - Authentication
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Token valid, session active
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                    example: true
+                  user:
+                    $ref: '#/components/schemas/User'
+                  expiresAt:
+                    type: string
+                    format: date-time
+                    description: Token expiration timestamp
+                    example: '2025-10-01T14:30:00Z'
+        '401':
+          description: Token invalid or expired
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Token expired
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/refresh:
+    post:
+      summary: Refresh access token
+      description: |
+        Uses refresh token to obtain new access token from Keycloak.
+        Updates session with new tokens.
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refreshToken
+              properties:
+                refreshToken:
+                  type: string
+                  description: Keycloak refresh token
+                  example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:
+                    type: string
+                    description: New access token
+                  refreshToken:
+                    type: string
+                    description: New refresh token (if rotated)
+                  expiresAt:
+                    type: string
+                    format: date-time
+                    description: New expiration timestamp
+        '401':
+          description: Refresh token invalid or expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Keycloak access token (JWT)
+
+  schemas:
+    User:
+      type: object
+      required:
+        - id
+        - username
+        - email
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Keycloak subject identifier (user_id)
+          example: a3b8c9d4-e5f6-7890-abcd-ef1234567890
+        username:
+          type: string
+          minLength: 3
+          maxLength: 255
+          description: User display name from Keycloak
+          example: gamemaster42
+        email:
+          type: string
+          format: email
+          description: User email from Keycloak
+          example: gm@example.com
+        createdAt:
+          type: string
+          format: date-time
+          description: Account creation timestamp
+          example: '2025-10-01T12:00:00Z'
+        byollmConfig:
+          type: object
+          nullable: true
+          description: BYOLLM configuration (spec 008)
+          properties:
+            provider:
+              type: string
+              enum: [openai, anthropic, custom]
+              example: openai
+            apiKey:
+              type: string
+              description: Encrypted API key
+              example: encrypted_key_data
+            creditsRemaining:
+              type: number
+              nullable: true
+              description: Remaining API credits
+              example: 1000
+
+    Session:
+      type: object
+      required:
+        - sessionId
+        - userId
+        - expiresAt
+        - createdAt
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+          description: Unique session identifier
+          example: b4c9d0e1-f6a7-8901-bcde-f23456789012
+        userId:
+          type: string
+          format: uuid
+          description: User who owns this session
+          example: a3b8c9d4-e5f6-7890-abcd-ef1234567890
+        expiresAt:
+          type: string
+          format: date-time
+          description: Session expiration timestamp
+          example: '2025-10-01T13:00:00Z'
+        createdAt:
+          type: string
+          format: date-time
+          description: Session creation timestamp
+          example: '2025-10-01T12:00:00Z'
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+          example: Invalid authentication token
+        details:
+          type: string
+          nullable: true
+          description: Additional error details (development only)
+          example: Token signature verification failed
+
+security:
+  - BearerAuth: []

@@ -1,0 +1,171 @@
+openapi: 3.0.3
+info:
+  title: Publish API
+  description: API for draft/publish workflow
+  version: 1.0.0
+
+paths:
+  /api/campaigns/{campaignId}/publish:
+    post:
+      summary: Publish campaign changes
+      description: Atomically publishes current draft state to public view. Creates snapshot of all campaign content.
+      tags:
+        - Publish
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Campaign ID
+      responses:
+        '200':
+          description: Campaign published successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublishResponse'
+        '400':
+          description: Bad request (e.g., public sharing not enabled)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Campaign not found or public sharing not configured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Publish operation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/campaigns/{campaignId}/publish/status:
+    get:
+      summary: Get publish status
+      description: Retrieves draft vs published status and last publish timestamp
+      tags:
+        - Publish
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Campaign ID
+      responses:
+        '200':
+          description: Publish status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublishStatus'
+        '404':
+          description: Campaign not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    PublishResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Campaign published successfully"
+        published_version_id:
+          type: string
+          description: ID of newly created published version
+        published_at:
+          type: integer
+          description: Unix timestamp of publish operation
+        snapshot_metadata:
+          type: object
+          properties:
+            total_cards:
+              type: integer
+              description: Number of cards in snapshot
+            total_graphs:
+              type: integer
+              description: Number of knowledge graphs in snapshot
+          description: Metadata about published snapshot
+      required:
+        - success
+        - message
+        - published_version_id
+        - published_at
+        - snapshot_metadata
+
+    PublishStatus:
+      type: object
+      properties:
+        campaign_id:
+          type: string
+        has_unpublished_changes:
+          type: boolean
+          description: Whether draft has changes since last publish
+        last_published_at:
+          type: integer
+          nullable: true
+          description: Unix timestamp of last publish (null if never published)
+        published_version_id:
+          type: string
+          nullable: true
+          description: ID of current published version (null if never published)
+        draft_card_count:
+          type: integer
+          description: Current number of cards in draft
+        published_card_count:
+          type: integer
+          nullable: true
+          description: Number of cards in published version (null if never published)
+      required:
+        - campaign_id
+        - has_unpublished_changes
+        - last_published_at
+        - published_version_id
+        - draft_card_count
+        - published_card_count
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+        details:
+          type: string
+          description: Additional error details
+      required:
+        - error

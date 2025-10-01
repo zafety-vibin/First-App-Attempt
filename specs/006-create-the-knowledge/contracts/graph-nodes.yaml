@@ -1,0 +1,238 @@
+openapi: 3.0.3
+info:
+  title: Graph Nodes API
+  description: API for manual graph node CRUD operations
+  version: 1.0.0
+
+paths:
+  /api/campaigns/{campaignId}/graphs/{graphId}/nodes:
+    post:
+      summary: Create a new node in a graph
+      operationId: createNode
+      tags:
+        - graph-nodes
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Campaign UUID
+        - name: graphId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Graph UUID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GraphNodeCreate'
+      responses:
+        '201':
+          description: Node created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GraphNode'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/GraphNotFound'
+
+  /api/campaigns/{campaignId}/graphs/{graphId}/nodes/{nodeId}:
+    patch:
+      summary: Update a graph node
+      operationId: updateNode
+      tags:
+        - graph-nodes
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Campaign UUID
+        - name: graphId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Graph UUID
+        - name: nodeId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Node UUID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                node_type:
+                  type: string
+                name:
+                  type: string
+                attributes:
+                  type: object
+                  additionalProperties: true
+                observations:
+                  type: string
+                  nullable: true
+                information_level_id:
+                  type: string
+                  format: uuid
+                  nullable: true
+      responses:
+        '200':
+          description: Node updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GraphNode'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NodeNotFound'
+
+    delete:
+      summary: Delete a graph node
+      operationId: deleteNode
+      tags:
+        - graph-nodes
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Campaign UUID
+        - name: graphId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Graph UUID
+        - name: nodeId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Node UUID
+      responses:
+        '204':
+          description: Node deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NodeNotFound'
+
+components:
+  schemas:
+    GraphNode:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        graph_id:
+          type: string
+          format: uuid
+        node_type:
+          type: string
+          example: NPC
+        name:
+          type: string
+          example: Lord Neverember
+        attributes:
+          type: object
+          additionalProperties: true
+          example: {"title": "Open Lord", "faction": "Lords' Alliance"}
+        observations:
+          type: string
+          nullable: true
+          example: "current location: Waterdeep"
+        information_level_id:
+          type: string
+          format: uuid
+          nullable: true
+        created_at:
+          type: integer
+          format: int64
+
+    GraphNodeCreate:
+      type: object
+      required:
+        - node_type
+        - name
+      properties:
+        node_type:
+          type: string
+        name:
+          type: string
+        attributes:
+          type: object
+          additionalProperties: true
+          default: {}
+        observations:
+          type: string
+          nullable: true
+        information_level_id:
+          type: string
+          format: uuid
+          nullable: true
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        details:
+          type: string
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid authentication token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: User does not have permission to access this resource
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    GraphNotFound:
+      description: Knowledge graph not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NodeNotFound:
+      description: Graph node not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

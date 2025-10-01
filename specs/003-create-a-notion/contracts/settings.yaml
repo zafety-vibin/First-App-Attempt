@@ -1,0 +1,320 @@
+openapi: 3.0.3
+info:
+  title: VVD-mimic Settings API
+  description: RESTful API for Settings (worlds/fictional universes) that contain multiple campaigns
+  version: 1.0.0
+  contact:
+    name: VVD-mimic Team
+
+servers:
+  - url: http://localhost:3001/api
+    description: Local development server
+
+security:
+  - bearerAuth: []
+
+paths:
+  /settings:
+    get:
+      summary: List user's settings
+      description: Returns all settings owned by authenticated user
+      operationId: listSettings
+      tags: [Settings]
+      responses:
+        '200':
+          description: List of settings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  settings:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Setting'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      summary: Create new setting
+      description: Creates a new setting (world/universe) owned by authenticated user
+      operationId: createSetting
+      tags: [Settings]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+                  description: Setting name (e.g., "Forgotten Realms")
+                  example: Forgotten Realms
+                description:
+                  type: string
+                  nullable: true
+                  description: Optional rich description
+                  example: High fantasy setting with magic and ancient civilizations
+      responses:
+        '201':
+          description: Setting created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Setting'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /settings/{id}:
+    get:
+      summary: Get setting by ID
+      description: Returns single setting with full details
+      operationId: getSetting
+      tags: [Settings]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Setting details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Setting'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      summary: Update setting
+      description: Updates setting name and/or description. Owner cannot be changed.
+      operationId: updateSetting
+      tags: [Settings]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+                description:
+                  type: string
+                  nullable: true
+      responses:
+        '200':
+          description: Setting updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Setting'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      summary: Delete setting
+      description: Deletes setting and ALL campaigns + cards within it (CASCADE). Requires confirmation.
+      operationId: deleteSetting
+      tags: [Settings]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: confirm
+          in: query
+          required: true
+          schema:
+            type: boolean
+          description: Must be true to confirm deletion
+      responses:
+        '200':
+          description: Setting deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted_campaigns:
+                    type: integer
+                    description: Number of campaigns deleted
+                  deleted_cards:
+                    type: integer
+                    description: Number of cards deleted
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /settings/{id}/campaigns:
+    get:
+      summary: List campaigns in setting
+      description: Returns all campaigns belonging to this setting
+      operationId: listSettingCampaigns
+      tags: [Settings]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of campaigns
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  campaigns:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Campaign'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Keycloak access token (OAuth 2.0 with PKCE)
+
+  schemas:
+    Setting:
+      type: object
+      required: [id, owner_id, name, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Setting UUID (immutable)
+        owner_id:
+          type: string
+          description: Keycloak user sub (immutable)
+        name:
+          type: string
+          maxLength: 255
+          description: Setting name
+          example: Forgotten Realms
+        description:
+          type: string
+          nullable: true
+          description: Optional rich description
+        created_at:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp
+        updated_at:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp
+
+    Campaign:
+      type: object
+      description: Simplified campaign schema (see campaigns.yaml for full details)
+      required: [id, name, owner_id, setting_id]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        owner_id:
+          type: string
+        setting_id:
+          type: string
+          format: uuid
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Invalid UUID format
+
+    Unauthorized:
+      description: Missing or invalid authentication token
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Unauthorized
+
+    Forbidden:
+      description: User does not have permission to access this resource
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: You do not own this setting
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Setting not found

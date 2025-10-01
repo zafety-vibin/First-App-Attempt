@@ -1,0 +1,339 @@
+openapi: 3.0.3
+info:
+  title: Pin Cards API
+  description: API for creating and managing pin cards on maps
+  version: 1.0.0
+
+paths:
+  /api/cards/{cardId}/maps/{mapId}/pins:
+    post:
+      summary: Create pin on map
+      operationId: createPin
+      tags:
+        - pins
+      parameters:
+        - name: cardId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Parent card UUID
+        - name: mapId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Map image UUID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - x
+                - y
+                - icon_type
+                - referenced_card_id
+              properties:
+                x:
+                  type: integer
+                  description: Absolute pixel X coordinate
+                y:
+                  type: integer
+                  description: Absolute pixel Y coordinate
+                icon_type:
+                  type: string
+                  enum:
+                    - marker
+                    - castle
+                    - landmark
+                    - npc
+                    - item
+                    - event
+                    - custom
+                label_override:
+                  type: string
+                  maxLength: 100
+                  description: Optional custom label (defaults to referenced card title)
+                referenced_card_id:
+                  type: string
+                  format: uuid
+                  description: Card this pin references
+                layer_id:
+                  type: string
+                  format: uuid
+                  nullable: true
+                  description: Optional layer assignment
+      responses:
+        '201':
+          description: Pin created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PinCard'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    get:
+      summary: List pins for map
+      operationId: listPins
+      tags:
+        - pins
+      parameters:
+        - name: cardId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Parent card UUID
+        - name: mapId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Map image UUID
+        - name: view_mode
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - dm
+              - player
+            default: dm
+          description: Filter pins by information level visibility
+      responses:
+        '200':
+          description: List of pins
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pins:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PinCard'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/cards/{cardId}/maps/{mapId}/pins/{pinId}:
+    patch:
+      summary: Update pin (coordinates, icon, label, reference)
+      operationId: updatePin
+      tags:
+        - pins
+      parameters:
+        - name: cardId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Parent card UUID
+        - name: mapId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Map image UUID
+        - name: pinId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Pin card UUID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                x:
+                  type: integer
+                y:
+                  type: integer
+                icon_type:
+                  type: string
+                  enum:
+                    - marker
+                    - castle
+                    - landmark
+                    - npc
+                    - item
+                    - event
+                    - custom
+                label_override:
+                  type: string
+                  maxLength: 100
+                  nullable: true
+                referenced_card_id:
+                  type: string
+                  format: uuid
+                  nullable: true
+                layer_id:
+                  type: string
+                  format: uuid
+                  nullable: true
+      responses:
+        '200':
+          description: Pin updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PinCard'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Delete pin
+      operationId: deletePin
+      tags:
+        - pins
+      parameters:
+        - name: cardId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Parent card UUID
+        - name: mapId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Map image UUID
+        - name: pinId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Pin card UUID
+      responses:
+        '204':
+          description: Pin deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/pins/orphaned:
+    get:
+      summary: Get all orphaned pins (missing referenced card)
+      operationId: getOrphanedPins
+      tags:
+        - pins
+      responses:
+        '200':
+          description: List of orphaned pins
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orphaned_pins:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PinCard'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  schemas:
+    PinCard:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        card_type:
+          type: string
+          enum:
+            - pin
+        parent_id:
+          type: string
+          format: uuid
+          description: Parent card ID (map-enabled card)
+        pin_map_image_id:
+          type: string
+          format: uuid
+        pin_x:
+          type: integer
+          description: Absolute pixel X coordinate
+        pin_y:
+          type: integer
+          description: Absolute pixel Y coordinate
+        pin_icon_type:
+          type: string
+          enum:
+            - marker
+            - castle
+            - landmark
+            - npc
+            - item
+            - event
+            - custom
+        pin_label_override:
+          type: string
+          nullable: true
+        pin_referenced_card_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Referenced card (null if orphaned)
+        pin_layer_id:
+          type: string
+          format: uuid
+          nullable: true
+        display_label:
+          type: string
+          description: Computed label (override or referenced card title)
+        is_visible_in_player_view:
+          type: boolean
+          description: Computed from referenced card's information level
+        is_orphaned:
+          type: boolean
+          description: True if pin_referenced_card_id is null
+        created_at:
+          type: integer
+          description: Unix timestamp
+        updated_at:
+          type: integer
+          description: Unix timestamp
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        details:
+          type: string
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid authentication token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

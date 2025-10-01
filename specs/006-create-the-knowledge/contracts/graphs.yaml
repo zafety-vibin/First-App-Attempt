@@ -1,0 +1,483 @@
+openapi: 3.0.3
+info:
+  title: Knowledge Graphs API
+  description: API for knowledge graph CRUD operations
+  version: 1.0.0
+
+paths:
+  /api/campaigns/{campaignId}/graphs:
+    get:
+      summary: List all knowledge graphs for a campaign
+      operationId: listGraphs
+      tags:
+        - graphs
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Campaign UUID
+        - name: include_nodes
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: Include nodes in response
+        - name: include_edges
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: Include edges in response
+      responses:
+        '200':
+          description: List of knowledge graphs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  graphs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/KnowledgeGraph'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/CampaignNotFound'
+
+    post:
+      summary: Create a new knowledge graph
+      operationId: createGraph
+      tags:
+        - graphs
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Campaign UUID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - graph_type
+                - graph_name
+              properties:
+                graph_type:
+                  type: string
+                  enum:
+                    - World-Foundations
+                    - Political-Web
+                    - Geographical
+                    - Campaign-Story
+                  description: Graph type (or custom:type_name for custom)
+                  example: Political-Web
+                graph_name:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                  description: Unique graph name per campaign
+                  example: Faerun Politics
+                initial_nodes:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/GraphNodeCreate'
+                  description: Initial nodes to create
+                initial_edges:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/GraphEdgeCreate'
+                  description: Initial edges to create
+      responses:
+        '201':
+          description: Graph created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnowledgeGraph'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Graph name already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/campaigns/{campaignId}/graphs/{graphId}:
+    get:
+      summary: Get a specific knowledge graph
+      operationId: getGraph
+      tags:
+        - graphs
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Campaign UUID
+        - name: graphId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Graph UUID
+        - name: include_nodes
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: true
+          description: Include nodes in response
+        - name: include_edges
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: true
+          description: Include edges in response
+      responses:
+        '200':
+          description: Knowledge graph
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnowledgeGraph'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/GraphNotFound'
+
+    patch:
+      summary: Update a knowledge graph (nodes/edges)
+      operationId: updateGraph
+      tags:
+        - graphs
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Campaign UUID
+        - name: graphId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Graph UUID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                graph_name:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                  description: Update graph name
+                nodes_to_add:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/GraphNodeCreate'
+                nodes_to_update:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/GraphNodeUpdate'
+                nodes_to_delete:
+                  type: array
+                  items:
+                    type: string
+                  description: Node IDs to delete
+                edges_to_add:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/GraphEdgeCreate'
+                edges_to_delete:
+                  type: array
+                  items:
+                    type: string
+                  description: Edge IDs to delete
+      responses:
+        '200':
+          description: Graph updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnowledgeGraph'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/GraphNotFound'
+
+    delete:
+      summary: Delete a knowledge graph
+      operationId: deleteGraph
+      tags:
+        - graphs
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Campaign UUID
+        - name: graphId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Graph UUID
+      responses:
+        '204':
+          description: Graph deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/GraphNotFound'
+
+components:
+  schemas:
+    KnowledgeGraph:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        campaign_id:
+          type: string
+          format: uuid
+        graph_type:
+          type: string
+          example: Political-Web
+        graph_name:
+          type: string
+          example: Faerun Politics
+        toggle_state:
+          type: boolean
+          description: true=toggled on (AI can access), false=toggled off
+        maintenance_rules:
+          type: array
+          items:
+            type: object
+          nullable: true
+        created_at:
+          type: integer
+          format: int64
+          description: Unix timestamp
+        updated_at:
+          type: integer
+          format: int64
+          description: Unix timestamp
+        current_version_id:
+          type: string
+          format: uuid
+          nullable: true
+        backup_version_id:
+          type: string
+          format: uuid
+          nullable: true
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/GraphNode'
+          description: Included if include_nodes=true
+        edges:
+          type: array
+          items:
+            $ref: '#/components/schemas/GraphEdge'
+          description: Included if include_edges=true
+
+    GraphNode:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        graph_id:
+          type: string
+          format: uuid
+        node_type:
+          type: string
+          example: NPC
+        name:
+          type: string
+          example: Lord Neverember
+        attributes:
+          type: object
+          additionalProperties: true
+          example: {"title": "Open Lord", "faction": "Lords' Alliance"}
+        observations:
+          type: string
+          nullable: true
+          example: "current location: Waterdeep"
+        information_level_id:
+          type: string
+          format: uuid
+          nullable: true
+        created_at:
+          type: integer
+          format: int64
+
+    GraphNodeCreate:
+      type: object
+      required:
+        - node_type
+        - name
+      properties:
+        node_type:
+          type: string
+        name:
+          type: string
+        attributes:
+          type: object
+          additionalProperties: true
+          default: {}
+        observations:
+          type: string
+          nullable: true
+        information_level_id:
+          type: string
+          format: uuid
+          nullable: true
+
+    GraphNodeUpdate:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+          format: uuid
+        node_type:
+          type: string
+        name:
+          type: string
+        attributes:
+          type: object
+          additionalProperties: true
+        observations:
+          type: string
+          nullable: true
+        information_level_id:
+          type: string
+          format: uuid
+          nullable: true
+
+    GraphEdge:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        graph_id:
+          type: string
+          format: uuid
+        edge_type:
+          type: string
+          example: "allied with"
+        source_node_id:
+          type: string
+          format: uuid
+        target_node_id:
+          type: string
+          format: uuid
+        directed:
+          type: boolean
+          description: true=directed edge, false=undirected (bidirectional)
+        metadata:
+          type: object
+          additionalProperties: true
+          nullable: true
+          example: {"strength": 0.8}
+        created_at:
+          type: integer
+          format: int64
+
+    GraphEdgeCreate:
+      type: object
+      required:
+        - edge_type
+        - source_node_id
+        - target_node_id
+      properties:
+        edge_type:
+          type: string
+        source_node_id:
+          type: string
+          format: uuid
+        target_node_id:
+          type: string
+          format: uuid
+        directed:
+          type: boolean
+          default: true
+        metadata:
+          type: object
+          additionalProperties: true
+          nullable: true
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        details:
+          type: string
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid authentication token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: User does not have permission to access this resource
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    CampaignNotFound:
+      description: Campaign not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    GraphNotFound:
+      description: Knowledge graph not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

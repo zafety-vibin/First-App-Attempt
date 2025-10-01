@@ -1,0 +1,176 @@
+openapi: 3.0.3
+info:
+  title: Graph Versions API
+  description: API for graph versioning (1-deep backup and restore)
+  version: 1.0.0
+
+paths:
+  /api/campaigns/{campaignId}/graphs/{graphId}/versions:
+    get:
+      summary: Get graph versions (current + backup)
+      operationId: getVersions
+      tags:
+        - graph-versions
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Campaign UUID
+        - name: graphId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Graph UUID
+      responses:
+        '200':
+          description: List of graph versions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  current_version:
+                    $ref: '#/components/schemas/GraphVersion'
+                    nullable: true
+                  backup_version:
+                    $ref: '#/components/schemas/GraphVersion'
+                    nullable: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/GraphNotFound'
+
+  /api/campaigns/{campaignId}/graphs/{graphId}/versions/restore:
+    post:
+      summary: Restore graph from backup version
+      operationId: restoreVersion
+      tags:
+        - graph-versions
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Campaign UUID
+        - name: graphId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Graph UUID
+      responses:
+        '200':
+          description: Graph restored successfully from backup
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Graph restored from backup successfully"
+                  graph_id:
+                    type: string
+                    format: uuid
+                  restored_at:
+                    type: integer
+                    format: int64
+                    description: Unix timestamp
+                  node_count:
+                    type: integer
+                    description: Number of nodes restored
+                  edge_count:
+                    type: integer
+                    description: Number of edges restored
+        '400':
+          description: No backup version available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/GraphNotFound'
+
+components:
+  schemas:
+    GraphVersion:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        graph_id:
+          type: string
+          format: uuid
+        snapshot_content:
+          type: object
+          properties:
+            nodes:
+              type: array
+              items:
+                type: object
+            edges:
+              type: array
+              items:
+                type: object
+            metadata:
+              type: object
+              properties:
+                graph_type:
+                  type: string
+                graph_name:
+                  type: string
+                node_count:
+                  type: integer
+                edge_count:
+                  type: integer
+                snapshot_timestamp:
+                  type: integer
+                  format: int64
+        version_type:
+          type: string
+          enum:
+            - current
+            - backup
+        created_at:
+          type: integer
+          format: int64
+          description: Unix timestamp
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        details:
+          type: string
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid authentication token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: User does not have permission to access this resource
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    GraphNotFound:
+      description: Knowledge graph not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

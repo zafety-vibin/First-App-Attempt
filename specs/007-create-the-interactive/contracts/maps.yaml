@@ -1,0 +1,298 @@
+openapi: 3.0.3
+info:
+  title: Map Interface API
+  description: API for enabling map interface on cards and managing map background images
+  version: 1.0.0
+
+paths:
+  /api/cards/{cardId}/maps:
+    post:
+      summary: Enable map interface on card
+      operationId: enableMapInterface
+      tags:
+        - maps
+      parameters:
+        - name: cardId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Card UUID
+      responses:
+        '200':
+          description: Map interface enabled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  card:
+                    $ref: '#/components/schemas/MapEnabledCard'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/cards/{cardId}/maps/images:
+    post:
+      summary: Upload map background image
+      operationId: uploadMapImage
+      tags:
+        - maps
+      parameters:
+        - name: cardId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Card UUID
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - image
+                - map_name
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: Map image file (PNG, JPG, WebP)
+                map_name:
+                  type: string
+                  example: "City Overview"
+                  maxLength: 100
+      responses:
+        '201':
+          description: Map image uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MapImage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '413':
+          description: Image too large (max 10MB)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    get:
+      summary: List all map images for card
+      operationId: listMapImages
+      tags:
+        - maps
+      parameters:
+        - name: cardId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Card UUID
+      responses:
+        '200':
+          description: List of map images
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  map_images:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MapImage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/cards/{cardId}/maps/images/{imageId}:
+    get:
+      summary: Get specific map image
+      operationId: getMapImage
+      tags:
+        - maps
+      parameters:
+        - name: cardId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Card UUID
+        - name: imageId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Map image UUID
+      responses:
+        '200':
+          description: Map image data
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/webp:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      summary: Update map image metadata (name)
+      operationId: updateMapImage
+      tags:
+        - maps
+      parameters:
+        - name: cardId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Card UUID
+        - name: imageId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Map image UUID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                map_name:
+                  type: string
+                  maxLength: 100
+      responses:
+        '200':
+          description: Map image updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MapImage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Delete map image
+      operationId: deleteMapImage
+      tags:
+        - maps
+      parameters:
+        - name: cardId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Card UUID
+        - name: imageId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Map image UUID
+      responses:
+        '204':
+          description: Map image deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  schemas:
+    MapEnabledCard:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        map_enabled:
+          type: boolean
+        created_at:
+          type: integer
+          description: Unix timestamp
+        updated_at:
+          type: integer
+          description: Unix timestamp
+
+    MapImage:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        card_id:
+          type: string
+          format: uuid
+        map_name:
+          type: string
+          example: "City Overview"
+        image_width:
+          type: integer
+          description: Image width in pixels
+        image_height:
+          type: integer
+          description: Image height in pixels
+        mime_type:
+          type: string
+          enum:
+            - image/png
+            - image/jpeg
+            - image/webp
+        uploaded_at:
+          type: integer
+          description: Unix timestamp
+        display_order:
+          type: integer
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        details:
+          type: string
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid authentication token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

@@ -1,0 +1,238 @@
+openapi: 3.0.3
+info:
+  title: Graph Edges API
+  description: API for manual graph edge CRUD operations
+  version: 1.0.0
+
+paths:
+  /api/campaigns/{campaignId}/graphs/{graphId}/edges:
+    post:
+      summary: Create a new edge in a graph
+      operationId: createEdge
+      tags:
+        - graph-edges
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Campaign UUID
+        - name: graphId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Graph UUID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GraphEdgeCreate'
+      responses:
+        '201':
+          description: Edge created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GraphEdge'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/GraphNotFound'
+
+  /api/campaigns/{campaignId}/graphs/{graphId}/edges/{edgeId}:
+    patch:
+      summary: Update a graph edge
+      operationId: updateEdge
+      tags:
+        - graph-edges
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Campaign UUID
+        - name: graphId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Graph UUID
+        - name: edgeId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Edge UUID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                edge_type:
+                  type: string
+                source_node_id:
+                  type: string
+                  format: uuid
+                target_node_id:
+                  type: string
+                  format: uuid
+                directed:
+                  type: boolean
+                metadata:
+                  type: object
+                  additionalProperties: true
+                  nullable: true
+      responses:
+        '200':
+          description: Edge updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GraphEdge'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/EdgeNotFound'
+
+    delete:
+      summary: Delete a graph edge
+      operationId: deleteEdge
+      tags:
+        - graph-edges
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Campaign UUID
+        - name: graphId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Graph UUID
+        - name: edgeId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Edge UUID
+      responses:
+        '204':
+          description: Edge deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/EdgeNotFound'
+
+components:
+  schemas:
+    GraphEdge:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        graph_id:
+          type: string
+          format: uuid
+        edge_type:
+          type: string
+          example: "allied with"
+        source_node_id:
+          type: string
+          format: uuid
+        target_node_id:
+          type: string
+          format: uuid
+        directed:
+          type: boolean
+          description: true=directed edge, false=undirected (bidirectional)
+        metadata:
+          type: object
+          additionalProperties: true
+          nullable: true
+          example: {"strength": 0.8}
+        created_at:
+          type: integer
+          format: int64
+
+    GraphEdgeCreate:
+      type: object
+      required:
+        - edge_type
+        - source_node_id
+        - target_node_id
+      properties:
+        edge_type:
+          type: string
+        source_node_id:
+          type: string
+          format: uuid
+        target_node_id:
+          type: string
+          format: uuid
+        directed:
+          type: boolean
+          default: true
+        metadata:
+          type: object
+          additionalProperties: true
+          nullable: true
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        details:
+          type: string
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid authentication token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: User does not have permission to access this resource
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    GraphNotFound:
+      description: Knowledge graph not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    EdgeNotFound:
+      description: Graph edge not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

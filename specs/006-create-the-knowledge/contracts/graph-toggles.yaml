@@ -1,0 +1,150 @@
+openapi: 3.0.3
+info:
+  title: Graph Toggle API
+  description: API for controlling graph toggle state (AI access)
+  version: 1.0.0
+
+paths:
+  /api/campaigns/{campaignId}/graphs/toggles:
+    get:
+      summary: Get toggle states for all graphs
+      operationId: getToggles
+      tags:
+        - graph-toggles
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Campaign UUID
+      responses:
+        '200':
+          description: List of graph toggle states
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  toggles:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        graph_id:
+                          type: string
+                          format: uuid
+                        graph_name:
+                          type: string
+                        graph_type:
+                          type: string
+                        toggle_state:
+                          type: boolean
+                          description: true=toggled on (AI can access), false=toggled off
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/CampaignNotFound'
+
+  /api/campaigns/{campaignId}/graphs/{graphId}/toggle:
+    patch:
+      summary: Toggle graph on/off (AI access control)
+      operationId: toggleGraph
+      tags:
+        - graph-toggles
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Campaign UUID
+        - name: graphId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Graph UUID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - toggle_state
+              properties:
+                toggle_state:
+                  type: boolean
+                  description: true=toggle on (AI can access), false=toggle off
+      responses:
+        '200':
+          description: Toggle state updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  graph_id:
+                    type: string
+                    format: uuid
+                  graph_name:
+                    type: string
+                  toggle_state:
+                    type: boolean
+                  updated_at:
+                    type: integer
+                    format: int64
+                    description: Unix timestamp
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/GraphNotFound'
+
+components:
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        details:
+          type: string
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid authentication token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: User does not have permission to access this resource
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    CampaignNotFound:
+      description: Campaign not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    GraphNotFound:
+      description: Knowledge graph not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

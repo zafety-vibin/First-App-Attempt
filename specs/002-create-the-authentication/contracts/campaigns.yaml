@@ -1,0 +1,530 @@
+openapi: 3.0.3
+info:
+  title: VVD-mimic Campaigns API
+  description: |
+    Campaign management endpoints for creating, reading, updating, and deleting
+    TTRPG campaigns. All endpoints require authentication.
+  version: 1.0.0
+  contact:
+    name: VVD-mimic Development
+servers:
+  - url: http://localhost:3001
+    description: Local development server
+
+tags:
+  - name: Campaigns
+    description: Campaign CRUD operations
+
+paths:
+  /api/campaigns:
+    get:
+      summary: List user's campaigns
+      description: |
+        Returns all campaigns owned by the authenticated user, ordered by most
+        recently updated first.
+      tags:
+        - Campaigns
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of campaigns to return
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: offset
+          in: query
+          description: Number of campaigns to skip (pagination)
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: List of campaigns
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  campaigns:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Campaign'
+                  total:
+                    type: integer
+                    description: Total number of campaigns owned by user
+                    example: 5
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      summary: Create new campaign
+      description: |
+        Creates a new campaign owned by the authenticated user. Generates
+        UUID and initializes with default settings.
+      tags:
+        - Campaigns
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+                  description: Campaign display name
+                  example: Waterdeep Dragon Heist
+      responses:
+        '201':
+          description: Campaign created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Campaign'
+        '400':
+          description: Invalid request (missing or invalid name)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/campaigns/{campaignId}:
+    get:
+      summary: Get campaign by ID
+      description: |
+        Returns campaign details. User must be the owner.
+      tags:
+        - Campaigns
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: campaignId
+          in: path
+          description: Campaign UUID
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Campaign details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Campaign'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized (user doesn't own campaign)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Campaign not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      summary: Update campaign
+      description: |
+        Updates campaign properties. User must be the owner.
+        Only provided fields are updated (partial update).
+      tags:
+        - Campaigns
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: campaignId
+          in: path
+          description: Campaign UUID
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+                  description: New campaign name
+                  example: Waterdeep Dragon Heist - Season 2
+                publicAccessEnabled:
+                  type: boolean
+                  description: Enable/disable public access
+                  example: true
+                publicPassword:
+                  type: string
+                  nullable: true
+                  maxLength: 255
+                  description: Optional password for public access (null to remove)
+                  example: dragonborn
+      responses:
+        '200':
+          description: Campaign updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Campaign'
+        '400':
+          description: Invalid request (invalid field values)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized (user doesn't own campaign)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Campaign not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Delete campaign
+      description: |
+        Permanently deletes campaign and all associated content (cards, maps, etc.).
+        User must be the owner. This action cannot be undone.
+      tags:
+        - Campaigns
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: campaignId
+          in: path
+          description: Campaign UUID
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Campaign deleted successfully (no content)
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized (user doesn't own campaign)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Campaign not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/campaigns/{campaignId}/publish:
+    post:
+      summary: Publish campaign changes
+      description: |
+        Pushes current draft content to published version visible on public URL.
+        Updates last_published_at timestamp. (spec 010)
+      tags:
+        - Campaigns
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: campaignId
+          in: path
+          description: Campaign UUID
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Campaign published successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Campaign published successfully
+                  publishedAt:
+                    type: string
+                    format: date-time
+                    example: '2025-10-01T14:00:00Z'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized (user doesn't own campaign)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Campaign not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /c/{publicUrlId}:
+    get:
+      summary: Access public campaign
+      description: |
+        Public endpoint (no authentication required) for viewing published campaign
+        content. Returns campaign homepage in Player/General View with all DM Secret
+        content filtered out. (spec 010)
+      tags:
+        - Campaigns
+      parameters:
+        - name: publicUrlId
+          in: path
+          description: Random public URL identifier (16 chars, base64url)
+          required: true
+          schema:
+            type: string
+            pattern: '^[A-Za-z0-9_-]{16}$'
+            example: a8f3D92k4p1mN7qR
+        - name: password
+          in: query
+          description: Password for password-protected campaigns
+          required: false
+          schema:
+            type: string
+            maxLength: 255
+      responses:
+        '200':
+          description: Public campaign content
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  campaign:
+                    $ref: '#/components/schemas/PublicCampaign'
+                  content:
+                    type: object
+                    description: Campaign content (cards, maps, etc.) in Player/General View
+        '401':
+          description: Password required or incorrect password
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Password required
+                  passwordProtected:
+                    type: boolean
+                    example: true
+        '404':
+          description: Campaign not found or public access disabled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Campaign not publicly available
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Keycloak access token (JWT)
+
+  schemas:
+    Campaign:
+      type: object
+      required:
+        - id
+        - name
+        - ownerId
+        - publicAccessEnabled
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique campaign identifier
+          example: d4e5f6a7-b8c9-0123-def4-567890abcdef
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Campaign display name
+          example: Waterdeep Dragon Heist
+        ownerId:
+          type: string
+          format: uuid
+          description: User who owns this campaign
+          example: a3b8c9d4-e5f6-7890-abcd-ef1234567890
+        publicUrlId:
+          type: string
+          nullable: true
+          pattern: '^[A-Za-z0-9_-]{16}$'
+          description: Random ID for public URL (null if never enabled)
+          example: a8f3D92k4p1mN7qR
+        publicAccessEnabled:
+          type: boolean
+          description: Whether campaign is publicly accessible
+          example: false
+        publicPassword:
+          type: string
+          nullable: true
+          maxLength: 255
+          description: Optional password for public access
+          example: dragonborn
+        lastPublishedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Last publish operation timestamp (null if never published)
+          example: '2025-10-01T14:00:00Z'
+        createdAt:
+          type: string
+          format: date-time
+          description: Campaign creation timestamp
+          example: '2025-10-01T12:00:00Z'
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last modification timestamp
+          example: '2025-10-01T13:30:00Z'
+
+    PublicCampaign:
+      type: object
+      required:
+        - id
+        - name
+        - publishedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Campaign identifier (not publicly exposed in URL)
+          example: d4e5f6a7-b8c9-0123-def4-567890abcdef
+        name:
+          type: string
+          description: Campaign display name
+          example: Waterdeep Dragon Heist
+        publishedAt:
+          type: string
+          format: date-time
+          description: When this version was published
+          example: '2025-10-01T14:00:00Z'
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+          example: Campaign not found
+        details:
+          type: string
+          nullable: true
+          description: Additional error details (development only)
+          example: No campaign found with ID d4e5f6a7-b8c9-0123-def4-567890abcdef
+
+security:
+  - BearerAuth: []

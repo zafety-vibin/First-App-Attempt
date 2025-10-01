@@ -1,0 +1,228 @@
+openapi: 3.0.3
+info:
+  title: Cross-Graph Query API
+  description: API for querying across multiple knowledge graphs
+  version: 1.0.0
+
+paths:
+  /api/campaigns/{campaignId}/graphs/query:
+    post:
+      summary: Query across multiple graphs with toggle filtering
+      operationId: queryCrossGraph
+      tags:
+        - cross-graph-query
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Campaign UUID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - query
+              properties:
+                query:
+                  type: string
+                  description: Natural language query
+                  example: "What factions are active in Waterdeep?"
+                graph_ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  description: Optional list of graph IDs to query (defaults to all toggled-on graphs)
+                view_mode:
+                  type: string
+                  enum:
+                    - dm
+                    - player
+                  default: dm
+                  description: Filter nodes by information level (player hides DM Secret nodes)
+      responses:
+        '200':
+          description: Cross-graph query result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  answer:
+                    type: string
+                    description: LLM-generated answer using cross-graph context
+                    example: "Three major factions are active in Waterdeep: The Lords' Alliance (led by Lord Neverember), the Harpers (covert network), and the Zhentarim (shadow organization)."
+                  graphs_used:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        graph_id:
+                          type: string
+                          format: uuid
+                        graph_name:
+                          type: string
+                        graph_type:
+                          type: string
+                        nodes_referenced:
+                          type: integer
+                          description: Number of nodes referenced in answer
+                    description: List of graphs used to generate answer
+                  cross_references:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        from_graph:
+                          type: string
+                          description: Source graph name
+                        from_node:
+                          type: string
+                          description: Source node name
+                        observation:
+                          type: string
+                          description: Cross-graph observation text
+                        to_graph:
+                          type: string
+                          description: Target graph name (inferred)
+                          example: Geographical
+                    description: Cross-graph references discovered via observations
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/CampaignNotFound'
+
+  /api/campaigns/{campaignId}/graphs/context:
+    get:
+      summary: Get serialized graph context for LLM queries
+      operationId: getGraphContext
+      tags:
+        - cross-graph-query
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Campaign UUID
+        - name: graph_ids
+          in: query
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+          description: Optional list of graph IDs (defaults to all toggled-on graphs)
+        - name: view_mode
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - dm
+              - player
+            default: dm
+          description: Filter nodes by information level
+      responses:
+        '200':
+          description: Serialized graph context for LLM
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  graphs:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        type:
+                          type: string
+                        nodes:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              type:
+                                type: string
+                              name:
+                                type: string
+                              attributes:
+                                type: object
+                                additionalProperties: true
+                              observations:
+                                type: string
+                                nullable: true
+                        edges:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              type:
+                                type: string
+                              source:
+                                type: string
+                                description: Source node ID
+                              target:
+                                type: string
+                                description: Target node ID
+                              metadata:
+                                type: object
+                                additionalProperties: true
+                                nullable: true
+                  total_nodes:
+                    type: integer
+                  total_edges:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/CampaignNotFound'
+
+components:
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        details:
+          type: string
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid authentication token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: User does not have permission to access this resource
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    CampaignNotFound:
+      description: Campaign not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

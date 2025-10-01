@@ -1,0 +1,552 @@
+openapi: 3.0.3
+info:
+  title: VVD-mimic Import AI API
+  description: API contract for AI Import workflow - entity extraction, knowledge graph updates, and approval workflow
+  version: 1.0.0
+  contact:
+    name: Feature 005 - AI Import & Planning Workflows
+
+servers:
+  - url: http://localhost:3000/api
+    description: Local development server
+
+tags:
+  - name: import
+    description: Import AI workflow endpoints
+
+paths:
+  /import/session:
+    post:
+      tags:
+        - import
+      summary: Create a new Import session
+      operationId: createImportSession
+      description: |
+        Creates a new Import session for the specified campaign. The GM will upload files/text
+        to this session and interact with the Import AI to extract entities.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - campaignId
+              properties:
+                campaignId:
+                  type: string
+                  format: uuid
+                  description: Campaign to import data into
+              example:
+                campaignId: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        '201':
+          description: Import session created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportSession'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Campaign not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /import/upload:
+    post:
+      tags:
+        - import
+      summary: Upload file to Import session
+      operationId: uploadFile
+      description: |
+        Uploads a file (PDF, DOCX, TXT, MD) or raw text to an active Import session.
+        The Import AI will parse the file and begin entity extraction.
+
+        FR-001: Supports PDF, DOCX, TXT, MD formats.
+        FR-002: Server-side parsing with pdf-parse, mammoth, native fs.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - sessionId
+              properties:
+                sessionId:
+                  type: string
+                  format: uuid
+                  description: Import session to upload to
+                file:
+                  type: string
+                  format: binary
+                  description: File to upload (optional if text is provided)
+                text:
+                  type: string
+                  description: Raw text content (optional if file is provided)
+                fileName:
+                  type: string
+                  description: Original filename (required if text is provided)
+              example:
+                sessionId: "660e8400-e29b-41d4-a716-446655440001"
+                fileName: "session-12-recap.md"
+      responses:
+        '200':
+          description: File uploaded and processed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - sessionId
+                  - batchId
+                  - status
+                properties:
+                  sessionId:
+                    type: string
+                    format: uuid
+                  batchId:
+                    type: string
+                    format: uuid
+                    description: ImportBatch ID for this upload
+                  status:
+                    type: string
+                    enum: [uploading, processing]
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Import session not found
+        '413':
+          description: File too large (max 10MB)
+
+  /import/chat:
+    post:
+      tags:
+        - import
+      summary: Send chat message to Import AI
+      operationId: sendImportChat
+      description: |
+        Sends a chat message to the Import AI within an active Import session.
+        The AI will respond with entity extraction results and knowledge graph suggestions.
+
+        FR-003: Streaming response using Server-Sent Events (SSE).
+        FR-004: LLM streaming via OpenAI/Anthropic SDK.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - sessionId
+                - message
+              properties:
+                sessionId:
+                  type: string
+                  format: uuid
+                message:
+                  type: string
+                  description: User message to Import AI
+                  maxLength: 5000
+              example:
+                sessionId: "660e8400-e29b-41d4-a716-446655440001"
+                message: "Extract all NPCs and their relationships from this text"
+      responses:
+        '200':
+          description: Streaming chat response
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                enum: [text/event-stream]
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: |
+                  Server-Sent Events stream with the following event types:
+                  - "chunk": Partial LLM response text
+                  - "done": Final message indicating completion
+                  - "error": Error during processing
+                example: |
+                  data: {"type": "chunk", "content": "I found 3 NPCs in the text..."}
+
+                  data: {"type": "chunk", "content": " Let me extract them for you."}
+
+                  data: {"type": "done", "sessionId": "660e8400-e29b-41d4-a716-446655440001"}
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Import session not found
+
+  /import/approval-summary:
+    get:
+      tags:
+        - import
+      summary: Get approval summary for Import session
+      operationId: getApprovalSummary
+      description: |
+        Retrieves the AI-generated approval summary showing all entities extracted,
+        nodes/edges added, and cards created during the Import session.
+
+        FR-040: Structured summary with confidence scores and conflict detection.
+        FR-041: Timeline consistency validation against Session Recaps.
+      parameters:
+        - name: sessionId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Import session ID
+      responses:
+        '200':
+          description: Approval summary retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIApprovalSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Import session not found or not in pending_approval state
+
+  /import/approve:
+    post:
+      tags:
+        - import
+      summary: Approve Import session
+      operationId: approveImport
+      description: |
+        Approves the Import session, committing all extracted entities, graph nodes/edges,
+        and cards to the campaign. This action is irreversible (though the batch can be reverted).
+
+        FR-042: GM approval required before committing entities.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - sessionId
+              properties:
+                sessionId:
+                  type: string
+                  format: uuid
+                  description: Import session to approve
+              example:
+                sessionId: "660e8400-e29b-41d4-a716-446655440001"
+      responses:
+        '200':
+          description: Import session approved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - sessionId
+                  - status
+                  - batchId
+                properties:
+                  sessionId:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+                    enum: [approved]
+                  batchId:
+                    type: string
+                    format: uuid
+                    description: ImportBatch ID for revert operations
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Import session not found
+
+  /import/revert:
+    post:
+      tags:
+        - import
+      summary: Revert Import batch
+      operationId: revertImportBatch
+      description: |
+        Reverts an entire Import batch, deleting all nodes, edges, and cards created
+        during that Import session. This operation cascades deletes to all related entities.
+
+        FR-044: Atomic batch revert operation.
+        FR-045: Cascade deletes GraphNodes, GraphEdges, Cards via foreign keys.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - batchId
+              properties:
+                batchId:
+                  type: string
+                  format: uuid
+                  description: ImportBatch ID to revert
+              example:
+                batchId: "770e8400-e29b-41d4-a716-446655440002"
+      responses:
+        '200':
+          description: Import batch reverted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - batchId
+                  - deletedCounts
+                properties:
+                  batchId:
+                    type: string
+                    format: uuid
+                  deletedCounts:
+                    type: object
+                    required:
+                      - nodes
+                      - edges
+                      - cards
+                    properties:
+                      nodes:
+                        type: integer
+                        description: Number of GraphNodes deleted
+                      edges:
+                        type: integer
+                        description: Number of GraphEdges deleted
+                      cards:
+                        type: integer
+                        description: Number of Cards deleted
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Import batch not found
+
+components:
+  schemas:
+    ImportSession:
+      type: object
+      required:
+        - id
+        - campaignId
+        - status
+        - chatHistory
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        campaignId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [uploading, processing, pending_approval, approved, reverted]
+          description: Current state of the Import session
+        chatHistory:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatMessage'
+        approvalSummary:
+          $ref: '#/components/schemas/AIApprovalSummary'
+        createdAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    ChatMessage:
+      type: object
+      required:
+        - role
+        - content
+        - timestamp
+      properties:
+        role:
+          type: string
+          enum: [user, assistant, system]
+        content:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+
+    AIApprovalSummary:
+      type: object
+      required:
+        - entitiesExtracted
+        - nodesAdded
+        - edgesAdded
+        - cardsCreated
+        - potentialConflicts
+      properties:
+        entitiesExtracted:
+          type: array
+          items:
+            $ref: '#/components/schemas/EntityExtractionResult'
+        nodesAdded:
+          type: array
+          items:
+            type: object
+            required:
+              - graphType
+              - nodeType
+              - name
+              - nodeId
+            properties:
+              graphType:
+                $ref: '#/components/schemas/KnowledgeGraphType'
+              nodeType:
+                type: string
+                description: Domain-specific node type (e.g., 'location', 'npc', 'faction')
+              name:
+                type: string
+              nodeId:
+                type: string
+                format: uuid
+        edgesAdded:
+          type: array
+          items:
+            type: object
+            required:
+              - graphType
+              - relationshipType
+              - source
+              - target
+              - edgeId
+            properties:
+              graphType:
+                $ref: '#/components/schemas/KnowledgeGraphType'
+              relationshipType:
+                type: string
+                description: Domain-specific relationship (e.g., 'located_in', 'allied_with')
+              source:
+                type: string
+                description: Source node name
+              target:
+                type: string
+                description: Target node name
+              edgeId:
+                type: string
+                format: uuid
+        cardsCreated:
+          type: array
+          items:
+            type: object
+            required:
+              - title
+              - category
+              - cardId
+            properties:
+              title:
+                type: string
+              category:
+                type: string
+              cardId:
+                type: string
+                format: uuid
+        potentialConflicts:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimelineConflict'
+
+    EntityExtractionResult:
+      type: object
+      required:
+        - name
+        - type
+        - confidence
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          description: Entity type (e.g., 'location', 'npc', 'faction')
+        confidence:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          description: LLM confidence score for entity extraction
+        fuzzyMatchScore:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          description: Levenshtein-based fuzzy match score (if matched to existing entity)
+          nullable: true
+        existingEntityId:
+          type: string
+          format: uuid
+          nullable: true
+          description: GraphNode ID if deduplicated against existing entity
+
+    TimelineConflict:
+      type: object
+      required:
+        - description
+        - sourceCardId
+        - conflictingRecapId
+        - severity
+      properties:
+        description:
+          type: string
+          description: Human-readable description of the timeline conflict
+        sourceCardId:
+          type: string
+          format: uuid
+          description: Card containing the conflicting information
+        conflictingRecapId:
+          type: string
+          format: uuid
+          description: Session Recap that contradicts the source card
+        severity:
+          type: string
+          enum: [low, medium, high]
+
+    KnowledgeGraphType:
+      type: string
+      enum: [geographical, political_web, world_foundations, campaign_story]
+      description: |
+        Knowledge graph type:
+        - geographical: Locations, travel routes, spatial relationships
+        - political_web: Factions, NPCs, allegiances, rivalries
+        - world_foundations: Lore, cosmology, magic systems, historical events
+        - campaign_story: Plot threads, session recaps, story arcs
+
+    Error:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error code
+        message:
+          type: string
+          description: Human-readable error message
+        details:
+          type: object
+          additionalProperties: true
+          description: Additional error context
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "INVALID_REQUEST"
+            message: "Missing required field: campaignId"

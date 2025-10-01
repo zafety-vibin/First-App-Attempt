@@ -7,6 +7,15 @@
 
 ---
 
+## Clarifications
+
+### Session 2025-10-01
+- Q: Preview mode approach - should there be a dedicated preview mode showing filtered content before publishing? → A: No dedicated preview mode - GM publishes and checks public URL manually
+- Q: Empty section handling - what happens when a database/section becomes 100% empty after filtering vs. partially empty? → A: Hide section entirely if 100% empty after filtering, otherwise show section with visible entries only
+- Q: Password change behavior - what happens to active player sessions when GM changes campaign password? → A: 30-minute grace period - active sessions remain valid for 30 minutes, new visitors must use new password immediately
+
+---
+
 ## User Scenarios & Testing
 
 ### Primary User Story
@@ -30,12 +39,12 @@ A Game Master has built their Waterdeep campaign over 10 sessions using cards, m
 15. **Given** I access public campaign on any device, **When** it renders, **Then** I see responsive web design (no separate mobile app)
 
 ### Edge Cases
-- What happens when GM changes public URL password while players are actively viewing?
+- What happens when GM changes public URL password while players are actively viewing? (Clarified: 30-minute grace period for active sessions)
 - What happens when GM publishes changes that remove content players are currently viewing?
 - What happens when public homepage template has no customization (GM just uses default)?
 - What happens when GM deletes navigation cards that players might be bookmarking externally?
 - What happens when draft has broken links or references to deleted cards?
-- What happens when GM has made many draft changes and wants to preview public view before publishing?
+- What happens when GM has made many draft changes and wants to preview public view before publishing? (Clarified: No dedicated preview - publish and check URL)
 
 ## Requirements
 
@@ -70,7 +79,7 @@ A Game Master has built their Waterdeep campaign over 10 sessions using cards, m
 - **FR-022**: Clicking "Publish Changes" MUST push current draft state to public view as atomic operation
 - **FR-023**: Publish operation MUST update all campaign content simultaneously (cards, maps, databases, homepage)
 - **FR-024**: System MUST show last published timestamp and draft status indicator
-- **FR-025**: GM MUST be able to preview public view before publishing with [NEEDS CLARIFICATION: dedicated preview mode showing filtered content?]
+- **FR-025**: No dedicated preview mode - GM publishes draft and manually checks public URL to verify filtered content appearance
 
 #### Information Filtering in Public View
 - **FR-026**: Public view MUST show content in Player/General View mode (identical to existing Player/General View filtering)
@@ -81,7 +90,7 @@ A Game Master has built their Waterdeep campaign over 10 sessions using cards, m
 - **FR-031**: Database entries in public view MUST hide entries tagged as DM Secret
 - **FR-032**: Knowledge graphs accessed in public view MUST be filtered to exclude DM Secret nodes/edges
 - **FR-033**: Navigation structure in public view MUST mirror GM's card organization with filtering applied
-- **FR-034**: If entire sections become empty due to filtering, public view MUST [NEEDS CLARIFICATION: hide empty sections, show "No content available", or show section with empty state?]
+- **FR-034**: If entire database or section becomes 100% empty after information filtering, hide section entirely from navigation; if section has any visible entries, show section with visible entries only
 
 #### Password Protection
 - **FR-035**: GM MUST be able to set optional text password for entire campaign
@@ -91,7 +100,7 @@ A Game Master has built their Waterdeep campaign over 10 sessions using cards, m
 - **FR-039**: System MUST validate password before granting access
 - **FR-040**: Invalid password attempts MUST display clear error message
 - **FR-041**: GM MUST be able to change or remove password at any time
-- **FR-042**: Changing password MUST not affect currently authenticated sessions with [NEEDS CLARIFICATION: immediate logout or grace period?]
+- **FR-042**: Changing password MUST maintain 30-minute grace period for currently authenticated sessions; new visitors must use new password immediately; sessions older than 30 minutes are invalidated
 
 #### Public View Access & Behavior
 - **FR-043**: Public URL MUST be accessible without authentication or login
@@ -136,11 +145,11 @@ A Game Master has built their Waterdeep campaign over 10 sessions using cards, m
 
 - **Public View Mode**: Rendering mode for public URL that applies Player/General View information filtering. Hides System and DM Secret tagged content. Shows Common Knowledge and Player Knowledge content. Filters maps (hides DM Secret pins), databases (hides secret entries), knowledge graphs (excludes secret nodes/edges). Read-only access.
 
-- **Password Protection**: Optional simple text password for entire campaign. When set, prompts users before showing any public content. Validates password before granting access. GM can change or remove anytime. Simple security layer for campaigns with sensitive player information.
+- **Password Protection**: Optional simple text password for entire campaign. When set, prompts users before showing any public content. Validates password before granting access. GM can change or remove anytime. Password changes maintain 30-minute grace period for active sessions. Simple security layer for campaigns with sensitive player information.
 
-- **Navigation Structure**: Card organization and linking created by GM that serves as public campaign navigation. Mirrors GM's structure with information filtering applied. Template provides examples of navigation cards with links. GM builds custom navigation using card architecture.
+- **Navigation Structure**: Card organization and linking created by GM that serves as public campaign navigation. Mirrors GM's structure with information filtering applied. Template provides examples of navigation cards with links. GM builds custom navigation using card architecture. Sections become hidden if 100% empty after filtering.
 
-- **Information Filtering**: Automatic content filtering applied to public view. Uses same filtering logic as Player/General View mode. Hides System tier (meta/structural) and DM Secret content. Shows Common Knowledge and Player Knowledge content. Applied to all content types (cards, maps, databases, graphs).
+- **Information Filtering**: Automatic content filtering applied to public view. Uses same filtering logic as Player/General View mode. Hides System tier (meta/structural) and DM Secret content. Shows Common Knowledge and Player Knowledge content. Applied to all content types (cards, maps, databases, graphs). Sections with any visible content show filtered entries; fully empty sections are hidden from navigation.
 
 - **Unlisted Mode**: Configuration preventing public campaigns from being indexed by search engines. Uses robots meta tags or headers. Campaigns only accessible via direct link. No public directory or discovery mechanism. Privacy-focused approach.
 
@@ -157,7 +166,7 @@ A Game Master has built their Waterdeep campaign over 10 sessions using cards, m
 - [x] All mandatory sections completed
 
 ### Requirement Completeness
-- [ ] No [NEEDS CLARIFICATION] markers remain (3 clarifications needed)
+- [x] No [NEEDS CLARIFICATION] markers remain (3 clarifications resolved in Session 2025-10-01)
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Scope is clearly bounded
@@ -173,6 +182,7 @@ A Game Master has built their Waterdeep campaign over 10 sessions using cards, m
 - [x] User scenarios defined
 - [x] Requirements generated
 - [x] Entities identified
-- [ ] Review checklist passed (blocked by clarifications)
+- [x] Clarifications resolved (Session 2025-10-01)
+- [x] Review checklist passed
 
 ---

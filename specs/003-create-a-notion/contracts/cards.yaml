@@ -1,0 +1,772 @@
+openapi: 3.0.3
+info:
+  title: VVD-mimic Card API
+  description: RESTful API for card-based content management (Notion-inspired). Supports pages, databases, text blocks, images with infinite nesting.
+  version: 1.0.0
+  contact:
+    name: VVD-mimic Team
+
+servers:
+  - url: http://localhost:3001/api
+    description: Local development server
+
+security:
+  - bearerAuth: []
+
+paths:
+  /cards:
+    get:
+      summary: List root cards for campaign
+      description: Returns root cards (parent_id IS NULL) for specified campaign, ordered by position
+      operationId: listRootCards
+      tags: [Cards]
+      parameters:
+        - name: campaign_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Campaign ID to filter cards
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [page, database, text, image]
+          description: Filter by card type
+      responses:
+        '200':
+          description: List of root cards
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cards:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Card'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      summary: Create new card
+      description: Creates card at root level or nested under parent. Validates circular references and depth limits.
+      operationId: createCard
+      tags: [Cards]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, campaign_id, position]
+              properties:
+                type:
+                  type: string
+                  enum: [page, database, text, image]
+                  description: Card type (immutable after creation)
+                campaign_id:
+                  type: string
+                  format: uuid
+                  description: Campaign scope (immutable)
+                parent_id:
+                  type: string
+                  format: uuid
+                  nullable: true
+                  description: Parent card ID (null = root card)
+                position:
+                  type: integer
+                  minimum: 0
+                  description: Order within parent (0-indexed)
+                title:
+                  type: string
+                  maxLength: 500
+                  nullable: true
+                  description: Display title (null for text/image cards)
+                content:
+                  type: object
+                  nullable: true
+                  description: ProseMirror JSON for rich text
+                metadata:
+                  type: object
+                  nullable: true
+                  description: Type-specific metadata (DatabaseCardMetadata, ImageCardMetadata, etc.)
+                cover_image_url:
+                  type: string
+                  format: uri
+                  maxLength: 2048
+                  nullable: true
+                  description: Cover image URL (page cards only)
+                icon_emoji:
+                  type: string
+                  maxLength: 4
+                  nullable: true
+                  description: Icon emoji (page cards only)
+      responses:
+        '201':
+          description: Card created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Card'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          description: Validation error (depth exceeded, circular reference)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Maximum nesting depth exceeded (50 levels)
+
+  /cards/{id}:
+    get:
+      summary: Get card by ID
+      description: Returns single card with full metadata
+      operationId: getCard
+      tags: [Cards]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Card details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Card'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      summary: Update card
+      description: Updates card content, title, metadata. Cannot change type, campaign_id, or hierarchy (use PATCH /cards/{id}/move for that).
+      operationId: updateCard
+      tags: [Cards]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  maxLength: 500
+                  nullable: true
+                content:
+                  type: object
+                  nullable: true
+                  description: ProseMirror JSON
+                metadata:
+                  type: object
+                  nullable: true
+                cover_image_url:
+                  type: string
+                  format: uri
+                  maxLength: 2048
+                  nullable: true
+                icon_emoji:
+                  type: string
+                  maxLength: 4
+                  nullable: true
+      responses:
+        '200':
+          description: Card updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Card'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      summary: Delete card
+      description: Deletes card and entire subtree (CASCADE). Warns if card is referenced by database entries.
+      operationId: deleteCard
+      tags: [Cards]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: force
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: Force delete even if referenced (orphans references)
+      responses:
+        '200':
+          description: Card deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted_count:
+                    type: integer
+                    description: Number of cards deleted (includes subtree)
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Card is referenced, requires force=true
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Card is referenced by 3 database entries
+                  references:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        card_id:
+                          type: string
+                          format: uuid
+                        card_title:
+                          type: string
+                        database_id:
+                          type: string
+                          format: uuid
+
+  /cards/{id}/children:
+    get:
+      summary: Get child cards
+      description: Returns immediate children of card, ordered by position
+      operationId: getChildCards
+      tags: [Cards]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [page, database, text, image]
+      responses:
+        '200':
+          description: List of child cards
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cards:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Card'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /cards/{id}/subtree:
+    get:
+      summary: Get entire subtree
+      description: Returns card and all descendants (recursive), ordered by path then position
+      operationId: getSubtree
+      tags: [Cards]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: max_depth
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 50
+          description: Maximum depth to traverse
+      responses:
+        '200':
+          description: Card subtree
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  root:
+                    $ref: '#/components/schemas/Card'
+                  descendants:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Card'
+                  total_count:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /cards/{id}/move:
+    patch:
+      summary: Move card to new parent
+      description: Changes parent_id, recalculates path and depth for entire subtree. Validates circular references.
+      operationId: moveCard
+      tags: [Cards]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [new_parent_id, position]
+              properties:
+                new_parent_id:
+                  type: string
+                  format: uuid
+                  nullable: true
+                  description: New parent card ID (null = move to root)
+                position:
+                  type: integer
+                  minimum: 0
+                  description: Position within new parent
+      responses:
+        '200':
+          description: Card moved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Card'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Validation error (circular reference, depth exceeded)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Cannot move card into its own subtree
+
+  /cards/{id}/reorder:
+    patch:
+      summary: Change card position within parent
+      description: Updates position field, adjusts sibling positions if needed
+      operationId: reorderCard
+      tags: [Cards]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [position]
+              properties:
+                position:
+                  type: integer
+                  minimum: 0
+                  description: New position within current parent
+      responses:
+        '200':
+          description: Card reordered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Card'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /cards/search:
+    get:
+      summary: Search cards by title
+      description: Simple string search across card titles within campaign. (Full-text search deferred to future.)
+      operationId: searchCards
+      tags: [Cards]
+      parameters:
+        - name: campaign_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+          description: Search query (case-insensitive)
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [page, database, text, image]
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cards:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Card'
+                  total:
+                    type: integer
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Keycloak access token (OAuth 2.0 with PKCE)
+
+  schemas:
+    Card:
+      type: object
+      required: [id, type, campaign_id, path, position, depth, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Card UUID (immutable)
+        type:
+          type: string
+          enum: [page, database, text, image]
+          description: Card type (immutable)
+        parent_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Parent card ID (null = root card)
+        campaign_id:
+          type: string
+          format: uuid
+          description: Campaign scope (immutable)
+        path:
+          type: string
+          description: Materialized path (e.g., /campaign-id/card-id/child-id)
+          example: /550e8400-e29b-41d4-a716-446655440000/650e8400-e29b-41d4-a716-446655440001
+        position:
+          type: integer
+          minimum: 0
+          description: Order within parent (0-indexed)
+        depth:
+          type: integer
+          minimum: 0
+          maximum: 50
+          description: Nesting level (0=root)
+        title:
+          type: string
+          maxLength: 500
+          nullable: true
+          description: Display title (null for text/image cards)
+        content:
+          type: object
+          nullable: true
+          description: ProseMirror JSON for rich text
+          example:
+            type: doc
+            content:
+              - type: paragraph
+                content:
+                  - type: text
+                    text: Hello world
+        metadata:
+          type: object
+          nullable: true
+          description: Type-specific metadata (see DatabaseCardMetadata, ImageCardMetadata)
+        cover_image_url:
+          type: string
+          format: uri
+          maxLength: 2048
+          nullable: true
+          description: Cover image URL (page cards only)
+        icon_emoji:
+          type: string
+          maxLength: 4
+          nullable: true
+          description: Icon emoji (page cards only)
+          example: 🏰
+        created_at:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp
+        updated_at:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp
+
+    DatabaseCardMetadata:
+      type: object
+      description: Metadata structure for database cards (type='database')
+      required: [schema, views, defaultViewId]
+      properties:
+        schema:
+          type: object
+          required: [columns]
+          properties:
+            columns:
+              type: array
+              items:
+                $ref: '#/components/schemas/DatabaseColumn'
+        views:
+          type: array
+          items:
+            $ref: '#/components/schemas/DatabaseView'
+        defaultViewId:
+          type: string
+          format: uuid
+          description: Default view to show
+
+    DatabaseColumn:
+      type: object
+      required: [id, name, type, required]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 255
+        type:
+          type: string
+          enum: [text, number, date, select, multi-select, entity-reference]
+        required:
+          type: boolean
+        defaultValue:
+          description: Default value (type-dependent)
+        options:
+          type: object
+          description: For select/multi-select types
+          properties:
+            choices:
+              type: array
+              items:
+                type: object
+                required: [id, label]
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  label:
+                    type: string
+                  color:
+                    type: string
+                    example: blue
+        entityType:
+          type: string
+          enum: [card]
+          description: For entity-reference type (future: add 'node' for spec 006)
+
+    DatabaseView:
+      type: object
+      required: [id, name, type]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 255
+        type:
+          type: string
+          enum: [table, list, gallery, kanban]
+        filter:
+          type: array
+          items:
+            $ref: '#/components/schemas/FilterRule'
+        sort:
+          type: array
+          items:
+            $ref: '#/components/schemas/SortRule'
+        groupBy:
+          type: string
+          format: uuid
+          nullable: true
+          description: Column ID for kanban grouping
+
+    FilterRule:
+      type: object
+      required: [columnId, operator, value]
+      properties:
+        columnId:
+          type: string
+          format: uuid
+        operator:
+          type: string
+          enum: [equals, contains, greater, less, is-empty]
+        value:
+          description: Filter value (type-dependent)
+
+    SortRule:
+      type: object
+      required: [columnId, direction]
+      properties:
+        columnId:
+          type: string
+          format: uuid
+        direction:
+          type: string
+          enum: [asc, desc]
+
+    ImageCardMetadata:
+      type: object
+      description: Metadata structure for image cards (type='image')
+      required: [url]
+      properties:
+        url:
+          type: string
+          format: uri
+          description: Image URL or upload path
+        caption:
+          type: string
+          nullable: true
+          description: Optional caption
+        width:
+          type: integer
+          nullable: true
+          description: Original width (px)
+        height:
+          type: integer
+          nullable: true
+          description: Original height (px)
+        size:
+          type: integer
+          nullable: true
+          description: File size (bytes)
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Invalid UUID format
+              details:
+                type: string
+
+    Unauthorized:
+      description: Missing or invalid authentication token
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Unauthorized
+
+    Forbidden:
+      description: User does not have permission to access this resource
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: You do not own this campaign
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Card not found

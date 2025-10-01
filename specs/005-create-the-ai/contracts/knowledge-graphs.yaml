@@ -1,0 +1,657 @@
+openapi: 3.0.3
+info:
+  title: VVD-mimic Knowledge Graphs API
+  description: API contract for knowledge graph CRUD operations - nodes, edges, filtering, and inspection
+  version: 1.0.0
+  contact:
+    name: Feature 005 - AI Import & Planning Workflows
+
+servers:
+  - url: http://localhost:3000/api
+    description: Local development server
+
+tags:
+  - name: graphs
+    description: Knowledge graph operations
+
+paths:
+  /graphs:
+    get:
+      tags:
+        - graphs
+      summary: List all knowledge graphs for a campaign
+      operationId: listKnowledgeGraphs
+      description: |
+        Retrieves all 4 knowledge graphs for the specified campaign (Geographical, Political-Web,
+        World-Foundations, Campaign-Story).
+
+        FR-049: Each campaign has exactly 4 knowledge graphs.
+      parameters:
+        - name: campaignId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Campaign ID
+      responses:
+        '200':
+          description: Knowledge graphs retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - graphs
+                properties:
+                  graphs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/KnowledgeGraph'
+                    minItems: 4
+                    maxItems: 4
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Campaign not found
+
+  /graphs/{type}:
+    get:
+      tags:
+        - graphs
+      summary: Get knowledge graph with nodes and edges
+      operationId: getKnowledgeGraph
+      description: |
+        Retrieves a specific knowledge graph with all nodes and edges, optionally filtered.
+
+        FR-065: Political-Web and Campaign-Story graphs support active filtering.
+        FR-066: Active filtering based on last 5 session recaps + active/party-relevant tags.
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/KnowledgeGraphType'
+          description: Knowledge graph type
+        - name: campaignId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Campaign ID
+        - name: filter
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [all, active]
+            default: all
+          description: |
+            Filter mode:
+            - all: Return all nodes/edges (default)
+            - active: Return only active nodes/edges (Political-Web and Campaign-Story only)
+      responses:
+        '200':
+          description: Knowledge graph retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - graph
+                  - nodes
+                  - edges
+                properties:
+                  graph:
+                    $ref: '#/components/schemas/KnowledgeGraph'
+                  nodes:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GraphNode'
+                  edges:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GraphEdge'
+                  filterApplied:
+                    type: string
+                    enum: [all, active]
+                    description: Filter mode that was applied
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Knowledge graph not found
+
+  /graphs/{type}/nodes:
+    post:
+      tags:
+        - graphs
+      summary: Create a new graph node
+      operationId: createGraphNode
+      description: |
+        Creates a new node in the specified knowledge graph. This is typically used by
+        the GM for manual graph edits, as AI workflows create nodes via Import/Planning sessions.
+
+        FR-080: GM can manually create nodes via UI.
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/KnowledgeGraphType'
+          description: Knowledge graph type
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - campaignId
+                - nodeType
+                - name
+                - attributes
+              properties:
+                campaignId:
+                  type: string
+                  format: uuid
+                nodeType:
+                  type: string
+                  description: Domain-specific node type (e.g., 'location', 'npc', 'faction')
+                name:
+                  type: string
+                  maxLength: 200
+                attributes:
+                  type: object
+                  additionalProperties: true
+                  description: Node attributes (description, tags, custom fields)
+                informationLevelId:
+                  type: string
+                  format: uuid
+                  nullable: true
+                  description: Information level for filtering (Feature 004)
+              example:
+                campaignId: "550e8400-e29b-41d4-a716-446655440000"
+                nodeType: "npc"
+                name: "Elara Moonwhisper"
+                attributes:
+                  description: "Elven ranger, guide to the Shadowfell"
+                  tags: ["active", "party-relevant"]
+                informationLevelId: "770e8400-e29b-41d4-a716-446655440003"
+      responses:
+        '201':
+          description: Graph node created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GraphNode'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Knowledge graph or information level not found
+
+  /graphs/{type}/nodes/{nodeId}:
+    get:
+      tags:
+        - graphs
+      summary: Get graph node details
+      operationId: getGraphNode
+      description: |
+        Retrieves a specific graph node with all its attributes.
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/KnowledgeGraphType'
+          description: Knowledge graph type
+        - name: nodeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Graph node ID
+      responses:
+        '200':
+          description: Graph node retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GraphNode'
+        '404':
+          description: Graph node not found
+
+    patch:
+      tags:
+        - graphs
+      summary: Update graph node
+      operationId: updateGraphNode
+      description: |
+        Updates a graph node's attributes. This is typically used by the GM for manual edits
+        or by the Planning AI for incremental updates.
+
+        FR-080: GM can manually edit nodes via UI.
+        FR-081: GM can inspect/edit graphs via Planning AI chat.
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/KnowledgeGraphType'
+          description: Knowledge graph type
+        - name: nodeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Graph node ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  maxLength: 200
+                  nullable: true
+                attributes:
+                  type: object
+                  additionalProperties: true
+                  nullable: true
+                  description: Partial update to attributes (merged with existing)
+                informationLevelId:
+                  type: string
+                  format: uuid
+                  nullable: true
+              example:
+                attributes:
+                  tags: ["active", "party-relevant", "quest-giver"]
+      responses:
+        '200':
+          description: Graph node updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GraphNode'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Graph node not found
+
+    delete:
+      tags:
+        - graphs
+      summary: Delete graph node
+      operationId: deleteGraphNode
+      description: |
+        Deletes a graph node and all its edges (cascade delete).
+
+        FR-080: GM can manually delete nodes via UI.
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/KnowledgeGraphType'
+          description: Knowledge graph type
+        - name: nodeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Graph node ID
+      responses:
+        '204':
+          description: Graph node deleted successfully
+        '404':
+          description: Graph node not found
+
+  /graphs/{type}/edges:
+    post:
+      tags:
+        - graphs
+      summary: Create a new graph edge
+      operationId: createGraphEdge
+      description: |
+        Creates a new edge (relationship) between two nodes in the specified knowledge graph.
+
+        FR-080: GM can manually create edges via UI.
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/KnowledgeGraphType'
+          description: Knowledge graph type
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - campaignId
+                - sourceNodeId
+                - targetNodeId
+                - relationshipType
+                - attributes
+              properties:
+                campaignId:
+                  type: string
+                  format: uuid
+                sourceNodeId:
+                  type: string
+                  format: uuid
+                  description: Source node ID
+                targetNodeId:
+                  type: string
+                  format: uuid
+                  description: Target node ID (must be different from source)
+                relationshipType:
+                  type: string
+                  description: Domain-specific relationship (e.g., 'allied_with', 'located_in')
+                attributes:
+                  type: object
+                  additionalProperties: true
+                  description: Edge attributes (strength, description, custom fields)
+              example:
+                campaignId: "550e8400-e29b-41d4-a716-446655440000"
+                sourceNodeId: "880e8400-e29b-41d4-a716-446655440004"
+                targetNodeId: "990e8400-e29b-41d4-a716-446655440005"
+                relationshipType: "allied_with"
+                attributes:
+                  strength: 0.8
+                  description: "Strong alliance formed in Session 11"
+      responses:
+        '201':
+          description: Graph edge created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GraphEdge'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Knowledge graph or source/target nodes not found
+
+  /graphs/{type}/edges/{edgeId}:
+    get:
+      tags:
+        - graphs
+      summary: Get graph edge details
+      operationId: getGraphEdge
+      description: |
+        Retrieves a specific graph edge with all its attributes.
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/KnowledgeGraphType'
+          description: Knowledge graph type
+        - name: edgeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Graph edge ID
+      responses:
+        '200':
+          description: Graph edge retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GraphEdge'
+        '404':
+          description: Graph edge not found
+
+    patch:
+      tags:
+        - graphs
+      summary: Update graph edge
+      operationId: updateGraphEdge
+      description: |
+        Updates a graph edge's attributes.
+
+        FR-080: GM can manually edit edges via UI.
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/KnowledgeGraphType'
+          description: Knowledge graph type
+        - name: edgeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Graph edge ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                relationshipType:
+                  type: string
+                  nullable: true
+                attributes:
+                  type: object
+                  additionalProperties: true
+                  nullable: true
+                  description: Partial update to attributes (merged with existing)
+              example:
+                attributes:
+                  strength: 0.9
+                  description: "Alliance strengthened in Session 12"
+      responses:
+        '200':
+          description: Graph edge updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GraphEdge'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Graph edge not found
+
+    delete:
+      tags:
+        - graphs
+      summary: Delete graph edge
+      operationId: deleteGraphEdge
+      description: |
+        Deletes a graph edge.
+
+        FR-080: GM can manually delete edges via UI.
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/KnowledgeGraphType'
+          description: Knowledge graph type
+        - name: edgeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Graph edge ID
+      responses:
+        '204':
+          description: Graph edge deleted successfully
+        '404':
+          description: Graph edge not found
+
+components:
+  schemas:
+    KnowledgeGraph:
+      type: object
+      required:
+        - id
+        - campaignId
+        - type
+        - lastUpdated
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        campaignId:
+          type: string
+          format: uuid
+        type:
+          $ref: '#/components/schemas/KnowledgeGraphType'
+        lastUpdated:
+          type: string
+          format: date-time
+          description: Last update timestamp (updated on any node/edge add/update/delete)
+        createdAt:
+          type: string
+          format: date-time
+
+    GraphNode:
+      type: object
+      required:
+        - id
+        - graphId
+        - type
+        - name
+        - attributes
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        graphId:
+          type: string
+          format: uuid
+          description: Parent KnowledgeGraph ID
+        type:
+          type: string
+          description: Domain-specific node type (e.g., 'location', 'npc', 'faction', 'plot_thread')
+        name:
+          type: string
+          maxLength: 200
+        attributes:
+          type: object
+          additionalProperties: true
+          description: |
+            Node attributes (JSONB):
+            - description (string, optional)
+            - tags (string[], optional) - For active filtering: "active", "party-relevant"
+            - custom fields (any)
+        sourceCardId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Card that originated this node (if from Import AI)
+        informationLevelId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Information level for filtering (Feature 004)
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    GraphEdge:
+      type: object
+      required:
+        - id
+        - graphId
+        - sourceNodeId
+        - targetNodeId
+        - relationshipType
+        - attributes
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        graphId:
+          type: string
+          format: uuid
+          description: Parent KnowledgeGraph ID
+        sourceNodeId:
+          type: string
+          format: uuid
+        targetNodeId:
+          type: string
+          format: uuid
+        relationshipType:
+          type: string
+          description: |
+            Domain-specific relationship type:
+            - Geographical: 'located_in', 'connected_by', 'region_of'
+            - Political-Web: 'allied_with', 'rivals_with', 'member_of', 'leads'
+            - World-Foundations: 'created_by', 'descends_from', 'powered_by'
+            - Campaign-Story: 'occurs_in', 'involves', 'triggers', 'resolves'
+        attributes:
+          type: object
+          additionalProperties: true
+          description: |
+            Edge attributes (JSONB):
+            - strength (number 0.0-1.0, optional) - For weighted relationships
+            - description (string, optional)
+            - custom fields (any)
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    KnowledgeGraphType:
+      type: string
+      enum: [geographical, political_web, world_foundations, campaign_story]
+      description: |
+        Knowledge graph type:
+        - geographical: Locations, travel routes, spatial relationships
+        - political_web: Factions, NPCs, allegiances, rivalries (kept lean via active filtering)
+        - world_foundations: Lore, cosmology, magic systems, historical events
+        - campaign_story: Plot threads, session recaps, story arcs (kept lean via active filtering)
+
+    Error:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error code
+        message:
+          type: string
+          description: Human-readable error message
+        details:
+          type: object
+          additionalProperties: true
+          description: Additional error context
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "INVALID_REQUEST"
+            message: "sourceNodeId cannot equal targetNodeId"

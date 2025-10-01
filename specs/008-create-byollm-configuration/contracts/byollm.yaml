@@ -1,0 +1,499 @@
+openapi: 3.0.3
+info:
+  title: BYOLLM Configuration API
+  description: API for configuring user's LLM provider account (OpenAI, Anthropic, Custom Endpoint) with OAuth 2.0 or API key authentication
+  version: 1.0.0
+
+paths:
+  /api/byollm/config:
+    post:
+      summary: Create or update BYOLLM configuration
+      operationId: createOrUpdateConfig
+      tags:
+        - config
+      parameters:
+        - name: scope
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [global, campaign]
+          description: Configuration scope
+        - name: campaign_id
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Campaign UUID (required if scope=campaign)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - provider
+                - auth_method
+                - credentials
+                - model_name
+              properties:
+                provider:
+                  type: string
+                  enum: [openai, anthropic, custom]
+                  description: LLM provider
+                auth_method:
+                  type: string
+                  enum: [oauth, api_key]
+                  description: Authentication method
+                credentials:
+                  oneOf:
+                    - type: object
+                      description: OAuth tokens (from callback)
+                      required:
+                        - access_token
+                      properties:
+                        access_token:
+                          type: string
+                        refresh_token:
+                          type: string
+                          nullable: true
+                        expires_at:
+                          type: integer
+                          description: Unix timestamp
+                    - type: object
+                      description: API key
+                      required:
+                        - api_key
+                      properties:
+                        api_key:
+                          type: string
+                model_name:
+                  type: string
+                  example: "claude-3-5-sonnet-20241022"
+                custom_endpoint_url:
+                  type: string
+                  nullable: true
+                  example: "http://localhost:11434"
+                  description: Required if provider=custom
+                custom_system_prompt_import:
+                  type: string
+                  nullable: true
+                  description: Custom prompt for Import AI
+                custom_system_prompt_planning:
+                  type: string
+                  nullable: true
+                  description: Custom prompt for Planning AI
+      responses:
+        '201':
+          description: Configuration created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BYOLLMConfig'
+        '200':
+          description: Configuration updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BYOLLMConfig'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    get:
+      summary: Get BYOLLM configuration for scope
+      operationId: getConfig
+      tags:
+        - config
+      parameters:
+        - name: scope
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [global, campaign]
+        - name: campaign_id
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Campaign UUID (required if scope=campaign)
+      responses:
+        '200':
+          description: Configuration retrieved (falls back to global if no campaign config)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BYOLLMConfig'
+        '404':
+          description: No configuration found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      summary: Delete per-campaign BYOLLM configuration
+      operationId: deleteConfig
+      tags:
+        - config
+      parameters:
+        - name: campaign_id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Campaign UUID
+      responses:
+        '204':
+          description: Configuration deleted (reverts to global)
+        '400':
+          description: Cannot delete global configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/byollm/oauth/initiate:
+    post:
+      summary: Initiate OAuth 2.0 authorization flow
+      operationId: initiateOAuth
+      tags:
+        - oauth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - provider
+                - scope
+              properties:
+                provider:
+                  type: string
+                  enum: [openai, anthropic]
+                  description: LLM provider
+                scope:
+                  type: string
+                  enum: [global, campaign]
+                  description: Configuration scope
+                campaign_id:
+                  type: string
+                  nullable: true
+                  description: Campaign UUID (required if scope=campaign)
+      responses:
+        '200':
+          description: OAuth flow initiated, redirect user to authorization_url
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  authorization_url:
+                    type: string
+                    example: "https://platform.openai.com/oauth/authorize?client_id=..."
+                  state:
+                    type: string
+                    description: OAuth state parameter (stored in session)
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/byollm/oauth/callback:
+    get:
+      summary: OAuth 2.0 callback endpoint
+      operationId: oauthCallback
+      tags:
+        - oauth
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Authorization code from provider
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+          description: OAuth state parameter (CSRF protection)
+      responses:
+        '302':
+          description: Redirect to Settings page with success/error
+          headers:
+            Location:
+              schema:
+                type: string
+                example: "/settings?byollm=success"
+        '400':
+          description: Invalid OAuth callback (invalid code or state)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/byollm/credits:
+    get:
+      summary: Fetch current credits/usage from provider
+      operationId: fetchCredits
+      tags:
+        - provider
+      parameters:
+        - name: scope
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [global, campaign]
+        - name: campaign_id
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Campaign UUID (if scope=campaign)
+      responses:
+        '200':
+          description: Credits/usage retrieved from provider API
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderCredits'
+        '400':
+          description: Custom endpoint does not have credits
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: No configuration found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/byollm/models:
+    get:
+      summary: List available models for provider
+      operationId: listModels
+      tags:
+        - provider
+      parameters:
+        - name: provider
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [openai, anthropic, custom]
+      responses:
+        '200':
+          description: List of available models
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  models:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProviderModel'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/byollm/test-connection:
+    post:
+      summary: Test connection with bulk MCP operation
+      operationId: testConnection
+      tags:
+        - provider
+      parameters:
+        - name: scope
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [global, campaign]
+        - name: campaign_id
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Campaign UUID (if scope=campaign)
+      responses:
+        '200':
+          description: Connection test result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                    example: "Connected to anthropic with model claude-3-5-sonnet-20241022. Bulk operations ready."
+                  details:
+                    type: object
+                    nullable: true
+                    properties:
+                      provider:
+                        type: string
+                      model_name:
+                        type: string
+                      context_window:
+                        type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: No configuration found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    BYOLLMConfig:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        scope:
+          type: string
+          enum: [global, campaign]
+        campaign_id:
+          type: string
+          format: uuid
+          nullable: true
+        provider:
+          type: string
+          enum: [openai, anthropic, custom]
+        auth_method:
+          type: string
+          enum: [oauth, api_key]
+        model_name:
+          type: string
+          example: "claude-3-5-sonnet-20241022"
+        custom_endpoint_url:
+          type: string
+          nullable: true
+          example: "http://localhost:11434"
+        custom_system_prompt_import:
+          type: string
+          nullable: true
+        custom_system_prompt_planning:
+          type: string
+          nullable: true
+        created_at:
+          type: integer
+          description: Unix timestamp
+        updated_at:
+          type: integer
+          description: Unix timestamp
+      required:
+        - id
+        - scope
+        - provider
+        - auth_method
+        - model_name
+
+    ProviderCredits:
+      type: object
+      properties:
+        config_id:
+          type: string
+          format: uuid
+        balance:
+          type: number
+          format: float
+          example: 45.30
+        currency:
+          type: string
+          example: "USD"
+        organization_name:
+          type: string
+          example: "Personal"
+        last_fetched_at:
+          type: integer
+          description: Unix timestamp
+      required:
+        - config_id
+        - balance
+        - currency
+        - organization_name
+        - last_fetched_at
+
+    ProviderModel:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "claude-3-5-sonnet-20241022"
+        name:
+          type: string
+          example: "Claude 3.5 Sonnet"
+        context_window:
+          type: integer
+          example: 200000
+        input_cost_per_1k:
+          type: number
+          format: float
+          example: 3.0
+        output_cost_per_1k:
+          type: number
+          format: float
+          example: 15.0
+      required:
+        - id
+        - name
+        - context_window
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        details:
+          type: string
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid authentication token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Keycloak JWT token (required for all endpoints)
+
+security:
+  - BearerAuth: []

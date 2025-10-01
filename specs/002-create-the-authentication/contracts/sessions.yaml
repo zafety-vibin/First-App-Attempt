@@ -1,0 +1,218 @@
+openapi: 3.0.3
+info:
+  title: VVD-mimic Sessions API
+  description: |
+    Session management endpoints for viewing and managing active authentication
+    sessions across multiple devices.
+  version: 1.0.0
+  contact:
+    name: VVD-mimic Development
+servers:
+  - url: http://localhost:3001
+    description: Local development server
+
+tags:
+  - name: Sessions
+    description: Session lifecycle management
+
+paths:
+  /api/sessions:
+    get:
+      summary: List active sessions
+      description: |
+        Returns all active sessions for the authenticated user across all devices.
+        Useful for security monitoring and multi-device session management.
+      tags:
+        - Sessions
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of active sessions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sessions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Session'
+                  total:
+                    type: integer
+                    description: Total number of active sessions
+                    example: 2
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/sessions/{sessionId}:
+    delete:
+      summary: Revoke specific session
+      description: |
+        Revokes (deletes) a specific session by ID. Useful for logging out from
+        a specific device or revoking compromised sessions. User can only revoke
+        their own sessions.
+      tags:
+        - Sessions
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: sessionId
+          in: path
+          description: Session UUID to revoke
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Session revoked successfully (no content)
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized (session belongs to different user)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Session not found or already expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/sessions/revoke-all:
+    post:
+      summary: Revoke all sessions except current
+      description: |
+        Revokes all active sessions for the authenticated user EXCEPT the current
+        session. Useful for security response (e.g., "logout all other devices").
+      tags:
+        - Sessions
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Other sessions revoked successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: All other sessions revoked successfully
+                  revokedCount:
+                    type: integer
+                    description: Number of sessions revoked
+                    example: 3
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Keycloak access token (JWT)
+
+  schemas:
+    Session:
+      type: object
+      required:
+        - sessionId
+        - userId
+        - expiresAt
+        - createdAt
+        - isCurrent
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+          description: Unique session identifier
+          example: b4c9d0e1-f6a7-8901-bcde-f23456789012
+        userId:
+          type: string
+          format: uuid
+          description: User who owns this session
+          example: a3b8c9d4-e5f6-7890-abcd-ef1234567890
+        expiresAt:
+          type: string
+          format: date-time
+          description: Session expiration timestamp
+          example: '2025-10-01T13:00:00Z'
+        createdAt:
+          type: string
+          format: date-time
+          description: Session creation timestamp
+          example: '2025-10-01T12:00:00Z'
+        isCurrent:
+          type: boolean
+          description: True if this is the session making the request
+          example: true
+        lastActivityAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Last API request timestamp (future enhancement)
+          example: '2025-10-01T12:45:00Z'
+        userAgent:
+          type: string
+          nullable: true
+          description: Browser/device user agent (future enhancement)
+          example: Mozilla/5.0 (Windows NT 10.0; Win64; x64)
+        ipAddress:
+          type: string
+          nullable: true
+          description: IP address of session (future enhancement, local only shows 127.0.0.1)
+          example: 127.0.0.1
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+          example: Session not found
+        details:
+          type: string
+          nullable: true
+          description: Additional error details (development only)
+          example: No session found with ID b4c9d0e1-f6a7-8901-bcde-f23456789012
+
+security:
+  - BearerAuth: []

@@ -1,0 +1,327 @@
+openapi: 3.0.3
+info:
+  title: VVD-mimic Information Levels API
+  description: RESTful API for managing information levels (visibility classifications for cards)
+  version: 1.0.0
+  contact:
+    name: VVD-mimic Team
+
+servers:
+  - url: http://localhost:3001/api
+    description: Local development server
+
+security:
+  - bearerAuth: []
+
+paths:
+  /information-levels:
+    get:
+      summary: List information levels for campaign
+      description: Returns default levels (4) plus custom levels for specified campaign
+      operationId: listInformationLevels
+      tags: [Information Levels]
+      parameters:
+        - name: campaign_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Campaign ID to fetch custom levels
+      responses:
+        '200':
+          description: List of information levels
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  levels:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/InformationLevel'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      summary: Create custom information level
+      description: Creates new custom information level scoped to campaign
+      operationId: createInformationLevel
+      tags: [Information Levels]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, color, hierarchical, campaign_id]
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                  description: Level name
+                  example: Major Spoilers
+                color:
+                  type: string
+                  pattern: '^#[0-9A-Fa-f]{6}$'
+                  description: Hex color code for UI palette
+                  example: '#FF5733'
+                hierarchical:
+                  type: boolean
+                  description: If true, hides cards in Player View like DM Secret
+                  example: true
+                campaign_id:
+                  type: string
+                  format: uuid
+                  description: Campaign this level belongs to
+      responses:
+        '201':
+          description: Information level created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InformationLevel'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Name already exists
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Information level name already exists
+
+  /information-levels/{id}:
+    get:
+      summary: Get information level by ID
+      description: Returns single information level details
+      operationId: getInformationLevel
+      tags: [Information Levels]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Information level ID (UUID for custom, string for default)
+      responses:
+        '200':
+          description: Information level details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InformationLevel'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      summary: Update custom information level
+      description: Updates name, color, or hierarchical flag for custom level (default levels immutable)
+      operationId: updateInformationLevel
+      tags: [Information Levels]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                color:
+                  type: string
+                  pattern: '^#[0-9A-Fa-f]{6}$'
+                hierarchical:
+                  type: boolean
+      responses:
+        '200':
+          description: Information level updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InformationLevel'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Cannot modify default level
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Cannot modify default information levels
+
+    delete:
+      summary: Delete custom information level
+      description: Deletes custom level and reverts all cards to System level with warning
+      operationId: deleteInformationLevel
+      tags: [Information Levels]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: confirm
+          in: query
+          required: true
+          schema:
+            type: boolean
+          description: Must be true to confirm deletion
+      responses:
+        '200':
+          description: Information level deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reverted_cards_count:
+                    type: integer
+                    description: Number of cards reverted to System level
+                  warning:
+                    type: string
+                    example: "Information Level 'Major Spoilers' was deleted. 15 cards reverted to System. Secrets may now be exposed in Player View."
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Cannot delete default level
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Cannot delete default information levels
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Keycloak access token (OAuth 2.0 with PKCE)
+
+  schemas:
+    InformationLevel:
+      type: object
+      required: [id, name, color, hierarchical, type, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          description: UUID for custom levels, hardcoded string for defaults
+          example: system
+        name:
+          type: string
+          maxLength: 100
+          description: Level name
+          example: System
+        color:
+          type: string
+          pattern: '^#[0-9A-Fa-f]{6}$'
+          description: Hex color code for UI palette
+          example: '#6B7280'
+        hierarchical:
+          type: boolean
+          description: If true, hides cards in Player View
+          example: false
+        type:
+          type: string
+          enum: [default, custom]
+          description: Type of level
+          example: default
+        campaign_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Campaign ID (null for default levels)
+        created_at:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp
+        updated_at:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Invalid hex color format
+
+    Unauthorized:
+      description: Missing or invalid authentication token
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Unauthorized
+
+    Forbidden:
+      description: User does not have permission to access this resource
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: You do not own this campaign
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Information level not found

@@ -114,7 +114,7 @@ A Game Master is preparing for next week's session. They pull down the Planning 
 - **FR-045**: Import AI MUST adapt to user's active editing on wiki side during import sessions
 - **FR-046**: Import AI MUST support incremental imports (e.g., "import characters first, locations later") within same content batch
 - **FR-047**: Import AI MUST determine correct placement by searching wiki each time (no learning/preference memory)
-- **FR-048**: Import AI MUST support customization via [NEEDS CLARIFICATION: environment file, system prompt injection, campaign settings?]
+- **FR-048**: Import AI MUST support customization via system prompt injection (Settings → AI Configuration → text field for custom instructions, stored in SQLite settings table per campaign)
 
 #### Planning Workflow - Graph Update & Management
 - **FR-049**: Planning AI MUST be explicitly invoked by user to process imports and update knowledge graphs
@@ -146,7 +146,7 @@ A Game Master is preparing for next week's session. They pull down the Planning 
 #### Default Template & Structure
 - **FR-070**: System MUST provide default campaign template with Session Recaps database
 - **FR-071**: Session Recaps database MUST serve as authoritative timeline source for both Import and Planning workflows
-- **FR-072**: Default template MUST include standard databases and pages for [NEEDS CLARIFICATION: Characters/NPCs, Locations, Factions, Items, Plot Threads?]
+- **FR-072**: Default template MUST include standard databases and pages: Session Recaps (database), Characters/NPCs (database), Locations (page or database), Factions (page or database), Plot Threads (page), Lore (database)
 - **FR-073**: Import and Planning AI MUST understand default template structure for content placement and context
 - **FR-074**: Users MUST be able to deviate from default template with AI adapting to custom structures
 
@@ -157,7 +157,7 @@ A Game Master is preparing for next week's session. They pull down the Planning 
 - **FR-078**: World-Foundations graph MUST represent core world-building elements, rules, and lore
 - **FR-079**: Campaign-Story graph MUST represent active story threads, events, and narrative connections from Session Recaps
 - **FR-080**: Knowledge graphs MUST be updated only by Planning AI when user explicitly invokes processing
-- **FR-081**: Knowledge graphs MUST [NEEDS CLARIFICATION: be visible to users for inspection/editing, or purely AI-internal?]
+- **FR-081**: Knowledge graphs MUST be inspectable and editable by GM users via Planning AI chat interface (future: canvas-like visualization for viewing graphs)
 
 ### Key Entities
 
@@ -190,7 +190,7 @@ A Game Master is preparing for next week's session. They pull down the Planning 
 - [x] All mandatory sections completed
 
 ### Requirement Completeness
-- [ ] No [NEEDS CLARIFICATION] markers remain (4 clarifications needed)
+- [x] No [NEEDS CLARIFICATION] markers remain (3 clarifications resolved: FR-048 system prompt injection, FR-072 default template with 6 databases, FR-081 GM-editable graphs via chat)
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Scope is clearly bounded
@@ -206,6 +206,19 @@ A Game Master is preparing for next week's session. They pull down the Planning 
 - [x] User scenarios defined
 - [x] Requirements generated
 - [x] Entities identified
-- [ ] Review checklist passed (blocked by clarifications)
+- [x] Review checklist passed
+
+## Clarifications
+
+### Session 2025-10-01
+
+- **Q**: FR-048 - How should Import AI customization work? (environment file, system prompt injection, campaign settings?)
+  **A**: System prompt injection via Campaign Settings UI - text field for custom instructions, stored in SQLite settings table per campaign
+
+- **Q**: FR-072 - Which databases/pages should be in the default campaign template?
+  **A**: Six databases/pages: Session Recaps (database), Characters/NPCs (database), Locations (page or database), Factions (page or database), Plot Threads (page), Lore (database)
+
+- **Q**: FR-081 - Should knowledge graphs be visible to users for inspection/editing, or purely AI-internal?
+  **A**: GM users can inspect and edit knowledge graphs via Planning AI chat interface. Future enhancement: canvas-like visualization for viewing graphs (not in this feature scope)
 
 ---

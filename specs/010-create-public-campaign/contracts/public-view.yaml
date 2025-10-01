@@ -1,0 +1,220 @@
+openapi: 3.0.3
+info:
+  title: Public View API
+  description: API for accessing public campaign URLs (no authentication required)
+  version: 1.0.0
+
+paths:
+  /api/c/{randomId}:
+    get:
+      summary: Access public campaign
+      description: Retrieves published campaign content via random ID URL. No authentication required.
+      tags:
+        - Public View
+      parameters:
+        - name: randomId
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 12
+          description: Random ID from public URL (e.g., "a8f3d92k4p1m")
+      responses:
+        '200':
+          description: Public campaign content retrieved successfully
+          headers:
+            X-Robots-Tag:
+              description: Instructs search engines not to index
+              schema:
+                type: string
+                example: "noindex, nofollow"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicCampaignContent'
+        '401':
+          description: Password required or invalid password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PasswordRequired'
+        '404':
+          description: Campaign not publicly available
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Campaign not publicly available"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      summary: Authenticate with password
+      description: Submit password for password-protected public campaign
+      tags:
+        - Public View
+      parameters:
+        - name: randomId
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 12
+          description: Random ID from public URL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                password:
+                  type: string
+                  description: Campaign password
+              required:
+                - password
+              example:
+                password: "dragonborn"
+      responses:
+        '200':
+          description: Authentication successful, session created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Authentication successful"
+        '401':
+          description: Invalid password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Campaign not publicly available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    PublicCampaignContent:
+      type: object
+      properties:
+        campaign_id:
+          type: string
+          description: Campaign ID
+        campaign_name:
+          type: string
+          description: Campaign name
+        random_id:
+          type: string
+          description: Random ID for this public URL
+        published_at:
+          type: integer
+          description: Unix timestamp of last publish
+        content:
+          type: object
+          properties:
+            cards:
+              type: array
+              items:
+                $ref: '#/components/schemas/FilteredCard'
+              description: Filtered campaign cards (Player/General View mode)
+            graphs:
+              type: array
+              items:
+                $ref: '#/components/schemas/FilteredGraph'
+              description: Filtered knowledge graphs
+          description: Published content snapshot with information filtering applied
+      required:
+        - campaign_id
+        - campaign_name
+        - random_id
+        - published_at
+        - content
+
+    FilteredCard:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        type:
+          type: string
+          enum: [page, database, text, image, public_homepage]
+        content:
+          type: object
+          description: TipTap JSON content (filtered)
+        information_level:
+          type: string
+          description: Information level tier (only Common Knowledge or Player Knowledge visible)
+        parent_id:
+          type: string
+          nullable: true
+        created_at:
+          type: integer
+        updated_at:
+          type: integer
+      description: Card entity with DM Secret content filtered out
+
+    FilteredGraph:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          enum: [Geographical, Political-Web, World-Foundations, Campaign-Story]
+        nodes:
+          type: array
+          items:
+            type: object
+          description: Graph nodes (DM Secret nodes filtered out)
+        edges:
+          type: array
+          items:
+            type: object
+          description: Graph edges (DM Secret edges filtered out)
+      description: Knowledge graph with DM Secret content filtered out
+
+    PasswordRequired:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Password required"
+        password_protected:
+          type: boolean
+          example: true
+      required:
+        - error
+        - password_protected
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+        details:
+          type: string
+          description: Additional error details
+      required:
+        - error

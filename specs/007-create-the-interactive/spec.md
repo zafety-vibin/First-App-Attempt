@@ -7,6 +7,30 @@
 
 ---
 
+## Clarifications (Session 2025-10-01)
+
+### Q1: Multiple Map Switching UI (FR-011)
+**Decision**: Use tabs view for switching between multiple maps on the same card.
+**Rationale**: Tabs provide clear visual indication of available maps and are familiar UI pattern for users.
+
+### Q2: Orphaned Pin Handling (FR-027)
+**Decision**: Show a warning notification to the user when a pin references a deleted card.
+**Rationale**: Alerts GM to broken references so they can decide whether to delete the orphaned pin or update the reference.
+
+### Q3: Zone Colors (FR-047)
+**Decision**: User-defined colors with color picker.
+**Rationale**: Gives GMs full customization to match their campaign aesthetic or use colors meaningfully (e.g., red for danger zones, blue for water).
+
+### Q4: Edit vs View Mode (FR-069)
+**Decision**: Maps are always editable by the GM, not editable in Player View.
+**Rationale**: GMs need quick access to make changes. Players view-only mode aligns with information filtering principles.
+
+### Q5: Circular Reference Handling (FR-096)
+**Decision**: Allow circular map references as long as parent-child relationships are respected. No special navigation handling.
+**Rationale**: If it doesn't complicate implementation, support nested navigation naturally. If users create circular loops, that's acceptable for prototype.
+
+---
+
 ## User Scenarios & Testing
 
 ### Primary User Story
@@ -56,7 +80,7 @@ A Game Master is building their Waterdeep campaign and wants to create an intera
 - **FR-008**: Cards with map interface MUST allow users to upload background images
 - **FR-009**: System MUST support common image formats (PNG, JPG, WebP) for map backgrounds
 - **FR-010**: Cards MUST be able to have multiple map images (different scales, floors, zoom levels)
-- **FR-011**: When multiple maps exist on a card, users MUST be able to switch between them with [NEEDS CLARIFICATION: tabs, dropdown, dedicated view?]
+- **FR-011**: When multiple maps exist on a card, users MUST be able to switch between them with tabs
 - **FR-012**: Uploaded map images MUST be stored as part of the card data
 - **FR-013**: Users MUST be able to replace or remove map background images
 - **FR-014**: Map images MUST display at appropriate size in map editing interface
@@ -76,7 +100,7 @@ A Game Master is building their Waterdeep campaign and wants to create an intera
 - **FR-024**: Multiple pins MUST be able to reference the same card from different positions
 - **FR-025**: Clicking a pin in map view mode MUST navigate to the referenced card
 - **FR-026**: When a pin references a card that also has map interface, users MUST be able to navigate to that card's map (nested navigation)
-- **FR-027**: System MUST handle cases where pins reference cards that are deleted with [NEEDS CLARIFICATION: delete pin, mark orphaned, show warning?]
+- **FR-027**: System MUST show a warning notification to the user when a pin references a deleted card
 
 #### Pin Cards - Visual Properties
 - **FR-028**: Pin cards MUST have predefined icon types for visual representation
@@ -102,7 +126,7 @@ A Game Master is building their Waterdeep campaign and wants to create an intera
 - **FR-044**: Zone cards MUST have user-defined purposes (visual organization, game mechanics, narrative areas, etc.)
 - **FR-045**: Zone purpose MUST be free-form text or categories defined by the user
 - **FR-046**: Zone cards MAY include metadata like faction control, encounter rates, travel time, environment type (user-defined)
-- **FR-047**: Zones MUST render as semi-transparent overlays on the map with [NEEDS CLARIFICATION: user-defined colors, or preset color scheme?]
+- **FR-047**: Zones MUST render as semi-transparent overlays on the map with user-defined colors via color picker
 - **FR-048**: Zone polygons MAY overlap - system supports multiple overlapping zones
 
 #### Layer Cards - Organization & Toggle
@@ -130,7 +154,7 @@ A Game Master is building their Waterdeep campaign and wants to create an intera
 - **FR-066**: Map editing interface MUST show all layers with toggle controls
 - **FR-067**: Map editing interface MUST show all zones with edit/delete options
 - **FR-068**: Users MUST be able to zoom in/out on map for precise pin placement
-- **FR-069**: Map editing interface MUST have "View Mode" separate from "Edit Mode" for [NEEDS CLARIFICATION: separate UI modes, or always editable?]
+- **FR-069**: Maps MUST be always editable by the GM, and view-only in Player View
 
 #### Map Viewing Interface
 - **FR-070**: Map viewing interface MUST display background image with pins, zones, and active layers
@@ -167,7 +191,7 @@ A Game Master is building their Waterdeep campaign and wants to create an intera
 - **FR-093**: Pins MUST be able to reference cards that also have map interfaces
 - **FR-094**: Users MUST be able to click a pin, navigate to the referenced card, and enter that card's map interface (nested navigation)
 - **FR-095**: Nested map navigation is a supported feature but NOT required for initial prototype functionality
-- **FR-096**: System MUST handle potential circular references (map A has pin to map B, map B has pin to map A) with [NEEDS CLARIFICATION: navigation history, breadcrumbs, or no special handling?]
+- **FR-096**: System MUST allow circular map references as long as parent-child relationships are respected, with no special navigation handling
 
 #### Default Template Integration
 - **FR-097**: Default campaign template MAY include a placeholder world map image (not critical for prototype)
@@ -211,7 +235,7 @@ A Game Master is building their Waterdeep campaign and wants to create an intera
 - [x] All mandatory sections completed
 
 ### Requirement Completeness
-- [ ] No [NEEDS CLARIFICATION] markers remain (5 clarifications needed)
+- [x] No [NEEDS CLARIFICATION] markers remain
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Scope is clearly bounded
@@ -227,6 +251,6 @@ A Game Master is building their Waterdeep campaign and wants to create an intera
 - [x] User scenarios defined
 - [x] Requirements generated
 - [x] Entities identified
-- [ ] Review checklist passed (blocked by clarifications)
+- [x] Review checklist passed
 
 ---

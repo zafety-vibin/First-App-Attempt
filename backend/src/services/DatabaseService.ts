@@ -66,6 +66,17 @@ export function runMigrations(): void {
     }
   });
 
+  // Migration 4: Feature 003 - Image Upload
+  runMigration(4, () => {
+    const migrationsDir = path.join(__dirname, '../db/migrations');
+    const filePath = path.join(migrationsDir, '004-add-images.sql');
+    if (fs.existsSync(filePath)) {
+      const sql = fs.readFileSync(filePath, 'utf-8');
+      db.exec(sql);
+      console.log(`  ✓ Applied 004-add-images.sql`);
+    }
+  });
+
   console.log('✓ Database initialized');
   logDatabaseInfo();
 }

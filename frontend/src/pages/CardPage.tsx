@@ -1,11 +1,13 @@
 /**
- * Card Page - Full page card view with editor
- * Feature: 003-create-a-notion
+ * Card Page - Full page card view with inline children
+ * Feature: 003-create-a-notion (refactored)
+ *
+ * Pages are CONTAINERS that render child blocks inline
  */
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { CardEditor } from '../components/cards/CardEditor';
+import { BlockList } from '../components/cards/BlockList';
 import { useCardContext } from '../contexts/CardContext';
 import { useCards } from '../hooks/useCards';
 
@@ -14,7 +16,7 @@ export function CardPage() {
   const navigate = useNavigate();
   const { loadCard, currentCard, loading } = useCardContext();
   const { updateCard } = useCards();
-  const [saving, setSaving] = useState(false);
+  const [childrenKey, setChildrenKey] = useState(0);
 
   useEffect(() => {
     if (cardId) {
@@ -22,17 +24,15 @@ export function CardPage() {
     }
   }, [cardId]);
 
-  const handleSave = async (content: any) => {
+  const handleTitleUpdate = async (e: React.FocusEvent<HTMLHeadingElement>) => {
     if (!currentCard) return;
-
-    try {
-      setSaving(true);
-      await updateCard(currentCard.id, { content });
-    } catch (error) {
-      console.error('Failed to save card:', error);
-      alert('Failed to save changes');
-    } finally {
-      setSaving(false);
+    const newTitle = e.currentTarget.textContent || '';
+    if (newTitle !== currentCard.title) {
+      try {
+        await updateCard(currentCard.id, { title: newTitle });
+      } catch (error) {
+        console.error('Failed to update title:', error);
+      }
     }
   };
 
@@ -52,44 +52,35 @@ export function CardPage() {
         </button>
       </div>
 
-      <div style={{ marginBottom: '1rem' }}>
-        <h1 contentEditable suppressContentEditableWarning style={{ outline: 'none' }}>
+      {/* Page Title - Editable */}
+      <div style={{ marginBottom: '2rem' }}>
+        <h1
+          contentEditable
+          suppressContentEditableWarning
+          onBlur={handleTitleUpdate}
+          style={{ outline: 'none', minHeight: '1em' }}
+        >
           {currentCard.title || 'Untitled'}
         </h1>
         <div style={{ fontSize: '12px', color: '#999' }}>
-          {currentCard.type} • Depth: {currentCard.depth} • {saving ? 'Saving...' : 'Saved'}
+          {currentCard.type} • Depth: {currentCard.depth}
         </div>
       </div>
 
-      {(currentCard.type === 'page' || currentCard.type === 'text') && (
-        <CardEditor
-          card={currentCard}
-          onUpdate={handleSave}
-          placeholder={`Start typing your ${currentCard.type} content...`}
-        />
-      )}
-
-      {currentCard.type === 'database' && (
-        <div style={{ padding: '2rem', background: '#f5f5f5', borderRadius: '4px' }}>
-          <h3>Database View</h3>
-          <p>Database views coming soon...</p>
+      {/* Database Properties Section (for database entries) */}
+      {currentCard.type === 'database' && currentCard.metadata?.schema && (
+        <div style={{ marginBottom: '2rem', padding: '1rem', background: '#f9f9f9', borderRadius: '4px' }}>
+          <h3 style={{ marginTop: 0 }}>Properties</h3>
+          <p style={{ color: '#666', fontSize: '14px' }}>
+            Database schema properties will be displayed here
+          </p>
         </div>
       )}
 
-      {currentCard.type === 'image' && currentCard.metadata?.url && (
-        <div>
-          <img
-            src={currentCard.metadata.url}
-            alt={currentCard.metadata.caption || 'Image'}
-            style={{ maxWidth: '100%', borderRadius: '4px' }}
-          />
-          {currentCard.metadata.caption && (
-            <p style={{ marginTop: '8px', color: '#666', fontStyle: 'italic' }}>
-              {currentCard.metadata.caption}
-            </p>
-          )}
-        </div>
-      )}
+      {/* Page Content = Child Blocks */}
+      <div style={{ marginBottom: '2rem' }}>
+        <BlockList key={childrenKey} parentCard={currentCard} campaignId={campaignId!} />
+      </div>
     </div>
   );
 }

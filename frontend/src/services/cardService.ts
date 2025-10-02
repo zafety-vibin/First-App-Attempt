@@ -52,7 +52,19 @@ export const cardService = {
    * Create a new card
    */
   async createCard(data: CreateCardRequest): Promise<Card> {
-    const response = await apiClient.post('/api/cards', data);
+    // Convert camelCase to snake_case for API
+    const payload = {
+      type: data.type,
+      campaign_id: data.campaignId,
+      parent_id: data.parentId || null,
+      position: data.position,
+      title: data.title || null,
+      content: data.content || null,
+      metadata: data.metadata || null,
+      cover_image_url: data.coverImageUrl || null,
+      icon_emoji: data.iconEmoji || null,
+    };
+    const response = await apiClient.post('/api/cards', payload);
     return response.data;
   },
 
@@ -60,7 +72,16 @@ export const cardService = {
    * Update a card
    */
   async updateCard(cardId: string, data: UpdateCardRequest): Promise<Card> {
-    const response = await apiClient.put(`/api/cards/${cardId}`, data);
+    // Convert camelCase to snake_case for API
+    const payload = {
+      type: data.type,
+      title: data.title,
+      content: data.content,
+      metadata: data.metadata,
+      cover_image_url: data.coverImageUrl,
+      icon_emoji: data.iconEmoji,
+    };
+    const response = await apiClient.put(`/api/cards/${cardId}`, payload);
     return response.data;
   },
 
@@ -75,7 +96,11 @@ export const cardService = {
    * Move card to new parent
    */
   async moveCard(cardId: string, data: MoveCardRequest): Promise<Card> {
-    const response = await apiClient.post(`/api/cards/${cardId}/move`, data);
+    const payload = {
+      new_parent_id: data.newParentId,
+      position: data.position,
+    };
+    const response = await apiClient.post(`/api/cards/${cardId}/move`, payload);
     return response.data;
   },
 
@@ -83,7 +108,10 @@ export const cardService = {
    * Reorder card within same parent
    */
   async reorderCard(cardId: string, data: ReorderCardRequest): Promise<Card> {
-    const response = await apiClient.post(`/api/cards/${cardId}/reorder`, data);
+    const payload = {
+      position: data.position,
+    };
+    const response = await apiClient.post(`/api/cards/${cardId}/reorder`, payload);
     return response.data;
   },
 };

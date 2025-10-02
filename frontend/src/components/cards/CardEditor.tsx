@@ -1,9 +1,12 @@
 /**
  * Card Editor Component - TipTap rich text editor
  * Feature: 003-create-a-notion
+ *
+ * UNCONTROLLED COMPONENT: Maintains own state, saves via debounce
+ * This prevents cursor jumping during typing
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -15,6 +18,7 @@ interface CardEditorProps {
   onUpdate?: (content: any) => void;
   editable?: boolean;
   placeholder?: string;
+  autoSaveDelay?: number; // ms to wait before auto-saving
 }
 
 export function CardEditor({
@@ -22,7 +26,24 @@ export function CardEditor({
   onUpdate,
   editable = true,
   placeholder = 'Start typing...',
+  autoSaveDelay = 2000, // 2 seconds default
 }: CardEditorProps) {
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const cardIdRef = useRef(card.id);
+
+  // Debounced save function
+  const debouncedSave = useCallback((content: any) => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    saveTimeoutRef.current = setTimeout(() => {
+      if (onUpdate) {
+        onUpdate(content);
+      }
+    }, autoSaveDelay);
+  }, [onUpdate, autoSaveDelay]);
+
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -36,18 +57,28 @@ export function CardEditor({
     content: card.content || { type: 'doc', content: [] },
     editable,
     onUpdate: ({ editor }) => {
-      if (onUpdate) {
-        onUpdate(editor.getJSON());
-      }
+      // Debounced save - won't trigger parent re-render immediately
+      debouncedSave(editor.getJSON());
     },
   });
 
-  // Update editor content when card changes
+  // Only update content if card ID changed (navigated to different card)
+  // Don't update on content changes to avoid cursor jumps
   useEffect(() => {
-    if (editor && card.content && editor.getJSON() !== card.content) {
-      editor.commands.setContent(card.content);
+    if (editor && card.id !== cardIdRef.current) {
+      cardIdRef.current = card.id;
+      editor.commands.setContent(card.content || { type: 'doc', content: [] });
     }
-  }, [editor, card.content]);
+  }, [editor, card.id, card.content]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, []);
 
   if (!editor) {
     return null;

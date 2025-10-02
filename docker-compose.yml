@@ -16,12 +16,6 @@ services:
       - keycloak-data:/opt/keycloak/data
     networks:
       - vvd-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health/ready"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
 
   backend:
     build:
@@ -46,14 +40,7 @@ services:
     networks:
       - vvd-network
     depends_on:
-      keycloak:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
+      - keycloak
 
   frontend:
     build:
@@ -76,8 +63,7 @@ services:
     networks:
       - vvd-network
     depends_on:
-      backend:
-        condition: service_healthy
+      - backend
 
 volumes:
   keycloak-data:

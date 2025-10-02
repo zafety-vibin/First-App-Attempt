@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(start chrome:*)",
+      "Read(//c/Program Files/Google/Chrome/Application/**)",
+      "Bash(cmd /c:*)",
+      "Bash(curl:*)",
+      "mcp__chrome-devtools__take_snapshot",
+      "mcp__chrome-devtools__list_pages",
+      "mcp__chrome-devtools__select_page",
+      "mcp__chrome-devtools__new_page",
+      "mcp__chrome-devtools__click",
+      "mcp__chrome-devtools__take_screenshot",
+      "SlashCommand(/specify Create the authentication flow and campaign management system including: public landing page with app information and Keycloak login, post-login campaign selection/management page, and customizable campaign landing page with Import and Planning AI chat buttons)",
+      "Bash(.specify/scripts/bash/create-new-feature.sh:*)",
+      "Read(//c/Users/zmanl/Projects/VVD-mimic/**)",
+      "Bash(.specify/scripts/bash/setup-plan.sh:*)",
+      "Bash(.specify/scripts/bash/check-prerequisites.sh:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

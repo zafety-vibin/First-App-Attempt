@@ -1,0 +1,17 @@
+FROM quay.io/keycloak/keycloak:latest
+
+# Copy realm configuration
+COPY realm-export.json /opt/keycloak/data/import/vvd-mimic-realm.json
+
+# Set Keycloak to development mode with realm import
+ENV KC_DB=dev-file
+ENV KEYCLOAK_ADMIN=admin
+ENV KEYCLOAK_ADMIN_PASSWORD=admin
+
+# Install curl for healthcheck
+USER root
+RUN microdnf install -y curl && microdnf clean all
+USER keycloak
+
+# Start Keycloak with import
+ENTRYPOINT ["/opt/keycloak/bin/kc.sh", "start-dev", "--import-realm"]

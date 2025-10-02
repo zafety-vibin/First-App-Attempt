@@ -6,6 +6,7 @@
 import express, { Request, Response } from 'express';
 import { CampaignService } from '../services/CampaignService';
 import { protect } from '../middleware/auth';
+import { db } from '../services/DatabaseService';
 
 const router = express.Router();
 
@@ -152,6 +153,37 @@ router.delete('/:id', (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Delete campaign error:', error);
     res.status(500).json({ error: 'Failed to delete campaign' });
+  }
+});
+
+/**
+ * GET /api/campaigns/:id/cards
+ * Get all cards in a campaign (for entity-reference pickers)
+ */
+router.get('/:id/cards', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user!.id;
+
+    // Verify campaign ownership
+    const campaign = db.prepare('SELECT * FROM campaigns WHERE id = ? AND owner_id = ?').get(id, userId);
+    if (!campaign) {
+      res.status(403).json({ error: 'Campaign not found or access denied' });
+      return;
+    }
+
+    // Get all cards in campaign with path for display
+    const cards = db.prepare(`
+      SELECT id, title, type, parent_id, position, path
+      FROM cards
+      WHERE campaign_id = ?
+      ORDER BY path ASC, position ASC
+    `).all(id);
+
+    res.status(200).json(cards);
+  } catch (error: any) {
+    console.error('Get campaign cards error:', error);
+    res.status(500).json({ error: 'Failed to fetch campaign cards' });
   }
 });
 

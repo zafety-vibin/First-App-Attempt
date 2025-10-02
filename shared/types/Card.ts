@@ -135,6 +135,7 @@ export interface CreateCardRequest {
  * Update Card Request (from client)
  */
 export interface UpdateCardRequest {
+  type?: CardType; // Allow type transformation (e.g., text → database)
   title?: string | null;
   content?: any | null;
   metadata?: any | null;

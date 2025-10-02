@@ -168,7 +168,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 router.put('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { title, content, metadata, cover_image_url, icon_emoji, information_level_id } = req.body;
+    const { type, title, content, metadata, cover_image_url, icon_emoji, information_level_id } = req.body;
     const userId = req.user!.id;
 
     // Verify ownership
@@ -186,6 +186,11 @@ router.put('/:id', async (req: Request, res: Response) => {
     // Build update query
     const updates: string[] = [];
     const values: any[] = [];
+
+    if (type !== undefined) {
+      updates.push('type = ?');
+      values.push(type);
+    }
 
     if (title !== undefined) {
       updates.push('title = ?');

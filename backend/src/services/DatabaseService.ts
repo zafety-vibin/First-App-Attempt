@@ -66,16 +66,27 @@ export function runMigrations(): void {
     }
   });
 
-  // Migration 4: Feature 004 - Information Level-Based Filtering
+  // Migration 4: Feature 003 - Image Upload
   runMigration(4, () => {
     const migrationsDir = path.join(__dirname, '../db/migrations');
-    const migration004Files = [
-      '004-add-information-levels.sql',
-      '004-extend-cards.sql',
-      '004-add-filtering-indexes.sql',
+    const filePath = path.join(migrationsDir, '004-add-images.sql');
+    if (fs.existsSync(filePath)) {
+      const sql = fs.readFileSync(filePath, 'utf-8');
+      db.exec(sql);
+      console.log(`  ✓ Applied 004-add-images.sql`);
+    }
+  });
+
+  // Migration 5: Feature 004 - Information Level-Based Filtering
+  runMigration(5, () => {
+    const migrationsDir = path.join(__dirname, '../db/migrations');
+    const migration005Files = [
+      '005-add-information-levels.sql',
+      '005-extend-cards.sql',
+      '005-add-filtering-indexes.sql',
     ];
 
-    for (const file of migration004Files) {
+    for (const file of migration005Files) {
       const filePath = path.join(migrationsDir, file);
       if (fs.existsSync(filePath)) {
         const sql = fs.readFileSync(filePath, 'utf-8');

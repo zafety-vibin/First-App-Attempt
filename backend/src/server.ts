@@ -12,6 +12,7 @@ import settingRoutes from './routes/settings';
 import cardRoutes from './routes/cards';
 import databaseCardRoutes from './routes/database-cards';
 import informationLevelRoutes from './routes/information-levels';
+import { imageServeRouter, imageUploadRouter } from './routes/images';
 import healthRoutes from './routes/health';
 
 const app = express();
@@ -27,8 +28,12 @@ app.use('/api/auth', authRoutes);
 app.use('/api/campaigns', campaignRoutes);
 app.use('/api/settings', settingRoutes);
 app.use('/api/information-levels', informationLevelRoutes); // Feature 004
-app.use('/api/cards', cardRoutes);
+// Image routes (Feature 003)
+app.use('/api/images', imageServeRouter);  // GET /api/images/:id (public)
+app.use('/api/cards', imageUploadRouter);  // POST /api/cards/:id/image (protected)
+// Database card routes MUST come before general card routes (more specific routes first)
 app.use('/api/cards', databaseCardRoutes);
+app.use('/api/cards', cardRoutes);
 
 // Error handler (must be last)
 app.use(errorHandler);

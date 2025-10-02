@@ -1,6 +1,6 @@
 /**
  * Campaign Homepage Component
- * GM view of campaign workspace (placeholder for future features)
+ * GM view of campaign workspace with card tree
  */
 
 import React, { useState, useEffect } from 'react';
@@ -8,6 +8,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { campaignService } from '../services/campaignService';
 import { Campaign } from '../../shared/types/Campaign';
 import { ViewModeToggle } from './ViewModeToggle';
+import { BlockList } from './cards/BlockList';
 import { useInformationLevel } from '../contexts/InformationLevelContext';
 import { useViewMode } from '../contexts/ViewModeContext';
 
@@ -15,7 +16,27 @@ export function CampaignHomepage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [campaign, setCampaign] = useState<Campaign | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [campaignLoading, setCampaignLoading] = useState(true);
+
+  // Create a virtual "homepage card" to act as parent for root-level cards
+  // Using null as id signals BlockList to load root cards (parent_id IS NULL)
+  const homepageCard = campaign ? {
+    id: null as any, // null signals root-level cards
+    type: 'page' as const,
+    parentId: null,
+    campaignId: campaign.id,
+    path: `/${campaign.id}`,
+    position: 0,
+    depth: 0,
+    title: campaign.name,
+    content: null,
+    metadata: null,
+    coverImageUrl: null,
+    iconEmoji: null,
+    informationLevelId: 'system', // Feature 004
+    createdAt: campaign.createdAt,
+    updatedAt: campaign.updatedAt,
+  } : null;
 
   // Feature 004: Information levels and view mode
   const { loadLevels, levels, loading: levelsLoading } = useInformationLevel();
@@ -29,7 +50,7 @@ export function CampaignHomepage() {
 
   const loadCampaign = async (campaignId: string) => {
     try {
-      setLoading(true);
+      setCampaignLoading(true);
       const data = await campaignService.getCampaign(campaignId);
       setCampaign(data);
 
@@ -40,11 +61,12 @@ export function CampaignHomepage() {
       alert('Failed to load campaign');
       navigate('/campaigns');
     } finally {
-      setLoading(false);
+      setCampaignLoading(false);
     }
   };
 
-  if (loading) {
+
+  if (campaignLoading) {
     return <div style={{ padding: '2rem' }}>Loading campaign...</div>;
   }
 
@@ -53,7 +75,7 @@ export function CampaignHomepage() {
   }
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
+    <div style={{ padding: '2rem', maxWidth: '900px', margin: '0 auto' }}>
       {/* Feature 004: View Mode Toggle */}
       <ViewModeToggle />
 
@@ -61,76 +83,14 @@ export function CampaignHomepage() {
         <button onClick={() => navigate('/campaigns')}>← Back to Campaigns</button>
       </div>
 
-      <h1>{campaign.name}</h1>
+      <h1 contentEditable suppressContentEditableWarning style={{ outline: 'none', minHeight: '1em', marginBottom: '2rem' }}>
+        {campaign.name}
+      </h1>
 
-      {/* Feature 004: Current view mode indicator */}
-      <p style={{ fontSize: '0.875rem', color: '#666', marginTop: '0.5rem' }}>
-        Current View: <strong>{viewMode === 'dm' ? 'DM View' : 'Player View'}</strong>
-      </p>
-
-      <div style={{ marginTop: '2rem' }}>
-        <h2>Campaign Homepage</h2>
-        <p style={{ color: '#666' }}>
-          This is the GM workspace for your campaign. Future features will include:
-        </p>
-        <ul style={{ color: '#666' }}>
-          <li>Card-based content organization (Feature 003)</li>
-          <li>Information level filtering (Feature 004)</li>
-          <li>AI Import & Planning tools (Feature 005)</li>
-          <li>Interactive maps (Feature 007)</li>
-          <li>Public campaign sharing (Feature 010)</li>
-        </ul>
-      </div>
-
-      <div style={{ marginTop: '2rem', padding: '1rem', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
-        <h3>Campaign Details</h3>
-        <p><strong>ID:</strong> {campaign.id}</p>
-        <p><strong>Public URL ID:</strong> {campaign.publicUrlId}</p>
-        <p><strong>Public Access:</strong> {campaign.publicAccessEnabled ? 'Enabled' : 'Disabled'}</p>
-        <p><strong>Created:</strong> {new Date(campaign.createdAt).toLocaleString()}</p>
-        <p><strong>Updated:</strong> {new Date(campaign.updatedAt).toLocaleString()}</p>
-      </div>
-
-      {/* Feature 004: Information Levels */}
-      <div style={{ marginTop: '2rem', padding: '1rem', backgroundColor: '#f0f9ff', borderRadius: '4px' }}>
-        <h3>Information Levels (Feature 004)</h3>
-        {levelsLoading ? (
-          <p>Loading information levels...</p>
-        ) : (
-          <div>
-            <p><strong>Total Levels:</strong> {levels.length}</p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.5rem', marginTop: '1rem' }}>
-              {levels.map(level => (
-                <div
-                  key={level.id}
-                  style={{
-                    padding: '0.75rem',
-                    border: `2px solid ${level.color}`,
-                    borderRadius: '4px',
-                    backgroundColor: 'white',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <div
-                      style={{
-                        width: '12px',
-                        height: '12px',
-                        borderRadius: '50%',
-                        backgroundColor: level.color,
-                      }}
-                    />
-                    <strong>{level.name}</strong>
-                    {level.hierarchical && <span title="Hidden in Player View">🔒</span>}
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.25rem' }}>
-                    {level.type === 'default' ? 'Default' : 'Custom'}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
+      {/* Campaign content - rendered as blocks just like a page (Feature 003) */}
+      {homepageCard && (
+        <BlockList parentCard={homepageCard} campaignId={id!} />
+      )}
     </div>
   );
 }

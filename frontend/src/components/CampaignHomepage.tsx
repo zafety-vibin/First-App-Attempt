@@ -8,6 +8,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { campaignService } from '../services/campaignService';
 import { Campaign } from '../../../shared/types/Campaign';
 import { CardTree } from './cards/CardTree';
+import { SlashCommandPalette } from './cards/SlashCommandPalette';
 import { useCardContext } from '../contexts/CardContext';
 import { useCards } from '../hooks/useCards';
 
@@ -16,9 +17,10 @@ export function CampaignHomepage() {
   const navigate = useNavigate();
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [campaignLoading, setCampaignLoading] = useState(true);
-  const { loadCampaignCards, cards, loading: cardsLoading } = useCardContext();
+  const { loadCampaignCards, cards, loading: cardsLoading, refreshCards } = useCardContext();
   const { createCard } = useCards();
   const [showNewCardForm, setShowNewCardForm] = useState(false);
+  const [showSlashCommands, setShowSlashCommands] = useState(false);
   const [newCardTitle, setNewCardTitle] = useState('');
   const [newCardType, setNewCardType] = useState<'page' | 'database' | 'text'>('page');
 
@@ -28,6 +30,19 @@ export function CampaignHomepage() {
       loadCampaignCards(id);
     }
   }, [id]);
+
+  // Keyboard shortcut for slash commands
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === '/' && !showNewCardForm && !showSlashCommands) {
+        e.preventDefault();
+        setShowSlashCommands(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showNewCardForm, showSlashCommands]);
 
   const loadCampaign = async (campaignId: string) => {
     try {
@@ -181,6 +196,38 @@ export function CampaignHomepage() {
         )}
 
         <CardTree cards={cards} campaignId={id!} loading={cardsLoading} />
+      </div>
+
+      {/* Slash Command Palette */}
+      <SlashCommandPalette
+        campaignId={id!}
+        position={cards.length}
+        open={showSlashCommands}
+        onClose={() => setShowSlashCommands(false)}
+        onCardCreated={async () => {
+          await refreshCards();
+        }}
+      />
+
+      {/* Hint text */}
+      <div style={{
+        position: 'fixed',
+        bottom: '16px',
+        right: '16px',
+        padding: '8px 12px',
+        background: '#333',
+        color: 'white',
+        borderRadius: '4px',
+        fontSize: '12px',
+        opacity: showSlashCommands ? 0 : 0.7,
+        transition: 'opacity 0.2s',
+      }}>
+        Press <kbd style={{
+          background: '#555',
+          padding: '2px 6px',
+          borderRadius: '3px',
+          fontFamily: 'monospace',
+        }}>/</kbd> for commands
       </div>
     </div>
   );

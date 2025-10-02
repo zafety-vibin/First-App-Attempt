@@ -16,7 +16,9 @@
       "Read(//c/Users/zmanl/Projects/wrldbldr-mcp-manager/**)",
       "Bash(.specify/scripts/bash/setup-plan.sh:*)",
       "Bash(.specify/scripts/bash/check-prerequisites.sh:*)",
-      "Bash(docker-compose logs:*)"
+      "Bash(docker-compose logs:*)",
+      "Bash(docker-compose:*)",
+      "Bash(docker exec:*)"
     ],
     "deny": [],
     "ask": []

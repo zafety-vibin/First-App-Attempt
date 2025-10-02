@@ -61,6 +61,7 @@ services:
       - ./frontend/index.html:/app/index.html
       - ./frontend/vite.config.ts:/app/vite.config.ts
       - ./frontend/package.json:/app/package.json
+      - ./shared:/app/shared
     networks:
       - wrldbldr-network
     depends_on:

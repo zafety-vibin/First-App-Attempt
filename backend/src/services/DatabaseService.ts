@@ -66,6 +66,25 @@ export function runMigrations(): void {
     }
   });
 
+  // Migration 4: Feature 004 - Information Level-Based Filtering
+  runMigration(4, () => {
+    const migrationsDir = path.join(__dirname, '../db/migrations');
+    const migration004Files = [
+      '004-add-information-levels.sql',
+      '004-extend-cards.sql',
+      '004-add-filtering-indexes.sql',
+    ];
+
+    for (const file of migration004Files) {
+      const filePath = path.join(migrationsDir, file);
+      if (fs.existsSync(filePath)) {
+        const sql = fs.readFileSync(filePath, 'utf-8');
+        db.exec(sql);
+        console.log(`  ✓ Applied ${file}`);
+      }
+    }
+  });
+
   console.log('✓ Database initialized');
   logDatabaseInfo();
 }

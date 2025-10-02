@@ -2,28 +2,34 @@
  * Cards routes
  * Based on: specs/003-create-a-notion/contracts/cards.yaml
  * Feature: 003-create-a-notion
+ * Extended in Feature: 004-create-a-tagging (added view mode filtering, information_level_id)
  */
 
 import express, { Request, Response } from 'express';
 import { CardService } from '../services/CardService';
+import { ViewModeService } from '../services/ViewModeService';
 import { protect } from '../middleware/auth';
+import { extractViewMode } from '../middleware/viewMode';
 import { db } from '../services/DatabaseService';
 import { rowToCard, CardRow } from '../models/Card';
 
 const router = express.Router();
 const cardService = new CardService();
+const viewModeService = new ViewModeService();
 
 // All routes require authentication
 router.use(protect);
+router.use(extractViewMode);
 
 /**
  * GET /api/cards
- * List root cards for campaign
+ * List root cards for campaign (with view mode filtering - Feature 004)
  */
 router.get('/', async (req: Request, res: Response) => {
   try {
     const { campaign_id, type } = req.query;
     const userId = req.user!.id;
+    const viewMode = req.viewMode || 'dm';
 
     if (!campaign_id || typeof campaign_id !== 'string') {
       res.status(400).json({ error: 'campaign_id query parameter is required' });
@@ -49,9 +55,15 @@ router.get('/', async (req: Request, res: Response) => {
     query += ' ORDER BY position ASC';
 
     const rows = db.prepare(query).all(...params) as CardRow[];
-    const cards = rows.map(rowToCard);
+    const allCards = rows.map(rowToCard);
 
-    res.status(200).json({ cards });
+    // Feature 004: Apply view mode filtering
+    const filtered = viewModeService.filterCards(allCards, viewMode);
+
+    res.status(200).json({
+      cards: filtered.visibleCards,
+      filtered_count: filtered.filteredCount,
+    });
   } catch (error: any) {
     console.error('List cards error:', error);
     res.status(500).json({ error: 'Failed to fetch cards' });
@@ -60,11 +72,11 @@ router.get('/', async (req: Request, res: Response) => {
 
 /**
  * POST /api/cards
- * Create new card
+ * Create new card (with information_level_id - Feature 004)
  */
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { type, campaign_id, parent_id, position, title, content, metadata, cover_image_url, icon_emoji } = req.body;
+    const { type, campaign_id, parent_id, position, title, content, metadata, cover_image_url, icon_emoji, information_level_id } = req.body;
     const userId = req.user!.id;
 
     // Validate required fields
@@ -90,6 +102,7 @@ router.post('/', async (req: Request, res: Response) => {
         metadata,
         coverImageUrl: cover_image_url,
         iconEmoji: icon_emoji,
+        informationLevelId: information_level_id, // Feature 004
       },
       userId
     );
@@ -113,12 +126,13 @@ router.post('/', async (req: Request, res: Response) => {
 
 /**
  * GET /api/cards/:id
- * Get card by ID
+ * Get card by ID (with view mode filtering - Feature 004)
  */
 router.get('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const userId = req.user!.id;
+    const viewMode = req.viewMode || 'dm';
 
     const row = db.prepare(`
       SELECT c.* FROM cards c
@@ -127,11 +141,19 @@ router.get('/:id', async (req: Request, res: Response) => {
     `).get(id, userId) as CardRow | undefined;
 
     if (!row) {
-      res.status(404).json({ error: 'Card not found or access denied' });
+      res.status(404).json({ error: 'Card not found' });
       return;
     }
 
     const card = rowToCard(row);
+
+    // Feature 004: Check view mode visibility
+    if (!viewModeService.isCardVisible(card.informationLevelId, viewMode)) {
+      // Return 404 instead of 403 to not reveal existence
+      res.status(404).json({ error: 'Card not found' });
+      return;
+    }
+
     res.status(200).json(card);
   } catch (error: any) {
     console.error('Get card error:', error);
@@ -141,12 +163,12 @@ router.get('/:id', async (req: Request, res: Response) => {
 
 /**
  * PUT /api/cards/:id
- * Update card content (not hierarchy)
+ * Update card content (not hierarchy) (with information_level_id - Feature 004)
  */
 router.put('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { title, content, metadata, cover_image_url, icon_emoji } = req.body;
+    const { title, content, metadata, cover_image_url, icon_emoji, information_level_id } = req.body;
     const userId = req.user!.id;
 
     // Verify ownership
@@ -188,6 +210,12 @@ router.put('/:id', async (req: Request, res: Response) => {
     if (icon_emoji !== undefined) {
       updates.push('icon_emoji = ?');
       values.push(icon_emoji);
+    }
+
+    // Feature 004: Support information_level_id updates
+    if (information_level_id !== undefined) {
+      updates.push('information_level_id = ?');
+      values.push(information_level_id);
     }
 
     if (updates.length === 0) {

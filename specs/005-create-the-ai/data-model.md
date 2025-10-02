@@ -50,7 +50,7 @@
 
 ## 1. ImportSession
 
-**Purpose**: Tracks AI Import workflow instances where the GM uploads files/text for the Import AI to extract entities and suggest knowledge graph updates.
+**Purpose**: Tracks AI Import workflow instances where the GM uploads files/text for the Import AI to extract entities.
 
 **Lifecycle**: Created → Uploading → Processing → Pending Approval → Approved/Reverted
 

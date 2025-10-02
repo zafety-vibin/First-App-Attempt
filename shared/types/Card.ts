@@ -1,12 +1,14 @@
 /**
  * Card Entity - Polymorphic content unit (Notion-inspired)
  * Feature: 003-create-a-notion
+ * Extended in Feature: 004-create-a-tagging (added informationLevelId)
  *
  * Supports infinite nesting via adjacency list + materialized path.
  * Types: page, database, text, image
  */
 
 import { DatabaseCardMetadata } from './DatabaseSchema';
+import { InformationLevel } from './InformationLevel';
 
 /**
  * Card Type Discriminator
@@ -29,6 +31,8 @@ export interface BaseCard {
   metadata: any | null; // Type-specific metadata
   coverImageUrl: string | null; // Cover image (page cards only)
   iconEmoji: string | null; // Icon emoji (page cards only)
+  informationLevelId: string; // FK to information_levels (Feature 004)
+  informationLevel?: InformationLevel; // Optional joined data (Feature 004)
   createdAt: Date;
   updatedAt: Date;
 }
@@ -124,6 +128,7 @@ export interface CreateCardRequest {
   metadata?: any | null;
   coverImageUrl?: string | null;
   iconEmoji?: string | null;
+  informationLevelId?: string; // Feature 004: defaults to 'system' if not provided
 }
 
 /**
@@ -135,6 +140,7 @@ export interface UpdateCardRequest {
   metadata?: any | null;
   coverImageUrl?: string | null;
   iconEmoji?: string | null;
+  informationLevelId?: string; // Feature 004: change information level
 }
 
 /**

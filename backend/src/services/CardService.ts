@@ -1,6 +1,7 @@
 /**
  * CardService - Business logic for card operations
  * Feature: 003-create-a-notion
+ * Extended in Feature: 004-create-a-tagging (added information level validation)
  *
  * Implements:
  * - Circular reference detection (DFS cycle detection)
@@ -8,14 +9,21 @@
  * - Depth validation (50 level limit)
  * - Subtree deletion with CASCADE
  * - Entity reference validation
+ * - Information level assignment and validation (Feature 004)
  */
 
 import { db } from './DatabaseService';
 import { Card, CreateCardRequest } from '../../shared/types/Card';
 import { rowToCard, cardToRow, CardRow, generateCardId } from '../models/Card';
+import { InformationLevelService } from './InformationLevelService';
 
 export class CardService {
   private readonly MAX_DEPTH = 50;
+  private informationLevelService: InformationLevelService;
+
+  constructor() {
+    this.informationLevelService = new InformationLevelService();
+  }
 
   /**
    * Create new card with hierarchy validation
@@ -32,6 +40,15 @@ export class CardService {
       const parent = db.prepare('SELECT * FROM cards WHERE id = ? AND campaign_id = ?').get(data.parentId, data.campaignId);
       if (!parent) {
         throw new Error('Parent card not found');
+      }
+    }
+
+    // Feature 004: Validate and default information level
+    const informationLevelId = data.informationLevelId || 'system';
+    if (informationLevelId !== 'system') {
+      const isValid = await this.informationLevelService.validateLevelForCampaign(informationLevelId, data.campaignId);
+      if (!isValid) {
+        throw new Error('Information level not found or not available for this campaign');
       }
     }
 
@@ -60,6 +77,7 @@ export class CardService {
       metadata: data.metadata || null,
       coverImageUrl: data.coverImageUrl || null,
       iconEmoji: data.iconEmoji || null,
+      informationLevelId, // Feature 004
       createdAt: now,
       updatedAt: now,
     } as Card;
@@ -70,13 +88,13 @@ export class CardService {
     db.prepare(`
       INSERT INTO cards (
         id, type, parent_id, campaign_id, path, position, depth,
-        title, content, metadata, cover_image_url, icon_emoji,
+        title, content, metadata, cover_image_url, icon_emoji, information_level_id,
         created_at, updated_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       row.id, row.type, row.parent_id, row.campaign_id, row.path, row.position, row.depth,
-      row.title, row.content, row.metadata, row.cover_image_url, row.icon_emoji,
+      row.title, row.content, row.metadata, row.cover_image_url, row.icon_emoji, row.information_level_id,
       row.created_at, row.updated_at
     );
 

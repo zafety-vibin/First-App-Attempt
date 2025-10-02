@@ -2,6 +2,7 @@
  * Card model - Polymorphic content unit (Notion-inspired)
  * Based on: specs/003-create-a-notion/data-model.md
  * Feature: 003-create-a-notion
+ * Extended in Feature: 004-create-a-tagging (added information_level_id)
  *
  * Supports infinite nesting via adjacency list + materialized path.
  */
@@ -24,6 +25,7 @@ export interface CardRow {
   metadata: string | null; // JSONB stored as string
   cover_image_url: string | null;
   icon_emoji: string | null;
+  information_level_id: string; // Feature 004: FK to information_levels
   created_at: number; // Unix timestamp
   updated_at: number; // Unix timestamp
 }
@@ -49,6 +51,7 @@ export function rowToCard(row: CardRow): Card {
     metadata,
     coverImageUrl: row.cover_image_url,
     iconEmoji: row.icon_emoji,
+    informationLevelId: row.information_level_id, // Feature 004
     createdAt: new Date(row.created_at * 1000),
     updatedAt: new Date(row.updated_at * 1000),
   };
@@ -82,6 +85,7 @@ export function cardToRow(card: Partial<Card>): Partial<CardRow> {
 
   if (card.coverImageUrl !== undefined) row.cover_image_url = card.coverImageUrl;
   if (card.iconEmoji !== undefined) row.icon_emoji = card.iconEmoji;
+  if (card.informationLevelId !== undefined) row.information_level_id = card.informationLevelId; // Feature 004
 
   if (card.createdAt !== undefined)
     row.created_at = Math.floor(card.createdAt.getTime() / 1000);

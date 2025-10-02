@@ -1,6 +1,7 @@
 /**
  * Database Schema Types
  * Feature: 003-create-a-notion
+ * Extended in Feature: 004-create-a-tagging (added hierarchical column flag, player-knowledge-text type)
  *
  * User-defined database schemas with flexible columns and multiple views.
  * Stored as JSONB in database card metadata column.
@@ -29,11 +30,13 @@ export interface DatabaseColumn {
   defaultValue?: any; // Type-dependent
   options?: DatabaseColumnOptions; // For select/multi-select
   entityType?: 'card'; // For entity-reference (future: 'node' for graph nodes)
+  hierarchical?: boolean; // Feature 004: Always hidden in Player View (default: false)
 }
 
 /**
  * Column Types
  * MVP: text, number, date, select, multi-select, entity-reference
+ * Feature 004: player-knowledge-text (partial visibility for secret entries)
  * Future: checkbox, URL, file, formula
  */
 export type DatabaseColumnType =
@@ -42,7 +45,8 @@ export type DatabaseColumnType =
   | 'date'
   | 'select'
   | 'multi-select'
-  | 'entity-reference';
+  | 'entity-reference'
+  | 'player-knowledge-text'; // Feature 004: Enables partial visibility
 
 /**
  * Column Options (for select/multi-select types)

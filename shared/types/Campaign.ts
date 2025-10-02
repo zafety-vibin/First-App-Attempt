@@ -5,6 +5,7 @@ export interface Campaign {
   id: string;
   name: string;
   ownerId: string;
+  settingId: string | null;
   publicUrlId: string | null;
   publicAccessEnabled: boolean;
   publicPassword: string | null;
@@ -20,6 +21,7 @@ export interface CampaignRow {
   id: string;
   name: string;
   owner_id: string;
+  setting_id: string | null;
   public_url_id: string | null;
   public_access_enabled: number; // SQLite boolean (0 or 1)
   public_password: string | null;
@@ -34,6 +36,7 @@ export interface CampaignRow {
 export interface CreateCampaignInput {
   name: string;
   ownerId: string;
+  settingId?: string | null;
 }
 
 /**

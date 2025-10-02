@@ -5,7 +5,7 @@ services:
     build:
       context: ./keycloak
       dockerfile: Dockerfile.keycloak
-    container_name: vvd-keycloak
+    container_name: wrldbldr-keycloak
     ports:
       - "8080:8080"
     environment:
@@ -15,20 +15,20 @@ services:
     volumes:
       - keycloak-data:/opt/keycloak/data
     networks:
-      - vvd-network
+      - wrldbldr-network
 
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: vvd-backend
+    container_name: wrldbldr-backend
     ports:
       - "3001:3001"
     environment:
-      DATABASE_PATH: /app/data/vvd-mimic.db
+      DATABASE_PATH: /app/data/wrldbldr-mcp-manager.db
       KEYCLOAK_URL: http://keycloak:8080
-      KEYCLOAK_REALM: vvd-mimic
-      KEYCLOAK_CLIENT_ID: vvd-mimic-backend
+      KEYCLOAK_REALM: wrldbldr-mcp-manager
+      KEYCLOAK_CLIENT_ID: wrldbldr-mcp-manager-backend
       CORS_ORIGIN: http://localhost:3000
       PORT: 3001
       NODE_ENV: development
@@ -37,8 +37,9 @@ services:
       - ./data:/app/data
       - ./backend/src:/app/src
       - ./backend/package.json:/app/package.json
+      - ./shared:/app/shared
     networks:
-      - vvd-network
+      - wrldbldr-network
     depends_on:
       - keycloak
 
@@ -46,14 +47,14 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: vvd-frontend
+    container_name: wrldbldr-frontend
     ports:
       - "3000:3000"
     environment:
       VITE_API_URL: http://localhost:3001
       VITE_KEYCLOAK_URL: http://localhost:8080
-      VITE_KEYCLOAK_REALM: vvd-mimic
-      VITE_KEYCLOAK_CLIENT_ID: vvd-mimic-frontend
+      VITE_KEYCLOAK_REALM: wrldbldr-mcp-manager
+      VITE_KEYCLOAK_CLIENT_ID: wrldbldr-mcp-manager-frontend
       NODE_ENV: development
     volumes:
       - ./frontend/src:/app/src
@@ -61,7 +62,7 @@ services:
       - ./frontend/vite.config.ts:/app/vite.config.ts
       - ./frontend/package.json:/app/package.json
     networks:
-      - vvd-network
+      - wrldbldr-network
     depends_on:
       - backend
 
@@ -69,5 +70,5 @@ volumes:
   keycloak-data:
 
 networks:
-  vvd-network:
+  wrldbldr-network:
     driver: bridge

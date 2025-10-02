@@ -1,7 +1,7 @@
 {
-  "name": "vvd-mimic-frontend",
+  "name": "wrldbldr-mcp-manager-frontend",
   "version": "1.0.0",
-  "description": "VVD-mimic frontend React application",
+  "description": "Wrldbldr MCP Manager frontend React application",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",

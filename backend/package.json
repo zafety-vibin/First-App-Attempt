@@ -1,7 +1,7 @@
 {
-  "name": "vvd-mimic-backend",
+  "name": "wrldbldr-mcp-manager-backend",
   "version": "1.0.0",
-  "description": "VVD-mimic backend API with Express and Keycloak authentication",
+  "description": "Wrldbldr MCP Manager backend API with Express and Keycloak authentication",
   "main": "dist/server.js",
   "scripts": {
     "dev": "nodemon --watch src --ext ts --exec ts-node src/server.ts",

@@ -12,18 +12,18 @@ Sync Impact Report:
 - Follow-up TODOs: None
 -->
 
-# VVD-mimic Constitution
+# Wrldbldr MCP Manager Constitution
 
 ## Mission
 
-VVD-mimic provides Game Masters with a campaign database and management tool that solves the "plan twice" problem. Game Masters already maintain detailed notes in documents; this system eliminates the tedious manual rewrite into a structured database through AI-assisted workflow improvements while providing the organizational benefits of a VVD-style wiki and database.
+Wrldbldr MCP Manager provides Game Masters with a campaign database and management tool that solves the "plan twice" problem. Game Masters already maintain detailed notes in documents; this system eliminates the tedious manual rewrite into a structured database through AI-assisted workflow improvements while providing the organizational benefits of a VVD-style wiki and database.
 
 ## Core Principles
 
 ### I. Workflow-First Design (NON-NEGOTIABLE)
 Users MUST NOT have to "plan twice" - maintaining notes in external tools and then manually re-entering them into the application is unacceptable. The system MUST provide AI-assisted bulk import and transformation of existing notes.
 
-**Rationale**: The core problem VVD-mimic solves is eliminating the tedious rewrite workflow (Google Docs → manual database entry). Every feature must respect this principle or it undermines the project's primary value proposition.
+**Rationale**: The core problem Wrldbldr MCP Manager solves is eliminating the tedious rewrite workflow (Google Docs → manual database entry). Every feature must respect this principle or it undermines the project's primary value proposition.
 
 **Implementation Requirements**:
 - MCP integration for bulk API-driven changes

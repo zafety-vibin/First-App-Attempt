@@ -13,9 +13,10 @@
       "mcp__chrome-devtools__take_screenshot",
       "SlashCommand(/specify Create the authentication flow and campaign management system including: public landing page with app information and Keycloak login, post-login campaign selection/management page, and customizable campaign landing page with Import and Planning AI chat buttons)",
       "Bash(.specify/scripts/bash/create-new-feature.sh:*)",
-      "Read(//c/Users/zmanl/Projects/VVD-mimic/**)",
+      "Read(//c/Users/zmanl/Projects/wrldbldr-mcp-manager/**)",
       "Bash(.specify/scripts/bash/setup-plan.sh:*)",
-      "Bash(.specify/scripts/bash/check-prerequisites.sh:*)"
+      "Bash(.specify/scripts/bash/check-prerequisites.sh:*)",
+      "Bash(docker-compose logs:*)"
     ],
     "deny": [],
     "ask": []

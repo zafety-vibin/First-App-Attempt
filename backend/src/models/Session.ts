@@ -3,7 +3,7 @@
  * Based on: specs/002-create-the-authentication/data-model.md
  */
 
-import { Session, SessionRow } from '../../../shared/types/Session';
+import { Session, SessionRow } from '../../shared/types/Session';
 
 /**
  * Transform database row to Session entity

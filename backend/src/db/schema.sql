@@ -1,4 +1,4 @@
--- VVD-mimic Database Schema
+-- Wrldbldr MCP Manager Database Schema
 -- SQLite3 with Better-SQLite3
 -- Feature 002: Authentication Flow & Campaign Management
 

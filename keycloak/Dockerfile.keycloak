@@ -1,7 +1,7 @@
 FROM quay.io/keycloak/keycloak:latest
 
 # Copy realm configuration
-COPY realm-export.json /opt/keycloak/data/import/vvd-mimic-realm.json
+COPY realm-export.json /opt/keycloak/data/import/wrldbldr-mcp-manager-realm.json
 
 # Set Keycloak to development mode with realm import
 ENV KC_DB=dev-file

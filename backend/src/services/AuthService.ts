@@ -7,11 +7,10 @@
  */
 
 import { db } from './DatabaseService';
-import { User } from '../../../shared/types/User';
-import { Session } from '../../../shared/types/Session';
-import { rowToUser, userToRow } from '../models/User';
-import { rowToSession, sessionToRow } from '../models/Session';
-import { UserRow, SessionRow } from '../../../shared/types/User';
+import { User, UserRow } from '../../shared/types/User';
+import { Session, SessionRow } from '../../shared/types/Session';
+import { rowToUser } from '../models/User';
+import { rowToSession } from '../models/Session';
 import crypto from 'crypto';
 
 export class AuthService {

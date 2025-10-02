@@ -1,5 +1,5 @@
 {
-  "realm": "vvd-mimic",
+  "realm": "wrldbldr-mcp-manager",
   "enabled": true,
   "sslRequired": "none",
   "registrationAllowed": true,
@@ -28,8 +28,8 @@
   "accessCodeLifespanLogin": 1800,
   "clients": [
     {
-      "clientId": "vvd-mimic-frontend",
-      "name": "VVD-mimic Frontend",
+      "clientId": "wrldbldr-mcp-manager-frontend",
+      "name": "Wrldbldr MCP Manager Frontend",
       "description": "Frontend React application",
       "enabled": true,
       "publicClient": true,
@@ -83,8 +83,8 @@
       ]
     },
     {
-      "clientId": "vvd-mimic-backend",
-      "name": "VVD-mimic Backend",
+      "clientId": "wrldbldr-mcp-manager-backend",
+      "name": "Wrldbldr MCP Manager Backend",
       "description": "Backend Node.js API",
       "enabled": true,
       "publicClient": false,

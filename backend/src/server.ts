@@ -8,6 +8,9 @@ import { corsMiddleware } from './middleware/cors';
 import { errorHandler } from './middleware/errorHandler';
 import authRoutes from './routes/auth';
 import campaignRoutes from './routes/campaigns';
+import settingRoutes from './routes/settings';
+import cardRoutes from './routes/cards';
+import databaseCardRoutes from './routes/database-cards';
 import healthRoutes from './routes/health';
 
 const app = express();
@@ -21,6 +24,9 @@ app.use(express.json());
 app.use('/health', healthRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/campaigns', campaignRoutes);
+app.use('/api/settings', settingRoutes);
+app.use('/api/cards', cardRoutes);
+app.use('/api/cards', databaseCardRoutes);
 
 // Error handler (must be last)
 app.use(errorHandler);

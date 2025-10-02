@@ -4,9 +4,9 @@
  */
 
 import { db } from './DatabaseService';
-import { Campaign, CreateCampaignInput, UpdateCampaignInput } from '../../../shared/types/Campaign';
-import { rowToCampaign, campaignToRow } from '../models/Campaign';
-import { CampaignRow } from '../../../shared/types/Campaign';
+import { Campaign, CreateCampaignInput, UpdateCampaignInput } from '../../shared/types/Campaign';
+import { rowToCampaign } from '../models/Campaign';
+import { CampaignRow } from '../../shared/types/Campaign';
 import { generatePublicId } from '../utils/generatePublicId';
 import crypto from 'crypto';
 
@@ -74,16 +74,17 @@ export class CampaignService {
     while (attempts < maxAttempts) {
       try {
         const stmt = db.prepare(`
-          INSERT INTO campaigns (id, name, owner_id, public_url_id, public_access_enabled, created_at, updated_at)
-          VALUES (?, ?, ?, ?, 0, ?, ?)
+          INSERT INTO campaigns (id, name, owner_id, setting_id, public_url_id, public_access_enabled, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, 0, ?, ?)
         `);
 
-        stmt.run(campaignId, input.name, input.ownerId, publicUrlId, now, now);
+        stmt.run(campaignId, input.name, input.ownerId, input.settingId || null, publicUrlId, now, now);
 
         return {
           id: campaignId,
           name: input.name,
           ownerId: input.ownerId,
+          settingId: input.settingId || null,
           publicUrlId,
           publicAccessEnabled: false,
           publicPassword: null,

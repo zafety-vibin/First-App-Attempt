@@ -12,7 +12,7 @@ const router = express.Router();
  * GET /health
  * Health check endpoint - verifies database connectivity
  */
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', async (_req: Request, res: Response) => {
   try {
     // Check database connection
     const dbCheck = db.prepare('SELECT 1 as result').get() as { result: number };

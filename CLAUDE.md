@@ -1,10 +1,10 @@
-# VVD-mimic Development Guidelines
+# Wrldbldr MCP Manager Development Guidelines
 
 Auto-generated from feature plans. Last updated: 2025-10-01
 
 ## Mission
 
-VVD-mimic is a TTRPG campaign management webapp that solves the "plan twice" problem for Game Masters. Built as a fully local prototype on localhost using Docker.
+Wrldbldr MCP Manager is a TTRPG campaign management webapp that solves the "plan twice" problem for Game Masters. Built as a fully local prototype on localhost using Docker.
 
 ## Active Technologies
 - Backend: Node.js 20 LTS + TypeScript 5.0+, Frontend: React 18 + TypeScript 5.0+ + Backend: Express 4.x, Better-SQLite3, crypto (Node.js built-in for random IDs), Frontend: React Router v6, TipTap 2.x (reuse from Feature 003), existing card components (010-create-public-campaign)
@@ -101,7 +101,7 @@ VVD-mimic is a TTRPG campaign management webapp that solves the "plan twice" pro
 - 3 new tables: byollm_configs (encrypted credentials, model config, custom prompts), provider_credits (cached balance, org name, 5min TTL), oauth_sessions (state, code_verifier, 10min TTL)
 - New services: BYOLLMConfigService (CRUD, scope resolution global/campaign), OAuthFlowService (initiate, callback, token exchange), ProviderClientService (credits, models, connection test), EncryptionService (AES-256-GCM encrypt/decrypt), MCPConfigService (automatic streaming, timeout, retry)
 - Rate limit handling: exponential backoff with jitter, respect Retry-After header, max 3 retries, user notification
-- Credentials NEVER transmitted to VVD-mimic servers (direct user → provider API calls only)
+- Credentials NEVER transmitted to Wrldbldr MCP Manager servers (direct user → provider API calls only)
 
 **Testing** (002-create-the-authentication):
 - Vitest + React Testing Library (frontend unit tests)
@@ -136,13 +136,13 @@ VVD-mimic is a TTRPG campaign management webapp that solves the "plan twice" pro
 ## Project Structure
 
 ```
-vvd-mimic/
+wrldbldr-mcp-manager/
 ├── docker-compose.yml          # Orchestrates 3 services: keycloak, backend, frontend
 ├── data/                       # SQLite database (bind mount, persists)
-│   └── vvd-mimic.db
+│   └── wrldbldr-mcp-manager.db
 ├── keycloak/
 │   ├── Dockerfile.keycloak
-│   └── realm-export.json       # Pre-configured vvd-mimic realm
+│   └── realm-export.json       # Pre-configured wrldbldr-mcp-manager realm
 ├── backend/
 │   ├── Dockerfile
 │   ├── src/
@@ -210,17 +210,17 @@ npm test:e2e                # E2E tests (Playwright)
 ## Environment Variables
 
 **Backend** (set in docker-compose.yml):
-- `DATABASE_PATH`: /app/data/vvd-mimic.db
+- `DATABASE_PATH`: /app/data/wrldbldr-mcp-manager.db
 - `KEYCLOAK_URL`: http://keycloak:8080 (Docker network name)
-- `KEYCLOAK_REALM`: vvd-mimic
-- `KEYCLOAK_CLIENT_ID`: vvd-mimic-backend
+- `KEYCLOAK_REALM`: wrldbldr-mcp-manager
+- `KEYCLOAK_CLIENT_ID`: wrldbldr-mcp-manager-backend
 - `CORS_ORIGIN`: http://localhost:3000
 
 **Frontend** (set in docker-compose.yml):
 - `VITE_API_URL`: http://localhost:3001
 - `VITE_KEYCLOAK_URL`: http://localhost:8080
-- `VITE_KEYCLOAK_REALM`: vvd-mimic
-- `VITE_KEYCLOAK_CLIENT_ID`: vvd-mimic-frontend
+- `VITE_KEYCLOAK_REALM`: wrldbldr-mcp-manager
+- `VITE_KEYCLOAK_CLIENT_ID`: wrldbldr-mcp-manager-frontend
 
 ## Code Style
 
@@ -266,7 +266,7 @@ npm test:e2e                # E2E tests (Playwright)
 
 - **007-create-the-interactive**: Interactive map system as card feature. Konva.js canvas for map rendering. Pin/Zone/Layer cards as children of map-enabled cards. BLOB storage for map images (10MB limit, client-side compression). Absolute pixel coordinates for pins/zones. Tabs for multiple maps per card. Information filtering integration (pins inherit visibility from referenced cards). Nested map navigation via pin references. /map slash command. Orphaned pin warnings when referenced cards deleted. Modular parent-child architecture preserves coordinates on card move. Performance: <1s upload, <100ms pin operations, 60fps zoom/pan for 500+ pins.
 
-- **008-create-byollm-configuration**: BYOLLM (Bring Your Own LLM) configuration system. Implements Constitution Principle V (NON-NEGOTIABLE): user MUST provide own LLM credentials, stored locally with AES-256-GCM encryption (prototype-level), NEVER transmitted to VVD-mimic servers. OAuth 2.0 Authorization Code Flow + PKCE for OpenAI and Anthropic providers. API key alternative for Anthropic. Custom Endpoint support for local LLMs (Ollama, LM Studio) with OpenAI-compatible format. 3 new tables: byollm_configs (encrypted credentials, model config, custom prompts per scope), provider_credits (cached balance, org name, 5min TTL), oauth_sessions (PKCE state/verifier, 10min TTL). Credits/usage display prevents surprise costs. Model selection with context window info. Connection test validates bulk MCP operations. Custom system prompts for Import/Planning AI (text input or file upload). Global vs per-campaign configuration scopes (campaign overrides global). Blocking errors prevent Import/Planning AI usage without valid config. Rate limit handling: exponential backoff + jitter, respect Retry-After header, max 3 retries, user notification. Graceful failure with manual retry on API errors. OAuth token refresh automatic. All provider API calls direct from user machine (not proxied). Performance: OAuth flow <3s, connection test <5s, credits refresh <2s.
+- **008-create-byollm-configuration**: BYOLLM (Bring Your Own LLM) configuration system. Implements Constitution Principle V (NON-NEGOTIABLE): user MUST provide own LLM credentials, stored locally with AES-256-GCM encryption (prototype-level), NEVER transmitted to Wrldbldr MCP Manager servers. OAuth 2.0 Authorization Code Flow + PKCE for OpenAI and Anthropic providers. API key alternative for Anthropic. Custom Endpoint support for local LLMs (Ollama, LM Studio) with OpenAI-compatible format. 3 new tables: byollm_configs (encrypted credentials, model config, custom prompts per scope), provider_credits (cached balance, org name, 5min TTL), oauth_sessions (PKCE state/verifier, 10min TTL). Credits/usage display prevents surprise costs. Model selection with context window info. Connection test validates bulk MCP operations. Custom system prompts for Import/Planning AI (text input or file upload). Global vs per-campaign configuration scopes (campaign overrides global). Blocking errors prevent Import/Planning AI usage without valid config. Rate limit handling: exponential backoff + jitter, respect Retry-After header, max 3 retries, user notification. Graceful failure with manual retry on API errors. OAuth token refresh automatic. All provider API calls direct from user machine (not proxied). Performance: OAuth flow <3s, connection test <5s, credits refresh <2s.
 
 
 

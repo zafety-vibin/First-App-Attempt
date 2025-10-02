@@ -28,7 +28,7 @@ export function PublicLanding() {
 
   return (
     <div style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto' }}>
-      <h1>VVD-mimic</h1>
+      <h1>Wrldbldr MCP Manager</h1>
       <p>TTRPG Campaign Management - No More "Plan Twice" Problem</p>
 
       <div style={{ marginTop: '2rem' }}>

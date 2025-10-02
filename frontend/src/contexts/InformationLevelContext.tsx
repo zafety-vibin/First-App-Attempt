@@ -20,6 +20,7 @@ interface InformationLevelContextType {
   deleteLevel: (levelId: string) => Promise<{ reverted_cards_count: number; warning: string }>;
   getDefaultLevels: () => InformationLevel[];
   getCustomLevels: () => InformationLevel[];
+  getLevelById: (levelId: string) => InformationLevel | undefined;
 }
 
 const InformationLevelContext = createContext<InformationLevelContextType | undefined>(undefined);
@@ -129,6 +130,10 @@ export function InformationLevelProvider({ children }: { children: ReactNode }) 
     return levels.filter(level => level.type === 'custom');
   };
 
+  const getLevelById = (levelId: string): InformationLevel | undefined => {
+    return levels.find(level => level.id === levelId);
+  };
+
   return (
     <InformationLevelContext.Provider
       value={{
@@ -143,6 +148,7 @@ export function InformationLevelProvider({ children }: { children: ReactNode }) 
         deleteLevel,
         getDefaultLevels,
         getCustomLevels,
+        getLevelById,
       }}
     >
       {children}

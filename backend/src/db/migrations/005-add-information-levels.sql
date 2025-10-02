@@ -15,8 +15,8 @@ CREATE TABLE IF NOT EXISTS information_levels (
   FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE
 );
 
--- Seed 4 default information levels
-INSERT INTO information_levels (id, name, color, hierarchical, type, campaign_id) VALUES
+-- Seed 4 default information levels (idempotent - OR IGNORE prevents duplicate errors)
+INSERT OR IGNORE INTO information_levels (id, name, color, hierarchical, type, campaign_id) VALUES
   ('system', 'System', '#6B7280', 0, 'default', NULL),
   ('common-knowledge', 'Common Knowledge', '#3B82F6', 0, 'default', NULL),
   ('player-knowledge', 'Player Knowledge', '#10B981', 0, 'default', NULL),

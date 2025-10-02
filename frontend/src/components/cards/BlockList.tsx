@@ -5,13 +5,16 @@
  * Manages list of blocks with Enter key creating siblings
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cardService } from '../../services/cardService';
 import { useCards } from '../../hooks/useCards';
+import { useViewMode } from '../../contexts/ViewModeContext';
+import { useInformationLevel } from '../../contexts/InformationLevelContext';
 import { Block } from './Block';
 import { DatabaseTableView } from '../database/DatabaseTableView';
 import { ImageBlock } from './ImageBlock';
+import { BlockMenu } from './BlockMenu';
 import type { Card } from '../../../../shared/types/Card';
 import {
   DndContext,
@@ -40,22 +43,30 @@ interface SortableBlockItemProps {
   child: Card;
   campaignId: string;
   onUpdate: (cardId: string, content: any) => void;
+  onUpdateLevel: (cardId: string, levelId: string) => void;
+  onDelete: (cardId: string) => void;
   onEnter: (cardId: string) => void;
   onBackspaceEmpty: (cardId: string) => void;
   onTransform: (cardId: string, newType: string, headingLevel?: number, listType?: string) => void;
   onPageClick: (cardId: string) => void;
   autoFocus: boolean;
+  showMenu: boolean;
+  onMenuToggle: (cardId: string) => void;
 }
 
 function SortableBlockItem({
   child,
   campaignId,
   onUpdate,
+  onUpdateLevel,
+  onDelete,
   onEnter,
   onBackspaceEmpty,
   onTransform,
   onPageClick,
   autoFocus,
+  showMenu,
+  onMenuToggle,
 }: SortableBlockItemProps) {
   const {
     attributes,
@@ -65,6 +76,10 @@ function SortableBlockItem({
     transition,
     isDragging,
   } = useSortable({ id: child.id });
+
+  const { getLevelById } = useInformationLevel();
+  const level = getLevelById(child.informationLevelId);
+  const isHierarchical = level?.hierarchical || false;
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -76,17 +91,41 @@ function SortableBlockItem({
     <div
       ref={setNodeRef}
       style={style}
-      className="block-item"
+      className={`block-item ${isHierarchical ? 'block-item-hierarchical' : ''}`}
       data-block-id={child.id}
     >
-      {/* Drag handle */}
-      <div
-        className="drag-handle"
-        {...attributes}
-        {...listeners}
-      >
-        ⋮⋮
+      {/* Drag handle with menu */}
+      <div className="drag-handle-wrapper">
+        <div
+          className="drag-handle"
+          {...attributes}
+          {...listeners}
+          onClick={(e) => {
+            e.stopPropagation();
+            onMenuToggle(child.id);
+          }}
+        >
+          ⋮⋮
+        </div>
+        {showMenu && (
+          <BlockMenu
+            card={child}
+            onClose={() => onMenuToggle(child.id)}
+            onLevelChange={(levelId) => onUpdateLevel(child.id, levelId)}
+            onDelete={() => onDelete(child.id)}
+            onTransformToPage={() => onTransform(child.id, 'page')}
+            onTransformToDatabase={() => onTransform(child.id, 'database')}
+            onTransformToText={() => onTransform(child.id, 'text')}
+          />
+        )}
       </div>
+
+      {/* Secret indicator for hierarchical blocks */}
+      {isHierarchical && (
+        <div className="secret-indicator" title={`${level?.name} (Hidden in Player View)`}>
+          👁️
+        </div>
+      )}
 
       {/* Block content */}
       <div className="block-content">
@@ -133,8 +172,25 @@ export function BlockList({ parentCard, campaignId }: BlockListProps) {
   const [children, setChildren] = useState<Card[]>([]);
   const [loading, setLoading] = useState(false);
   const [focusedBlockId, setFocusedBlockId] = useState<string | null>(null);
+  const [menuOpenForId, setMenuOpenForId] = useState<string | null>(null);
   const navigate = useNavigate();
   const { updateCard, createCard, deleteCard } = useCards();
+  const { viewMode } = useViewMode();
+  const { levels, selectedLevelId, getLevelById } = useInformationLevel();
+
+  // Filter children based on view mode (Feature 004)
+  const visibleChildren = useMemo(() => {
+    if (viewMode === 'dm') {
+      // DM View: Show all cards
+      return children;
+    } else {
+      // Player View: Hide hierarchical (DM Secret) cards
+      return children.filter(child => {
+        const level = getLevelById(child.informationLevelId);
+        return level ? !level.hierarchical : true;
+      });
+    }
+  }, [children, viewMode, getLevelById]);
 
   // Drag-and-drop sensors
   const sensors = useSensors(
@@ -184,6 +240,7 @@ export function BlockList({ parentCard, campaignId }: BlockListProps) {
         position,
         title: null,
         content: { type: 'doc', content: [] },
+        informationLevelId: selectedLevelId, // Feature 004: Use active level from Easel
       });
       setChildren(prev => [...prev, newBlock].sort((a, b) => a.position - b.position));
       setFocusedBlockId(newBlock.id);
@@ -201,6 +258,30 @@ export function BlockList({ parentCard, campaignId }: BlockListProps) {
     }
   };
 
+  const handleLevelUpdate = async (cardId: string, levelId: string) => {
+    try {
+      await updateCard(cardId, { informationLevelId: levelId });
+      setChildren(prev =>
+        prev.map(c => c.id === cardId ? { ...c, informationLevelId: levelId } : c)
+      );
+    } catch (error) {
+      console.error('Failed to update information level:', error);
+    }
+  };
+
+  const handleDelete = async (cardId: string) => {
+    try {
+      await deleteCard(cardId);
+      setChildren(prev => prev.filter(c => c.id !== cardId));
+    } catch (error) {
+      console.error('Failed to delete card:', error);
+    }
+  };
+
+  const handleMenuToggle = (cardId: string) => {
+    setMenuOpenForId(prev => prev === cardId ? null : cardId);
+  };
+
   const handleEnter = async (currentBlockId: string) => {
     // Create new sibling block below
     const currentIndex = children.findIndex(c => c.id === currentBlockId);
@@ -216,6 +297,7 @@ export function BlockList({ parentCard, campaignId }: BlockListProps) {
         position: newPosition,
         title: null,
         content: { type: 'doc', content: [] },
+        informationLevelId: selectedLevelId, // Feature 004: Use active level from Easel
       });
 
       // Update positions of blocks below
@@ -258,15 +340,85 @@ export function BlockList({ parentCard, campaignId }: BlockListProps) {
       // Update block type in backend
       const updates: any = { type: newType };
 
-      // If transforming to page, set a title
-      if (newType === 'page') {
-        const currentText = block.content?.content?.[0]?.content?.[0]?.text || 'Untitled';
-        updates.title = currentText;
-        updates.content = null; // Pages don't have inline content
+      // TEXT → PAGE: Wrap content into new page
+      if (block.type === 'text' && newType === 'page') {
+        const fullText = block.content?.content?.[0]?.content?.[0]?.text || '';
+        const words = fullText.split(' ').filter(w => w.length > 0);
+        const firstWord = words[0] || 'Untitled';
+        const remainingText = words.slice(1).join(' ');
+
+        // Set page title to first word
+        updates.title = firstWord;
+        updates.content = null;
+
+        // Transform to page first
+        await updateCard(blockId, updates);
+
+        // Create child block with remaining text (if any)
+        if (remainingText || words.length === 1) {
+          const childContent = {
+            type: 'doc',
+            content: remainingText ? [{
+              type: 'paragraph',
+              content: [{ type: 'text', text: words.length === 1 ? fullText : remainingText }]
+            }] : []
+          };
+          await createCard({
+            type: 'text',
+            campaignId,
+            parentId: blockId, // Child of the new page
+            position: 0,
+            content: childContent,
+            informationLevelId: block.informationLevelId, // Inherit level
+          });
+        }
+
+        await loadChildren();
+        return;
       }
 
-      // If transforming to database, add metadata
-      if (newType === 'database') {
+      // PAGE → TEXT: Unwrap and promote children up
+      if (block.type === 'page' && newType === 'text') {
+        const pageTitle = block.title || 'Untitled';
+
+        // Get children of the page
+        const pageChildren = await cardService.getChildren(blockId);
+
+        // Transform page to text with title as heading
+        updates.title = null;
+        updates.content = {
+          type: 'doc',
+          content: [{
+            type: 'heading',
+            attrs: { level: 2 },
+            content: [{ type: 'text', text: pageTitle }]
+          }]
+        };
+
+        await updateCard(blockId, updates);
+
+        // Move all page children up to be siblings (same parent as the converted text block)
+        // Use the block's actual parent_id (not parentCard.id which might be virtual)
+        const targetParentId = block.parentId;
+        let newPosition = block.position + 1;
+
+        for (const child of pageChildren.sort((a, b) => a.position - b.position)) {
+          try {
+            await cardService.moveCard(child.id, {
+              parentId: targetParentId,
+              position: newPosition++,
+            });
+          } catch (err) {
+            console.error('Failed to move child during unwrap:', child.id, err);
+          }
+        }
+
+        await loadChildren();
+        return;
+      }
+
+      // TEXT → DATABASE: Use text as database title
+      if (block.type === 'text' && newType === 'database') {
         const currentText = block.content?.content?.[0]?.content?.[0]?.text || 'Untitled Database';
         updates.title = currentText;
         updates.content = null;
@@ -277,16 +429,27 @@ export function BlockList({ parentCard, campaignId }: BlockListProps) {
         };
       }
 
+      // DATABASE → TEXT: Use database title as text
+      if (block.type === 'database' && newType === 'text') {
+        const dbTitle = block.title || '';
+        updates.title = null;
+        updates.content = {
+          type: 'doc',
+          content: dbTitle ? [{
+            type: 'paragraph',
+            content: [{ type: 'text', text: dbTitle }]
+          }] : []
+        };
+      }
+
       // For text blocks with special formatting (headings, lists, quotes),
       // content is already updated by TipTap, so we just save it
       // No need to manually construct content JSON
 
       await updateCard(blockId, updates);
 
-      // Update local state
-      setChildren(prev =>
-        prev.map(c => c.id === blockId ? { ...c, ...updates } : c)
-      );
+      // Reload children to get fresh data and ensure proper component rendering
+      await loadChildren();
     } catch (error) {
       console.error('Failed to transform block:', error);
     }
@@ -341,6 +504,7 @@ export function BlockList({ parentCard, campaignId }: BlockListProps) {
         parentId: parentCard.id === null ? null : parentCard.id,
         position: 0,
         content: { type: 'doc', content: [] },
+        informationLevelId: selectedLevelId, // Feature 004: Use active level from Easel
       });
 
       setChildren([newCard]);
@@ -362,21 +526,25 @@ export function BlockList({ parentCard, campaignId }: BlockListProps) {
         onDragEnd={handleDragEnd}
       >
         <SortableContext
-          items={children.map((c) => c.id)}
+          items={visibleChildren.map((c) => c.id)}
           strategy={verticalListSortingStrategy}
         >
           <div className="block-list">
-            {children.map((child) => (
+            {visibleChildren.map((child) => (
               <SortableBlockItem
                 key={child.id}
                 child={child}
                 campaignId={campaignId}
                 onUpdate={handleBlockUpdate}
+                onUpdateLevel={handleLevelUpdate}
+                onDelete={handleDelete}
                 onEnter={handleEnter}
                 onBackspaceEmpty={handleBackspaceEmpty}
                 onTransform={handleTransform}
                 onPageClick={handlePageClick}
                 autoFocus={child.id === focusedBlockId}
+                showMenu={menuOpenForId === child.id}
+                onMenuToggle={handleMenuToggle}
               />
             ))}
 
@@ -384,6 +552,12 @@ export function BlockList({ parentCard, campaignId }: BlockListProps) {
             {children.length === 0 && (
               <div className="empty-block" onClick={handleAddFirstBlock}>
                 <span className="empty-block-text">Type '/' for commands, or just start typing...</span>
+              </div>
+            )}
+            {/* View mode filtering message */}
+            {children.length > 0 && visibleChildren.length === 0 && (
+              <div className="empty-block">
+                <span className="empty-block-text">All blocks hidden in Player View</span>
               </div>
             )}
           </div>
@@ -400,17 +574,41 @@ export function BlockList({ parentCard, campaignId }: BlockListProps) {
           display: flex;
           align-items: flex-start;
           margin: 1px 0;
+          border-radius: 3px;
+          transition: background-color 0.15s;
         }
 
-        .drag-handle {
+        .block-item-hierarchical {
+          background-color: rgba(239, 68, 68, 0.05); /* Always show red tint for secrets */
+        }
+
+        .secret-indicator {
+          position: absolute;
+          top: 2px;
+          right: 4px;
+          font-size: 14px;
+          opacity: 0; /* Hidden by default */
+          transition: opacity 0.15s;
+          pointer-events: none;
+          z-index: 10;
+        }
+
+        .block-item-hierarchical:hover .secret-indicator {
+          opacity: 0.6; /* Show closed eye on hover */
+        }
+
+        .drag-handle-wrapper {
           position: absolute;
           left: 2px;
           top: 3px;
+        }
+
+        .drag-handle {
           width: 22px;
           height: 22px;
           color: transparent;
           font-size: 14px;
-          cursor: grab;
+          cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;

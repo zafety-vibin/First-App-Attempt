@@ -63,6 +63,7 @@ export const cardService = {
       metadata: data.metadata || null,
       cover_image_url: data.coverImageUrl || null,
       icon_emoji: data.iconEmoji || null,
+      information_level_id: data.informationLevelId || 'system', // Feature 004
     };
     const response = await apiClient.post('/api/cards', payload);
     return response.data;
@@ -80,6 +81,7 @@ export const cardService = {
       metadata: data.metadata,
       cover_image_url: data.coverImageUrl,
       icon_emoji: data.iconEmoji,
+      information_level_id: data.informationLevelId, // Feature 004
     };
     const response = await apiClient.put(`/api/cards/${cardId}`, payload);
     return response.data;
@@ -100,7 +102,7 @@ export const cardService = {
       new_parent_id: data.newParentId,
       position: data.position,
     };
-    const response = await apiClient.post(`/api/cards/${cardId}/move`, payload);
+    const response = await apiClient.patch(`/api/cards/${cardId}/move`, payload);
     return response.data;
   },
 
@@ -111,7 +113,7 @@ export const cardService = {
     const payload = {
       position: data.position,
     };
-    const response = await apiClient.post(`/api/cards/${cardId}/reorder`, payload);
+    const response = await apiClient.patch(`/api/cards/${cardId}/reorder`, payload);
     return response.data;
   },
 };

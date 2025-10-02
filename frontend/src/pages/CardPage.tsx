@@ -8,14 +8,17 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { BlockList } from '../components/cards/BlockList';
+import { ViewModeToggle } from '../components/ViewModeToggle';
 import { useCardContext } from '../contexts/CardContext';
 import { useCards } from '../hooks/useCards';
+import { useInformationLevel } from '../contexts/InformationLevelContext';
 
 export function CardPage() {
   const { campaignId, cardId } = useParams<{ campaignId: string; cardId: string }>();
   const navigate = useNavigate();
   const { loadCard, currentCard, loading } = useCardContext();
   const { updateCard } = useCards();
+  const { loadLevels, loading: levelsLoading } = useInformationLevel();
   const [childrenKey, setChildrenKey] = useState(0);
 
   useEffect(() => {
@@ -23,6 +26,13 @@ export function CardPage() {
       loadCard(cardId);
     }
   }, [cardId]);
+
+  // Feature 004: Load information levels for this campaign
+  useEffect(() => {
+    if (campaignId) {
+      loadLevels(campaignId);
+    }
+  }, [campaignId]);
 
   const handleTitleUpdate = async (e: React.FocusEvent<HTMLHeadingElement>) => {
     if (!currentCard) return;
@@ -36,8 +46,8 @@ export function CardPage() {
     }
   };
 
-  if (loading) {
-    return <div style={{ padding: '2rem' }}>Loading card...</div>;
+  if (loading || levelsLoading) {
+    return <div style={{ padding: '2rem' }}>Loading...</div>;
   }
 
   if (!currentCard) {
@@ -46,9 +56,15 @@ export function CardPage() {
 
   return (
     <div style={{ padding: '2rem', maxWidth: '900px', margin: '0 auto' }}>
-      <div style={{ marginBottom: '1rem' }}>
+      {/* Feature 004: View Mode Toggle */}
+      <ViewModeToggle />
+
+      <div style={{ marginBottom: '1rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
         <button onClick={() => navigate(`/campaigns/${campaignId}`)}>
           ← Back to Campaign
+        </button>
+        <button onClick={() => navigate(`/campaigns/${campaignId}/settings`)}>
+          ⚙️ Settings
         </button>
       </div>
 

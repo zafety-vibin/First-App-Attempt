@@ -79,8 +79,16 @@ export function CampaignHomepage() {
       {/* Feature 004: View Mode Toggle */}
       <ViewModeToggle />
 
-      <div style={{ marginBottom: '2rem' }}>
-        <button onClick={() => navigate('/campaigns')}>← Back to Campaigns</button>
+      <div style={{ marginBottom: '2rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
+        <button onClick={() => {
+          try {
+            navigate('/campaigns');
+          } catch (err) {
+            console.error('Navigation error:', err);
+            window.location.href = '/campaigns';
+          }
+        }}>← Back to Campaigns</button>
+        <button onClick={() => navigate(`/campaigns/${id}/settings`)}>⚙️ Settings</button>
       </div>
 
       <h1 contentEditable suppressContentEditableWarning style={{ outline: 'none', minHeight: '1em', marginBottom: '2rem' }}>

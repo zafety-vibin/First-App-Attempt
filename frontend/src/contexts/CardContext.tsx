@@ -81,18 +81,16 @@ export function CardProvider({ children }: { children: ReactNode }) {
       prev.map((c) => (c.id === cardId ? { ...c, ...updates } : c))
     );
 
-    if (currentCard?.id === cardId) {
-      setCurrentCard((prev) => (prev ? { ...prev, ...updates } : null));
-    }
-  }, [currentCard]);
+    // Use functional update to avoid dependency on currentCard (prevents infinite loops)
+    setCurrentCard((prev) => (prev?.id === cardId ? { ...prev, ...updates } : prev));
+  }, []); // No dependencies - uses functional updates
 
   const removeCard = useCallback((cardId: string) => {
     setCards((prev) => prev.filter((c) => c.id !== cardId));
 
-    if (currentCard?.id === cardId) {
-      setCurrentCard(null);
-    }
-  }, [currentCard]);
+    // Use functional update to avoid dependency on currentCard (prevents infinite loops)
+    setCurrentCard((prev) => (prev?.id === cardId ? null : prev));
+  }, []); // No dependencies - uses functional updates
 
   const value: CardContextValue = {
     cards,

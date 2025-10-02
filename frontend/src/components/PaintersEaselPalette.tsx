@@ -11,9 +11,10 @@ import { InformationLevel } from '../../shared/types/InformationLevel';
 interface PaintersEaselPaletteProps {
   onSelect?: (levelId: string) => void;
   showManagement?: boolean;
+  currentLevelId?: string; // If provided, shows this level as selected instead of global selectedLevelId
 }
 
-export function PaintersEaselPalette({ onSelect, showManagement = false }: PaintersEaselPaletteProps) {
+export function PaintersEaselPalette({ onSelect, showManagement = false, currentLevelId }: PaintersEaselPaletteProps) {
   const {
     levels,
     selectedLevelId,
@@ -27,8 +28,14 @@ export function PaintersEaselPalette({ onSelect, showManagement = false }: Paint
   const defaultLevels = getDefaultLevels();
   const customLevels = getCustomLevels();
 
+  // Use currentLevelId if provided (for per-card editing), otherwise use global selectedLevelId (for easel)
+  const activeLevelId = currentLevelId !== undefined ? currentLevelId : selectedLevelId;
+
   const handleSelect = (levelId: string) => {
-    setSelectedLevelId(levelId);
+    // Only update global state if we're using the easel (no currentLevelId provided)
+    if (currentLevelId === undefined) {
+      setSelectedLevelId(levelId);
+    }
     if (onSelect) {
       onSelect(levelId);
     }
@@ -43,7 +50,7 @@ export function PaintersEaselPalette({ onSelect, showManagement = false }: Paint
             <LevelButton
               key={level.id}
               level={level}
-              isSelected={selectedLevelId === level.id}
+              isSelected={activeLevelId === level.id}
               onSelect={() => handleSelect(level.id)}
             />
           ))}
@@ -58,7 +65,7 @@ export function PaintersEaselPalette({ onSelect, showManagement = false }: Paint
               <LevelButton
                 key={level.id}
                 level={level}
-                isSelected={selectedLevelId === level.id}
+                isSelected={activeLevelId === level.id}
                 onSelect={() => handleSelect(level.id)}
                 showManagement={showManagement}
               />

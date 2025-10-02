@@ -123,14 +123,16 @@ export function Block({
     },
     editorProps: {
       handleKeyDown: (view, event) => {
-        // If slash menu is open, let it handle arrow keys and enter
-        if (showSlashMenu && ['ArrowDown', 'ArrowUp', 'Enter', 'Escape'].includes(event.key)) {
-          // Menu will handle these
-          return false;
-        }
-
         // Enter key: check if we're in a list first
         if (event.key === 'Enter' && !event.shiftKey) {
+          console.log('[Block Enter] Key pressed, showSlashMenu:', showSlashMenu);
+
+          // If slash menu is open, let the menu handle it
+          if (showSlashMenu) {
+            console.log('[Block Enter] Slash menu open, letting menu handle');
+            return false;
+          }
+
           const { state } = view;
           const { $from } = state.selection;
 
@@ -139,15 +141,25 @@ export function Block({
           const inListItem = $from.node(-1)?.type.name === 'listItem';
           const inTaskItem = $from.node(-1)?.type.name === 'taskItem';
 
+          console.log('[Block Enter] inListItem:', inListItem, 'inTaskItem:', inTaskItem);
+
           if (inListItem || inTaskItem) {
             // Let TipTap handle list item creation
+            console.log('[Block Enter] In list, letting TipTap handle');
             return false;
           }
 
           // Not in a list - create sibling block
+          console.log('[Block Enter] Creating sibling block');
           event.preventDefault();
           onEnter();
           return true;
+        }
+
+        // If slash menu is open, let it handle arrow keys and escape
+        if (showSlashMenu && ['ArrowDown', 'ArrowUp', 'Escape'].includes(event.key)) {
+          // Menu will handle these
+          return false;
         }
 
         // Backspace on empty block: delete block
@@ -171,7 +183,7 @@ export function Block({
       cardIdRef.current = card.id;
       editor.commands.setContent(card.content || { type: 'doc', content: [] });
     }
-  }, [editor, card.id, card.content]);
+  }, [editor, card.id]); // DO NOT include card.content - causes infinite loop!
 
   // Auto-focus if requested
   useEffect(() => {
@@ -222,38 +234,30 @@ export function Block({
     editor.commands.focus();
   }, [editor, onTransform]);
 
-  // Cleanup
+  // Cleanup - save immediately on unmount to prevent data loss
+  // Use ref to avoid re-running cleanup when onUpdate reference changes
+  const onUpdateRef = useRef(onUpdate);
+  useEffect(() => {
+    onUpdateRef.current = onUpdate;
+  }, [onUpdate]);
+
   useEffect(() => {
     return () => {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
       }
+      // Save immediately on unmount (e.g., when filtered out by view mode)
+      if (editor && !editor.isDestroyed) {
+        onUpdateRef.current(editor.getJSON());
+      }
     };
-  }, []);
+  }, [editor]); // Only depend on editor, not onUpdate
 
   if (!editor) return null;
 
-  // Get font size based on content
-  const getFontSize = () => {
-    const firstNode = card.content?.content?.[0];
-    if (firstNode?.type === 'heading') {
-      const level = firstNode.attrs?.level || 1;
-      if (level === 1) return '2em';
-      if (level === 2) return '1.5em';
-      if (level === 3) return '1.17em';
-    }
-    return '1em';
-  };
-
   return (
     <div className="block" style={{ position: 'relative' }}>
-      <EditorContent
-        editor={editor}
-        style={{
-          fontSize: getFontSize(),
-          fontWeight: card.content?.content?.[0]?.type === 'heading' ? 700 : 400,
-        }}
-      />
+      <EditorContent editor={editor} />
 
       {/* Inline Slash Menu */}
       {showSlashMenu && (

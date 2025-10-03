@@ -1,0 +1,159 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MCP Resources and Prompts",
+  "description": "Schemas for browsable resources and structured prompts",
+  "resources": {
+    "campaign_cards": {
+      "uri": "campaign://cards",
+      "description": "Browse card hierarchy for a campaign",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "campaign_id": {
+            "type": "string",
+            "description": "Campaign ID to browse"
+          },
+          "root_card_id": {
+            "type": ["integer", "null"],
+            "description": "Start from this card (null = campaign root)"
+          }
+        },
+        "required": ["campaign_id"]
+      },
+      "returns": {
+        "type": "object",
+        "properties": {
+          "cards": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "integer" },
+                "title": { "type": "string" },
+                "card_type": { "type": "string" },
+                "has_children": { "type": "boolean" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "campaign_recaps": {
+      "uri": "campaign://recaps",
+      "description": "Browse session recap timeline",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "campaign_id": {
+            "type": "string",
+            "description": "Campaign ID to browse"
+          }
+        },
+        "required": ["campaign_id"]
+      },
+      "returns": {
+        "type": "object",
+        "properties": {
+          "recaps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "session_id": { "type": "string" },
+                "session_date": { "type": "integer" },
+                "recap_preview": { "type": "string", "maxLength": 200 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "campaign_graphs": {
+      "uri": "campaign://graphs/{type}",
+      "description": "Browse knowledge graph nodes and edges",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "campaign_id": {
+            "type": "string",
+            "description": "Campaign ID to browse"
+          },
+          "graph_type": {
+            "type": "string",
+            "description": "Graph type (Geographical, Political-Web, World-Foundations, Campaign-Story, custom:{type})"
+          }
+        },
+        "required": ["campaign_id", "graph_type"]
+      },
+      "returns": {
+        "type": "object",
+        "properties": {
+          "graph_summary": {
+            "type": "object",
+            "properties": {
+              "node_count": { "type": "integer" },
+              "edge_count": { "type": "integer" },
+              "last_updated": { "type": "integer" }
+            }
+          },
+          "node_names": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "List of node names for browsing"
+          }
+        }
+      }
+    }
+  },
+  "prompts": {
+    "import_workflow": {
+      "name": "import_workflow",
+      "description": "Structured prompt template for Import AI workflow",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "campaign_id": {
+            "type": "string",
+            "description": "Campaign context"
+          },
+          "file_content": {
+            "type": "string",
+            "description": "Uploaded file content (PDF/DOCX/TXT/MD)"
+          },
+          "file_type": {
+            "type": "string",
+            "enum": ["pdf", "docx", "txt", "md"],
+            "description": "File format"
+          }
+        },
+        "required": ["campaign_id", "file_content", "file_type"]
+      },
+      "template": {
+        "system_prompt": "You are an AI assistant helping a Game Master import session notes into their TTRPG campaign. Your task is to extract entities (NPCs, locations, events) from the provided content and add them to the campaign's knowledge graphs and card hierarchy. Use the MCP tools to:\n1. Search for existing entities to avoid duplicates (use search_cards with similarity matching)\n2. Create new cards for NPCs, locations, or events (use create_card)\n3. Update knowledge graphs with relationships (use update_graph)\n4. Present an approval summary before committing changes\n\nContext:\n- Campaign ID: {{campaign_id}}\n- File type: {{file_type}}\n- Content:\n{{file_content}}",
+        "user_prompt": "Extract entities from this session recap and organize them into my campaign. Use the knowledge graph types:\n- Geographical: Locations and travel routes\n- Political-Web: Factions, alliances, conflicts\n- World-Foundations: Lore, magic systems, cosmology\n- Campaign-Story: Plot threads, quests, character arcs\n\nBefore making changes, show me a summary of what you'll create/update for approval."
+      }
+    },
+    "planning_workflow": {
+      "name": "planning_workflow",
+      "description": "Structured prompt template for Planning AI workflow",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "campaign_id": {
+            "type": "string",
+            "description": "Campaign context"
+          },
+          "planning_goal": {
+            "type": "string",
+            "description": "What GM wants to plan (e.g., 'next session', 'boss encounter', 'political intrigue')"
+          }
+        },
+        "required": ["campaign_id", "planning_goal"]
+      },
+      "template": {
+        "system_prompt": "You are an AI assistant helping a Game Master plan TTRPG sessions. You have access to the campaign's complete context via MCP tools. Use them to:\n1. Review session recaps to understand current story state (use get_session_recaps)\n2. Query knowledge graphs for relevant NPCs, locations, and plot threads (use query_graph)\n3. Suggest session ideas based on active plot hooks\n4. Update graphs immediately when GM confirms ideas (use update_graph)\n\nContext:\n- Campaign ID: {{campaign_id}}\n- Planning goal: {{planning_goal}}\n\nYour changes to graphs take effect immediately (no approval needed for Planning AI).",
+        "user_prompt": "Help me plan: {{planning_goal}}\n\nUse the knowledge graphs to suggest ideas that connect to existing plot threads. When I approve an idea, immediately add it to the Campaign-Story graph."
+      }
+    }
+  }
+}

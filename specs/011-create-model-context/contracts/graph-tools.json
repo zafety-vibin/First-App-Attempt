@@ -1,0 +1,230 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MCP Knowledge Graph Tools",
+  "description": "Tool schemas for knowledge graph operations",
+  "tools": {
+    "query_graph": {
+      "description": "Query knowledge graph by type, node name, or relationship",
+      "input": {
+        "type": "object",
+        "properties": {
+          "campaign_id": {
+            "type": "string",
+            "description": "Campaign ID for permission filtering"
+          },
+          "graph_type": {
+            "type": "string",
+            "enum": ["Geographical", "Political-Web", "World-Foundations", "Campaign-Story"],
+            "description": "Graph type to query (also supports custom:{type})"
+          },
+          "node_name": {
+            "type": "string",
+            "description": "Filter by node name (optional, fuzzy matching)"
+          },
+          "relationship_type": {
+            "type": "string",
+            "description": "Filter by edge relationship type (optional)"
+          },
+          "active_only": {
+            "type": "boolean",
+            "default": false,
+            "description": "Apply active filtering for Political-Web/Campaign-Story (optional)"
+          }
+        },
+        "required": ["campaign_id", "graph_type"]
+      },
+      "output": {
+        "type": "object",
+        "properties": {
+          "graph_id": { "type": "integer" },
+          "graph_type": { "type": "string" },
+          "nodes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "integer" },
+                "name": { "type": "string" },
+                "node_type": { "type": "string" },
+                "attributes": { "type": "object" },
+                "information_level_id": { "type": ["integer", "null"] }
+              },
+              "required": ["id", "name", "node_type"]
+            }
+          },
+          "edges": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "integer" },
+                "from_node_id": { "type": "integer" },
+                "to_node_id": { "type": "integer" },
+                "relationship_type": { "type": "string" },
+                "attributes": { "type": "object" }
+              },
+              "required": ["id", "from_node_id", "to_node_id", "relationship_type"]
+            }
+          }
+        },
+        "required": ["graph_id", "graph_type", "nodes", "edges"]
+      },
+      "errors": [
+        { "code": "NOT_FOUND", "message": "Knowledge graph not found for campaign: {campaign_id}, type: {graph_type}" }
+      ]
+    },
+    "list_graph_nodes": {
+      "description": "List all nodes in a knowledge graph",
+      "input": {
+        "type": "object",
+        "properties": {
+          "campaign_id": {
+            "type": "string",
+            "description": "Campaign ID for permission filtering"
+          },
+          "graph_type": {
+            "type": "string",
+            "description": "Graph type"
+          },
+          "active_only": {
+            "type": "boolean",
+            "default": false,
+            "description": "Apply active filtering (optional)"
+          }
+        },
+        "required": ["campaign_id", "graph_type"]
+      },
+      "output": {
+        "type": "object",
+        "properties": {
+          "nodes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "integer" },
+                "name": { "type": "string" },
+                "node_type": { "type": "string" },
+                "attributes": { "type": "object" }
+              },
+              "required": ["id", "name", "node_type"]
+            }
+          }
+        },
+        "required": ["nodes"]
+      },
+      "errors": [
+        { "code": "NOT_FOUND", "message": "Knowledge graph not found" }
+      ]
+    },
+    "get_node_relationships": {
+      "description": "Get all edges connected to a node",
+      "input": {
+        "type": "object",
+        "properties": {
+          "campaign_id": {
+            "type": "string",
+            "description": "Campaign ID for permission filtering"
+          },
+          "graph_type": {
+            "type": "string",
+            "description": "Graph type"
+          },
+          "node_name": {
+            "type": "string",
+            "description": "Node name to get relationships for"
+          }
+        },
+        "required": ["campaign_id", "graph_type", "node_name"]
+      },
+      "output": {
+        "type": "object",
+        "properties": {
+          "node": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "integer" },
+              "name": { "type": "string" }
+            },
+            "required": ["id", "name"]
+          },
+          "relationships": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "edge_id": { "type": "integer" },
+                "direction": { "type": "string", "enum": ["outgoing", "incoming"] },
+                "related_node": { "type": "string" },
+                "relationship_type": { "type": "string" },
+                "attributes": { "type": "object" }
+              },
+              "required": ["edge_id", "direction", "related_node", "relationship_type"]
+            }
+          }
+        },
+        "required": ["node", "relationships"]
+      },
+      "errors": [
+        { "code": "NOT_FOUND", "message": "Node not found: {node_name}" }
+      ]
+    },
+    "update_graph": {
+      "description": "Atomic graph mutation (add/update/delete nodes/edges)",
+      "input": {
+        "type": "object",
+        "properties": {
+          "campaign_id": {
+            "type": "string",
+            "description": "Campaign ID for permission filtering"
+          },
+          "graph_type": {
+            "type": "string",
+            "description": "Graph type"
+          },
+          "operation": {
+            "type": "string",
+            "enum": ["add_node", "update_node", "delete_node", "add_edge", "update_edge", "delete_edge"],
+            "description": "Mutation operation"
+          },
+          "node_data": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "node_type": { "type": "string" },
+              "attributes": { "type": "object" },
+              "information_level_id": { "type": ["integer", "null"] }
+            },
+            "description": "Node data (for node operations)"
+          },
+          "edge_data": {
+            "type": "object",
+            "properties": {
+              "from_node": { "type": "string" },
+              "to_node": { "type": "string" },
+              "relationship_type": { "type": "string" },
+              "attributes": { "type": "object" }
+            },
+            "description": "Edge data (for edge operations)"
+          }
+        },
+        "required": ["campaign_id", "graph_type", "operation"]
+      },
+      "output": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "const": true },
+          "operation": { "type": "string" },
+          "affected_id": { "type": "integer", "description": "ID of created/updated/deleted node/edge" }
+        },
+        "required": ["success", "operation", "affected_id"]
+      },
+      "errors": [
+        { "code": "NOT_FOUND", "message": "Knowledge graph not found" },
+        { "code": "INVALID_OPERATION", "message": "Operation {operation} requires node_data or edge_data" },
+        { "code": "NODE_NOT_FOUND", "message": "Referenced node not found: {node_name}" },
+        { "code": "DUPLICATE_NODE", "message": "Node already exists: {node_name}" }
+      ]
+    }
+  }
+}

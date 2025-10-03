@@ -1,6 +1,6 @@
 # Wrldbldr MCP Manager Development Guidelines
 
-Auto-generated from feature plans. Last updated: 2025-10-01
+Auto-generated from feature plans. Last updated: 2025-10-03
 
 ## Mission
 
@@ -9,6 +9,8 @@ Wrldbldr MCP Manager is a TTRPG campaign management webapp that solves the "plan
 ## Active Technologies
 - Backend: Node.js 20 LTS + TypeScript 5.0+, Frontend: React 18 + TypeScript 5.0+ + Backend: Express 4.x, Better-SQLite3, crypto (Node.js built-in for random IDs), Frontend: React Router v6, TipTap 2.x (reuse from Feature 003), existing card components (010-create-public-campaign)
 - SQLite3 with Better-SQLite3 (extend campaigns table with public sharing config, add draft/published versions table) (010-create-public-campaign)
+- TypeScript 5.0+ (Node.js 20 LTS) + @modelcontextprotocol/sdk (official Anthropic MCP SDK), Better-SQLite3 (existing), zod (schema validation) (011-create-model-context)
+- SQLite3 (existing database, mcp_tool_logs table added) (011-create-model-context)
 
 **Infrastructure** (002-create-the-authentication):
 - Docker Compose 2.x for service orchestration
@@ -103,6 +105,15 @@ Wrldbldr MCP Manager is a TTRPG campaign management webapp that solves the "plan
 - Rate limit handling: exponential backoff with jitter, respect Retry-After header, max 3 retries, user notification
 - Credentials NEVER transmitted to Wrldbldr MCP Manager servers (direct user → provider API calls only)
 
+**Backend** (011-create-model-context):
+- @modelcontextprotocol/sdk for structured AI tool calls (⚠️ needs API refactoring to v0.5.0 patterns)
+- Zod for runtime schema validation (29 tools across 8 categories)
+- stdio transport for JSON-RPC communication (no network exposure)
+- 3 middleware layers: permissions (campaign ownership + information level filtering), transactions (10s timeout with automatic rollback), logging (mcp_tool_logs audit trail)
+- New table: mcp_tool_logs (tool_name, campaign_id, user_id, parameters, result_status, error_message, execution_time_ms, created_at)
+- Reuses existing services: CardService, KnowledgeGraphService, InformationLevelService (no duplication)
+- 29 tools: 6 card operations, 5 hierarchy navigation, 4 knowledge graph operations, 2 session recap queries, 2 information level discovery, 3 database card operations, 2 map card operations, 3 resources, 2 prompts
+
 **Testing** (002-create-the-authentication):
 - Vitest + React Testing Library (frontend unit tests)
 - Playwright (frontend E2E tests)
@@ -133,6 +144,11 @@ Wrldbldr MCP Manager is a TTRPG campaign management webapp that solves the "plan
 - Backend: Vitest + Supertest (BYOLLM config CRUD, OAuth flow initiate/callback, provider API calls, encryption/decryption, connection test, rate limit retry)
 - E2E: Playwright (blocking error → Settings → OAuth flow → authorize → view credits → select model → test connection → save → verify Import AI accessible)
 
+**Testing** (011-create-model-context):
+- Backend: Vitest + Supertest (7 contract tests for tool categories, 3 integration tests for atomic operations/permissions/concurrency)
+- 10 test files created, cannot run until MCP SDK API corrections applied
+- See specs/011-create-model-context/IMPLEMENTATION_NOTES.md for refactoring guide
+
 ## Project Structure
 
 ```
@@ -150,12 +166,21 @@ wrldbldr-mcp-manager/
 │   │   ├── services/           # AuthService, CampaignService, DatabaseService, CardService, SettingService, InformationLevelService, ViewModeService, ImportService, PlanningService, KnowledgeGraphService, LLMService (OpenAI/Anthropic), EntityExtractionService, FileParserService
 │   │   ├── middleware/         # keycloak.ts, cors.ts, errorHandler.ts, viewModeFilter.ts, multer.ts
 │   │   ├── routes/             # auth.ts, campaigns.ts, sessions.ts, cards.ts, settings.ts, database-cards.ts, information-levels.ts, view-mode.ts, import.ts, planning.ts, graphs.ts, health.ts
+│   │   ├── mcp/                # Model Context Protocol server (Feature 011 - ⚠️ needs API refactoring)
+│   │   │   ├── server.ts       # MCP server entry point (stdio transport, JSON-RPC)
+│   │   │   ├── schemas/        # Zod schemas for 29 tools (card, hierarchy, graph, recap, info-level, database, map)
+│   │   │   ├── tools/          # 29 tool implementations across 8 categories
+│   │   │   ├── resources/      # 3 browsable resources (campaign://cards, recaps, graphs)
+│   │   │   ├── prompts/        # 2 AI prompt templates (import_workflow, planning_workflow)
+│   │   │   └── middleware/     # permissions.ts, transactions.ts (10s timeout), logging.ts (mcp_tool_logs audit)
 │   │   └── db/
-│   │       ├── schema.sql      # CREATE TABLE statements (users, campaigns, sessions, settings, cards, information_levels, import_sessions, planning_sessions, knowledge_graphs, graph_nodes, graph_edges, import_batches)
-│   │       └── migrations.ts   # Version tracking
+│   │       ├── schema.sql      # CREATE TABLE statements (users, campaigns, sessions, settings, cards, information_levels, import_sessions, planning_sessions, knowledge_graphs, graph_nodes, graph_edges, import_batches, mcp_tool_logs)
+│   │       └── migrations/
+│   │           ├── migrations.ts   # Version tracking
+│   │           └── 011-mcp-tool-logs.sql  # Tool call audit logging table
 │   └── tests/
-│       ├── contract/           # API contract tests (auth, campaigns, cards, settings, database-cards, information-levels, view-mode, import, planning, graphs)
-│       ├── integration/        # Auth flow, card hierarchy validation, view mode filtering, import approval workflow, batch revert, planning immediate updates, active filtering
+│       ├── contract/           # API contract tests (auth, campaigns, cards, settings, database-cards, information-levels, view-mode, import, planning, graphs, mcp tools)
+│       ├── integration/        # Auth flow, card hierarchy validation, view mode filtering, import approval workflow, batch revert, planning immediate updates, active filtering, mcp atomic operations/permissions/concurrency
 │       └── unit/               # Service tests, circular reference detection, partial visibility logic, entity deduplication (Levenshtein), timeline conflict detection
 └── frontend/
     ├── Dockerfile
@@ -186,6 +211,9 @@ docker-compose up
 docker-compose logs -f backend
 docker-compose logs -f frontend
 docker-compose logs -f keycloak
+
+# Run MCP server (Feature 011 - after API refactoring)
+docker-compose exec backend npm run mcp
 
 # Stop all services
 docker-compose down
@@ -257,7 +285,9 @@ npm test:e2e                # E2E tests (Playwright)
 - Public campaign passwords stored plaintext (prototype only - note for production: hash with bcrypt)
 
 ## Recent Changes
-- 010-create-public-campaign: Added [if applicable, e.g., PostgreSQL, CoreData, files or N/A]
+
+- **011-create-model-context** (2025-10-03): Model Context Protocol (MCP) integration for structured AI tool calls. Implements Anthropic's MCP SDK to provide 29 tools across 8 categories for Feature 005's AI workflows: card operations (read, create, update, delete, search, move), hierarchy navigation (path, subtree, children, siblings, ancestor), knowledge graphs (query, list nodes, relationships, atomic updates), session recaps (get recaps, timeline events), information level discovery (list levels, get by name), database card operations (query, create entry, update entry), map card operations (list pins, create pin), plus 3 browsable resources (campaign://cards, recaps, graphs) and 2 AI prompt templates (import_workflow, planning_workflow). Middleware provides permissions (campaign ownership + information level filtering), atomic transactions (10s timeout, automatic rollback), and logging (mcp_tool_logs audit trail). All operations reuse existing services. Performance targets: <100ms single card read, <500ms search (100 results), 5 concurrent calls. **Status**: Spec complete (60 FRs), 41 files created (~6,400 lines), needs MCP SDK v0.5.0 API corrections - see specs/011-create-model-context/IMPLEMENTATION_NOTES.md for refactoring guide. Technologies: @modelcontextprotocol/sdk, zod, stdio transport, Better-SQLite3 WAL mode.
+
 - 010-create-public-campaign: Added Backend: Node.js 20 LTS + TypeScript 5.0+, Frontend: React 18 + TypeScript 5.0+ + Backend: Express 4.x, Better-SQLite3, crypto (Node.js built-in for random IDs), Frontend: React Router v6, TipTap 2.x (reuse from Feature 003), existing card components
 
 - **006-create-the-knowledge**: Formalized Knowledge Graph Architecture with separate tables (knowledge_graphs, graph_nodes, graph_edges, graph_versions). Toggle controls for selective AI context (campaign-level toggle_state). 1-deep versioning (current + backup) with restore functionality. Cross-graph queries via free-form observations (LLM interpretation). Graph Summary Panel above Planning AI showing all graphs with toggle controls, node/edge counts, last updated. Context Engineering help page. Chat-based graph creation via Planning AI. Manual node/edge CRUD operations. Custom graph types support (custom:{type}). Multiple instances of same graph type. GraphVersion entity for snapshots. GraphToggleService, GraphVersionService, CrossGraphQueryService. Adjacency list pattern with JSONB attributes for user-defined schemas. Information level filtering integration (DM Secret nodes hidden in Player View). Default World-Foundations graph on campaign init. Performance: <100ms query/toggle, <500ms save for 50 nodes/100 edges.
@@ -267,8 +297,6 @@ npm test:e2e                # E2E tests (Playwright)
 - **007-create-the-interactive**: Interactive map system as card feature. Konva.js canvas for map rendering. Pin/Zone/Layer cards as children of map-enabled cards. BLOB storage for map images (10MB limit, client-side compression). Absolute pixel coordinates for pins/zones. Tabs for multiple maps per card. Information filtering integration (pins inherit visibility from referenced cards). Nested map navigation via pin references. /map slash command. Orphaned pin warnings when referenced cards deleted. Modular parent-child architecture preserves coordinates on card move. Performance: <1s upload, <100ms pin operations, 60fps zoom/pan for 500+ pins.
 
 - **008-create-byollm-configuration**: BYOLLM (Bring Your Own LLM) configuration system. Implements Constitution Principle V (NON-NEGOTIABLE): user MUST provide own LLM credentials, stored locally with AES-256-GCM encryption (prototype-level), NEVER transmitted to Wrldbldr MCP Manager servers. OAuth 2.0 Authorization Code Flow + PKCE for OpenAI and Anthropic providers. API key alternative for Anthropic. Custom Endpoint support for local LLMs (Ollama, LM Studio) with OpenAI-compatible format. 3 new tables: byollm_configs (encrypted credentials, model config, custom prompts per scope), provider_credits (cached balance, org name, 5min TTL), oauth_sessions (PKCE state/verifier, 10min TTL). Credits/usage display prevents surprise costs. Model selection with context window info. Connection test validates bulk MCP operations. Custom system prompts for Import/Planning AI (text input or file upload). Global vs per-campaign configuration scopes (campaign overrides global). Blocking errors prevent Import/Planning AI usage without valid config. Rate limit handling: exponential backoff + jitter, respect Retry-After header, max 3 retries, user notification. Graceful failure with manual retry on API errors. OAuth token refresh automatic. All provider API calls direct from user machine (not proxied). Performance: OAuth flow <3s, connection test <5s, credits refresh <2s.
-
-
 
 ## Constitutional Principles
 
@@ -305,6 +333,10 @@ All API endpoints documented in OpenAPI 3.0 format:
 - `/specs/005-create-the-ai/contracts/planning.yaml` - Planning session CRUD, chat with immediate graph updates
 - `/specs/005-create-the-ai/contracts/knowledge-graphs.yaml` - Knowledge graph CRUD, node/edge operations, active filtering
 
+**Feature 011 (Model Context Protocol Integration)**:
+- `/specs/011-create-model-context/contracts/*.json` - 8 JSON Schema files defining 29 MCP tools + resources + prompts
+- See IMPLEMENTATION_NOTES.md for API refactoring requirements
+
 Run contract tests to validate implementation:
 ```bash
 cd backend && npm test:contract
@@ -316,6 +348,7 @@ cd backend && npm test:contract
 **Feature 003 Setup**: See `/specs/003-create-a-notion/quickstart.md`
 **Feature 004 Setup**: See `/specs/004-create-a-tagging/quickstart.md`
 **Feature 005 Setup**: See `/specs/005-create-the-ai/quickstart.md`
+**Feature 011 Setup**: See `/specs/011-create-model-context/quickstart.md` (⚠️ requires API refactoring first)
 
 **TL;DR**:
 1. `docker-compose up --build`

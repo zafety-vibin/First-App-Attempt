@@ -1,0 +1,122 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Information Level Tools Contract",
+  "description": "MCP tools for discovering and querying campaign information levels",
+  "tools": {
+    "list_information_levels": {
+      "description": "List all information levels configured for a campaign with their IDs, names, and hierarchy positions",
+      "input": {
+        "type": "object",
+        "properties": {
+          "campaign_id": {
+            "type": "string",
+            "description": "Campaign UUID"
+          }
+        },
+        "required": ["campaign_id"]
+      },
+      "output": {
+        "type": "object",
+        "properties": {
+          "levels": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer",
+                  "description": "Information level ID (use this in create_card/update_card)"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Display name (e.g., 'DM Secret', 'Player Knowledge')"
+                },
+                "hierarchy_level": {
+                  "type": "integer",
+                  "description": "Filtering hierarchy (higher = more restricted)"
+                },
+                "color": {
+                  "type": "string",
+                  "description": "Hex color code for UI display"
+                }
+              },
+              "required": ["id", "name", "hierarchy_level"]
+            }
+          }
+        },
+        "required": ["levels"]
+      },
+      "errors": [
+        {
+          "code": "CAMPAIGN_NOT_FOUND",
+          "message": "Campaign not found: {campaign_id}"
+        },
+        {
+          "code": "PERMISSION_DENIED",
+          "message": "Not authorized to access this campaign"
+        }
+      ]
+    },
+    "get_information_level_by_name": {
+      "description": "Find an information level ID by its name (case-insensitive fuzzy match)",
+      "input": {
+        "type": "object",
+        "properties": {
+          "campaign_id": {
+            "type": "string",
+            "description": "Campaign UUID"
+          },
+          "name": {
+            "type": "string",
+            "description": "Level name to search for (e.g., 'DM Secret', 'dm secret', 'DM-Secret')"
+          }
+        },
+        "required": ["campaign_id", "name"]
+      },
+      "output": {
+        "type": "object",
+        "properties": {
+          "level": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "description": "Information level ID (use this in create_card/update_card)"
+              },
+              "name": {
+                "type": "string",
+                "description": "Canonical name"
+              },
+              "hierarchy_level": {
+                "type": "integer"
+              },
+              "color": {
+                "type": "string"
+              }
+            },
+            "required": ["id", "name", "hierarchy_level"]
+          },
+          "match_score": {
+            "type": "number",
+            "description": "Fuzzy match confidence (0-1, higher = better match)"
+          }
+        },
+        "required": ["level", "match_score"]
+      },
+      "errors": [
+        {
+          "code": "CAMPAIGN_NOT_FOUND",
+          "message": "Campaign not found: {campaign_id}"
+        },
+        {
+          "code": "LEVEL_NOT_FOUND",
+          "message": "No information level matching '{name}' found in campaign"
+        },
+        {
+          "code": "PERMISSION_DENIED",
+          "message": "Not authorized to access this campaign"
+        }
+      ]
+    }
+  }
+}

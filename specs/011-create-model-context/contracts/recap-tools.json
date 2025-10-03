@@ -1,0 +1,107 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MCP Session Recap Tools",
+  "description": "Tool schemas for accessing session recaps and timeline events",
+  "tools": {
+    "get_session_recaps": {
+      "description": "Get session recaps with pagination",
+      "input": {
+        "type": "object",
+        "properties": {
+          "campaign_id": {
+            "type": "string",
+            "description": "Campaign ID for permission filtering"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20,
+            "default": 5,
+            "description": "Number of recaps to return"
+          },
+          "order": {
+            "type": "string",
+            "enum": ["ascending", "descending"],
+            "default": "descending",
+            "description": "Chronological order (descending = most recent first)"
+          }
+        },
+        "required": ["campaign_id"]
+      },
+      "output": {
+        "type": "object",
+        "properties": {
+          "recaps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "session_id": { "type": "string" },
+                "session_date": { "type": "integer", "description": "Unix timestamp" },
+                "recap": { "type": "string", "description": "Session summary text" },
+                "tags": { "type": "array", "items": { "type": "string" } }
+              },
+              "required": ["session_id", "session_date", "recap"]
+            }
+          },
+          "total": { "type": "integer", "description": "Total recaps for campaign" }
+        },
+        "required": ["recaps", "total"]
+      },
+      "errors": [
+        { "code": "NO_RECAPS", "message": "No session recaps found for campaign: {campaign_id}" }
+      ]
+    },
+    "get_timeline_events": {
+      "description": "Query timeline events by date range or tags",
+      "input": {
+        "type": "object",
+        "properties": {
+          "campaign_id": {
+            "type": "string",
+            "description": "Campaign ID for permission filtering"
+          },
+          "start_date": {
+            "type": "integer",
+            "description": "Unix timestamp - filter events after this date (optional)"
+          },
+          "end_date": {
+            "type": "integer",
+            "description": "Unix timestamp - filter events before this date (optional)"
+          },
+          "tags": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Filter by tags (e.g., ['active', 'party-relevant']) (optional)"
+          }
+        },
+        "required": ["campaign_id"]
+      },
+      "output": {
+        "type": "object",
+        "properties": {
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "session_id": { "type": "string" },
+                "session_date": { "type": "integer" },
+                "event_name": { "type": "string" },
+                "event_type": { "type": "string" },
+                "description": { "type": "string" },
+                "tags": { "type": "array", "items": { "type": "string" } }
+              },
+              "required": ["session_id", "session_date", "event_name"]
+            }
+          },
+          "total": { "type": "integer" }
+        },
+        "required": ["events", "total"]
+      },
+      "errors": [
+        { "code": "INVALID_DATE_RANGE", "message": "start_date must be before end_date" }
+      ]
+    }
+  }
+}

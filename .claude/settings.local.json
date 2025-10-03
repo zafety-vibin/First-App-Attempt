@@ -18,7 +18,10 @@
       "Bash(.specify/scripts/bash/check-prerequisites.sh:*)",
       "Bash(docker-compose logs:*)",
       "Bash(docker-compose:*)",
-      "Bash(docker exec:*)"
+      "Bash(docker exec:*)",
+      "Read(//c/Users/zmanl/Projects/VVD-mimic/specs/008-create-byollm-configuration/**)",
+      "Bash(docker logs wrldbldr-backend --tail 100)",
+      "Bash(docker logs:*)"
     ],
     "deny": [],
     "ask": []

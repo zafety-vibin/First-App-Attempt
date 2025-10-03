@@ -96,6 +96,25 @@ export function runMigrations(): void {
     }
   });
 
+  // Migration 8: Feature 008 - BYOLLM Configuration
+  runMigration(8, () => {
+    const migrationsDir = path.join(__dirname, '../db/migrations');
+    const migration008Files = [
+      '008-add-byollm-tables.sql',
+      '008-add-byollm-indexes.sql',
+      '008-test-encryption.sql',
+    ];
+
+    for (const file of migration008Files) {
+      const filePath = path.join(migrationsDir, file);
+      if (fs.existsSync(filePath)) {
+        const sql = fs.readFileSync(filePath, 'utf-8');
+        db.exec(sql);
+        console.log(`  ✓ Applied ${file}`);
+      }
+    }
+  });
+
   console.log('✓ Database initialized');
   logDatabaseInfo();
 }

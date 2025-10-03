@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useInformationLevel } from '../contexts/InformationLevelContext';
 import { CustomLevelForm } from '../components/CustomLevelForm';
+import { BYOLLMSettings } from '../components/BYOLLMSettings';
 import type { InformationLevel } from '../../shared/types/InformationLevel';
 
 export function SettingsPage() {
@@ -184,6 +185,14 @@ export function SettingsPage() {
             </div>
           )}
         </div>
+      </section>
+
+      {/* BYOLLM Configuration Section */}
+      <section className="settings-section">
+        <BYOLLMSettings
+          campaignId={campaignId}
+          scope="campaign"
+        />
       </section>
 
       <style>{`

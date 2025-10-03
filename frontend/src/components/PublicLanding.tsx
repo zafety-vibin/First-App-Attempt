@@ -35,9 +35,11 @@ export function PublicLanding() {
         <h2>Features</h2>
         <ul>
           <li>Manage multiple campaigns</li>
-          <li>Card-based content organization (coming soon)</li>
-          <li>Public campaign sharing with password protection</li>
+          <li>Card-based content organization with rich text editing</li>
+          <li>Database cards (tables, lists, galleries, kanban)</li>
           <li>Information filtering for GM/Player views</li>
+          <li>Public campaign sharing with password protection</li>
+          <li>BYOLLM configuration (bring your own LLM credentials)</li>
         </ul>
       </div>
 

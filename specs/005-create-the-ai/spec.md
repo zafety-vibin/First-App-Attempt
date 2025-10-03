@@ -2,8 +2,12 @@
 
 **Feature Branch**: `005-create-the-ai`
 **Created**: 2025-10-01
-**Status**: Draft
-**Input**: User description: "Create the AI Import and Planning workflows including: Import workflow (bulk note parsing, entity extraction, update vs addition detection, card creation/updates with user approval, graphs OFF, consistency with established story/timeline, revert functionality) and Planning workflow (session planning assistant, knowledge graph context, user-invoked graph updates from imports, graphs ON, context-aware suggestions without autonomous edits). Import uses pull-down tab interface accessible from any page. AI searches existing campaign structure to determine appropriate placement. Batch operations with single approval summary after clarifications. Planning AI explicitly invoked to parse imports and update four knowledge graphs (Geographical, Political-Web, World-Foundations, Campaign-Story). Political-Web and Campaign-Story graphs stay lean with only active/relevant content. Both workflows require BYOLLM configuration and use MCP protocol. Session Recaps database is default template, serves as authoritative timeline source. Revert limited to most recent import batch."
+**Status**: Draft (Updated 2025-10-03 post-Feature 011)
+**Input**: User description: "Create the AI Import and Planning workflows including: Import workflow (bulk note parsing, entity extraction, update vs addition detection, card creation/updates with user approval, graphs OFF, consistency with established story/timeline, revert functionality) and Planning workflow (session planning assistant, knowledge graph context, user-invoked graph updates from imports, graphs ON, context-aware suggestions without autonomous edits). Import uses pull-down tab interface accessible from any page. AI searches existing campaign structure to determine appropriate placement. Batch operations with single approval summary after clarifications. Planning AI explicitly invoked to parse imports and update four knowledge graphs (Geographical, Political-Web, World-Foundations, Campaign-Story). Political-Web and Campaign-Story graphs stay lean with only active/relevant content. Both workflows require BYOLLM configuration and reuse MCP tool handlers from Feature 011 via OpenAI/Anthropic function calling. Session Recaps database is default template, serves as authoritative timeline source. Revert limited to most recent import batch."
+
+**Dependencies**:
+- Feature 011 (MCP Integration) ✓ Complete - provides 24 reusable tool handlers (`backend/src/mcp/tools/*`) that Import/Planning AI call directly via OpenAI/Anthropic function calling
+- MCP server (Feature 011) is for external clients only (Claude Desktop via stdio) - Import/Planning workflows use REST API with direct tool handler calls
 
 ---
 
@@ -61,15 +65,15 @@ A Game Master is preparing for next week's session. They pull down the Planning 
 - **FR-004**: System MUST provide separate tabs for Import workflow and Planning workflow
 - **FR-005**: Both workflows MUST require BYOLLM configuration before activation
 - **FR-006**: System MUST display clear error message when Import or Planning is attempted without BYOLLM credentials
-- **FR-007**: Both workflows MUST use MCP protocol for bulk operations with streaming responses
+- **FR-007**: Both workflows MUST use OpenAI/Anthropic function calling with shared tool handlers from Feature 011 for bulk operations with streaming responses
 - **FR-008**: Both workflows MUST be campaign-scoped (operate within current campaign context)
 - **FR-009**: System MUST maintain session state for both Import and Planning across multiple exchanges within same session
 
-#### BYOLLM & MCP Integration
-- **FR-010**: System MUST use user-provided LLM API credentials for both Import and Planning workflows
-- **FR-011**: System MUST use MCP protocol for entity extraction, batch operations, and knowledge graph updates
-- **FR-012**: System MUST provide progress indicators during MCP bulk operations
-- **FR-013**: System MUST support cancellation of in-progress MCP operations
+#### BYOLLM & Tool Handler Integration
+- **FR-010**: System MUST use user-provided LLM API credentials (OpenAI/Anthropic) for both Import and Planning workflows
+- **FR-011**: System MUST use OpenAI/Anthropic function calling to invoke tool handlers from Feature 011 for entity extraction, batch operations, and knowledge graph updates
+- **FR-012**: System MUST provide progress indicators during bulk operations
+- **FR-013**: System MUST support cancellation of in-progress operations
 - **FR-014**: System MUST handle API failures gracefully with retry options and clear error messages
 
 #### Import Workflow - Content Analysis
@@ -177,7 +181,7 @@ A Game Master is preparing for next week's session. They pull down the Planning 
 
 - **AI Approval Summary**: Represents the approval interface presented to user before import execution. Contains proposed card updates, proposed card creations, placement locations, formatting changes, wording changes requiring approval, and user approval status.
 
-- **BYOLLM Configuration**: Represents user's LLM API credentials and settings. Required for both Import and Planning workflows. Contains API key, model selection, MCP protocol settings, and optional custom system prompt/environment file.
+- **BYOLLM Configuration**: Represents user's LLM API credentials and settings. Required for both Import and Planning workflows. Contains API key, model selection, function calling settings, and optional custom system prompt/environment file.
 
 ---
 

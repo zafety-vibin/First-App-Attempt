@@ -1,0 +1,279 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MCP Card Tools",
+  "description": "Tool schemas for card CRUD operations",
+  "tools": {
+    "read_card": {
+      "description": "Read a campaign card by ID, including content, metadata, and hierarchy position",
+      "input": {
+        "type": "object",
+        "properties": {
+          "card_id": {
+            "type": "integer",
+            "description": "Unique card identifier"
+          },
+          "campaign_id": {
+            "type": "string",
+            "description": "Campaign ID for permission filtering"
+          }
+        },
+        "required": ["card_id", "campaign_id"]
+      },
+      "output": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "campaign_id": { "type": "string" },
+          "parent_id": { "type": ["integer", "null"] },
+          "title": { "type": "string" },
+          "card_type": { "type": "string", "enum": ["text", "database", "map"] },
+          "content": { "type": "object", "description": "ProseMirror JSON" },
+          "information_level_id": { "type": ["integer", "null"] },
+          "position": { "type": "integer" },
+          "created_at": { "type": "integer" },
+          "updated_at": { "type": "integer" }
+        },
+        "required": ["id", "campaign_id", "title", "card_type"]
+      },
+      "errors": [
+        { "code": "NOT_FOUND", "message": "Card not found: {card_id}" },
+        { "code": "PERMISSION_DENIED", "message": "Card does not belong to campaign: {campaign_id}" },
+        { "code": "INFORMATION_LEVEL_FILTERED", "message": "Card hidden by information level filter" }
+      ]
+    },
+    "create_card": {
+      "description": "Create a new card with hierarchy validation",
+      "input": {
+        "type": "object",
+        "properties": {
+          "campaign_id": {
+            "type": "string",
+            "description": "Campaign ID for permission filtering"
+          },
+          "parent_id": {
+            "type": ["integer", "null"],
+            "description": "Parent card ID (null for root-level cards)"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Card title"
+          },
+          "card_type": {
+            "type": "string",
+            "enum": ["text", "database", "map"],
+            "description": "Card type"
+          },
+          "content": {
+            "type": "object",
+            "description": "ProseMirror JSON content (optional)"
+          },
+          "information_level_id": {
+            "type": ["integer", "null"],
+            "description": "Information level for DM/Player filtering (optional)"
+          }
+        },
+        "required": ["campaign_id", "title", "card_type"]
+      },
+      "output": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "description": "Newly created card ID" },
+          "campaign_id": { "type": "string" },
+          "parent_id": { "type": ["integer", "null"] },
+          "title": { "type": "string" },
+          "card_type": { "type": "string" },
+          "position": { "type": "integer" },
+          "created_at": { "type": "integer" }
+        },
+        "required": ["id", "campaign_id", "title", "card_type"]
+      },
+      "errors": [
+        { "code": "INVALID_PARENT", "message": "Parent card not found: {parent_id}" },
+        { "code": "PERMISSION_DENIED", "message": "Parent card does not belong to campaign: {campaign_id}" },
+        { "code": "INVALID_CARD_TYPE", "message": "Invalid card_type: {card_type}" },
+        { "code": "INVALID_INFORMATION_LEVEL", "message": "Information level not found for campaign" }
+      ]
+    },
+    "update_card": {
+      "description": "Update card title, content, or information level",
+      "input": {
+        "type": "object",
+        "properties": {
+          "card_id": {
+            "type": "integer",
+            "description": "Card ID to update"
+          },
+          "campaign_id": {
+            "type": "string",
+            "description": "Campaign ID for permission filtering"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "New title (optional)"
+          },
+          "content": {
+            "type": "object",
+            "description": "New ProseMirror JSON content (optional)"
+          },
+          "information_level_id": {
+            "type": ["integer", "null"],
+            "description": "New information level (optional)"
+          }
+        },
+        "required": ["card_id", "campaign_id"],
+        "minProperties": 3
+      },
+      "output": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "updated_at": { "type": "integer" }
+        },
+        "required": ["id", "updated_at"]
+      },
+      "errors": [
+        { "code": "NOT_FOUND", "message": "Card not found: {card_id}" },
+        { "code": "PERMISSION_DENIED", "message": "Card does not belong to campaign: {campaign_id}" },
+        { "code": "NO_FIELDS_TO_UPDATE", "message": "At least one field (title, content, information_level_id) required" }
+      ]
+    },
+    "delete_card": {
+      "description": "Delete a card (protection against deleting cards with children)",
+      "input": {
+        "type": "object",
+        "properties": {
+          "card_id": {
+            "type": "integer",
+            "description": "Card ID to delete"
+          },
+          "campaign_id": {
+            "type": "string",
+            "description": "Campaign ID for permission filtering"
+          }
+        },
+        "required": ["card_id", "campaign_id"]
+      },
+      "output": {
+        "type": "object",
+        "properties": {
+          "deleted": { "type": "boolean", "const": true },
+          "card_id": { "type": "integer" }
+        },
+        "required": ["deleted", "card_id"]
+      },
+      "errors": [
+        { "code": "NOT_FOUND", "message": "Card not found: {card_id}" },
+        { "code": "PERMISSION_DENIED", "message": "Card does not belong to campaign: {campaign_id}" },
+        { "code": "HAS_CHILDREN", "message": "Cannot delete card with children. Delete or move children first." }
+      ]
+    },
+    "search_cards": {
+      "description": "Search cards by title or content with fuzzy matching",
+      "input": {
+        "type": "object",
+        "properties": {
+          "campaign_id": {
+            "type": "string",
+            "description": "Campaign ID for permission filtering"
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Search query"
+          },
+          "card_type": {
+            "type": "string",
+            "enum": ["text", "database", "map"],
+            "description": "Filter by card type (optional)"
+          },
+          "parent_id": {
+            "type": ["integer", "null"],
+            "description": "Search only within descendants of this parent (optional)"
+          },
+          "information_level": {
+            "type": "integer",
+            "description": "Filter by information level threshold (optional)"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 20,
+            "description": "Max results to return"
+          }
+        },
+        "required": ["campaign_id", "query"]
+      },
+      "output": {
+        "type": "object",
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "integer" },
+                "title": { "type": "string" },
+                "card_type": { "type": "string" },
+                "parent_id": { "type": ["integer", "null"] },
+                "similarity": { "type": "number", "minimum": 0, "maximum": 1 }
+              },
+              "required": ["id", "title", "card_type"]
+            }
+          },
+          "total": { "type": "integer", "description": "Total matching cards (before limit)" }
+        },
+        "required": ["results", "total"]
+      },
+      "errors": [
+        { "code": "INVALID_PARENT", "message": "Parent card not found: {parent_id}" }
+      ]
+    },
+    "move_card": {
+      "description": "Move card to new parent with circular reference detection",
+      "input": {
+        "type": "object",
+        "properties": {
+          "card_id": {
+            "type": "integer",
+            "description": "Card ID to move"
+          },
+          "campaign_id": {
+            "type": "string",
+            "description": "Campaign ID for permission filtering"
+          },
+          "new_parent_id": {
+            "type": ["integer", "null"],
+            "description": "New parent card ID (null for root-level)"
+          },
+          "position": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Sibling position (optional, defaults to end)"
+          }
+        },
+        "required": ["card_id", "campaign_id", "new_parent_id"]
+      },
+      "output": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "parent_id": { "type": ["integer", "null"] },
+          "position": { "type": "integer" },
+          "updated_at": { "type": "integer" }
+        },
+        "required": ["id", "parent_id", "position", "updated_at"]
+      },
+      "errors": [
+        { "code": "NOT_FOUND", "message": "Card not found: {card_id}" },
+        { "code": "PERMISSION_DENIED", "message": "Card does not belong to campaign: {campaign_id}" },
+        { "code": "INVALID_PARENT", "message": "New parent card not found: {new_parent_id}" },
+        { "code": "CIRCULAR_REFERENCE", "message": "Cannot move card: would create circular reference (card cannot be ancestor of itself)" }
+      ]
+    }
+  }
+}

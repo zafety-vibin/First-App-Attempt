@@ -1,0 +1,215 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Database Card Tools Contract",
+  "description": "MCP tools for querying and manipulating database card rows (NPC databases, quest logs, etc.)",
+  "tools": {
+    "query_database_card": {
+      "description": "Query rows in a database card with optional filtering, sorting, and pagination",
+      "input": {
+        "type": "object",
+        "properties": {
+          "card_id": {
+            "type": "integer",
+            "description": "Database card ID"
+          },
+          "campaign_id": {
+            "type": "string",
+            "description": "Campaign UUID"
+          },
+          "filters": {
+            "type": "object",
+            "description": "Column-value pairs for filtering (e.g., {\"Faction\": \"Harpers\", \"Status\": \"Active\"})",
+            "additionalProperties": true
+          },
+          "sort_by": {
+            "type": "string",
+            "description": "Column name to sort by"
+          },
+          "sort_order": {
+            "type": "string",
+            "enum": ["asc", "desc"],
+            "default": "asc"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum rows to return",
+            "default": 100
+          }
+        },
+        "required": ["card_id", "campaign_id"]
+      },
+      "output": {
+        "type": "object",
+        "properties": {
+          "schema": {
+            "type": "object",
+            "description": "Database schema (column names and types)",
+            "properties": {
+              "columns": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": { "type": "string" },
+                    "type": { "type": "string", "enum": ["text", "number", "date", "select", "multi-select"] }
+                  }
+                }
+              }
+            }
+          },
+          "rows": {
+            "type": "array",
+            "description": "Query results",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "integer" },
+                "data": {
+                  "type": "object",
+                  "description": "Row data matching schema columns",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "total_count": {
+            "type": "integer",
+            "description": "Total rows matching filters (before limit)"
+          }
+        },
+        "required": ["schema", "rows", "total_count"]
+      },
+      "errors": [
+        {
+          "code": "CARD_NOT_FOUND",
+          "message": "Card not found: {card_id}"
+        },
+        {
+          "code": "CARD_NOT_DATABASE_TYPE",
+          "message": "Card is not a database type (card_type must be 'database')"
+        },
+        {
+          "code": "INVALID_FILTER_COLUMN",
+          "message": "Column '{column}' does not exist in database schema"
+        },
+        {
+          "code": "PERMISSION_DENIED",
+          "message": "Not authorized to access this card"
+        }
+      ]
+    },
+    "create_database_entry": {
+      "description": "Add a new row to a database card",
+      "input": {
+        "type": "object",
+        "properties": {
+          "card_id": {
+            "type": "integer",
+            "description": "Database card ID"
+          },
+          "campaign_id": {
+            "type": "string",
+            "description": "Campaign UUID"
+          },
+          "data": {
+            "type": "object",
+            "description": "Row data matching database schema (e.g., {\"Name\": \"Elara\", \"Faction\": \"Harpers\", \"Level\": 5})",
+            "additionalProperties": true
+          }
+        },
+        "required": ["card_id", "campaign_id", "data"]
+      },
+      "output": {
+        "type": "object",
+        "properties": {
+          "entry_id": {
+            "type": "integer",
+            "description": "ID of newly created row"
+          },
+          "data": {
+            "type": "object",
+            "description": "Created row data with defaults applied",
+            "additionalProperties": true
+          }
+        },
+        "required": ["entry_id", "data"]
+      },
+      "errors": [
+        {
+          "code": "CARD_NOT_FOUND",
+          "message": "Card not found: {card_id}"
+        },
+        {
+          "code": "CARD_NOT_DATABASE_TYPE",
+          "message": "Card is not a database type"
+        },
+        {
+          "code": "SCHEMA_VALIDATION_FAILED",
+          "message": "Data does not match schema: {details}"
+        },
+        {
+          "code": "PERMISSION_DENIED",
+          "message": "Not authorized to modify this card"
+        }
+      ]
+    },
+    "update_database_entry": {
+      "description": "Update an existing row in a database card",
+      "input": {
+        "type": "object",
+        "properties": {
+          "card_id": {
+            "type": "integer",
+            "description": "Database card ID"
+          },
+          "campaign_id": {
+            "type": "string",
+            "description": "Campaign UUID"
+          },
+          "entry_id": {
+            "type": "integer",
+            "description": "Row ID to update"
+          },
+          "data": {
+            "type": "object",
+            "description": "Partial update data (only changed columns)",
+            "additionalProperties": true
+          }
+        },
+        "required": ["card_id", "campaign_id", "entry_id", "data"]
+      },
+      "output": {
+        "type": "object",
+        "properties": {
+          "entry_id": {
+            "type": "integer"
+          },
+          "data": {
+            "type": "object",
+            "description": "Updated row data (full row after merge)",
+            "additionalProperties": true
+          }
+        },
+        "required": ["entry_id", "data"]
+      },
+      "errors": [
+        {
+          "code": "CARD_NOT_FOUND",
+          "message": "Card not found: {card_id}"
+        },
+        {
+          "code": "ENTRY_NOT_FOUND",
+          "message": "Row not found: {entry_id}"
+        },
+        {
+          "code": "SCHEMA_VALIDATION_FAILED",
+          "message": "Data does not match schema: {details}"
+        },
+        {
+          "code": "PERMISSION_DENIED",
+          "message": "Not authorized to modify this card"
+        }
+      ]
+    }
+  }
+}

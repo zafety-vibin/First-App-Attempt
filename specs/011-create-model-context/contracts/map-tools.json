@@ -1,0 +1,166 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Map Card Tools Contract",
+  "description": "MCP tools for listing and creating map pins on map-enabled cards",
+  "tools": {
+    "list_map_pins": {
+      "description": "List all pins on a map-enabled card with coordinates and referenced cards",
+      "input": {
+        "type": "object",
+        "properties": {
+          "card_id": {
+            "type": "integer",
+            "description": "Map-enabled card ID (parent of pin cards)"
+          },
+          "campaign_id": {
+            "type": "string",
+            "description": "Campaign UUID"
+          }
+        },
+        "required": ["card_id", "campaign_id"]
+      },
+      "output": {
+        "type": "object",
+        "properties": {
+          "pins": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "pin_card_id": {
+                  "type": "integer",
+                  "description": "Card ID of the pin itself"
+                },
+                "x": {
+                  "type": "number",
+                  "description": "X coordinate in pixels (absolute position)"
+                },
+                "y": {
+                  "type": "number",
+                  "description": "Y coordinate in pixels (absolute position)"
+                },
+                "label": {
+                  "type": "string",
+                  "description": "Pin label/title"
+                },
+                "referenced_card_id": {
+                  "type": "integer",
+                  "description": "Card referenced by this pin (null if no reference)",
+                  "nullable": true
+                },
+                "information_level_id": {
+                  "type": "integer",
+                  "description": "Information level of the pin (inherited from referenced card or explicit)"
+                }
+              },
+              "required": ["pin_card_id", "x", "y", "label"]
+            }
+          },
+          "map_dimensions": {
+            "type": "object",
+            "description": "Map image dimensions for coordinate context",
+            "properties": {
+              "width": { "type": "integer" },
+              "height": { "type": "integer" }
+            }
+          }
+        },
+        "required": ["pins"]
+      },
+      "errors": [
+        {
+          "code": "CARD_NOT_FOUND",
+          "message": "Card not found: {card_id}"
+        },
+        {
+          "code": "CARD_NOT_MAP_ENABLED",
+          "message": "Card does not have map feature enabled (map_enabled flag is false)"
+        },
+        {
+          "code": "PERMISSION_DENIED",
+          "message": "Not authorized to access this card"
+        }
+      ]
+    },
+    "create_map_pin": {
+      "description": "Create a new pin on a map-enabled card at specified coordinates",
+      "input": {
+        "type": "object",
+        "properties": {
+          "parent_card_id": {
+            "type": "integer",
+            "description": "Map-enabled card ID (parent for new pin)"
+          },
+          "campaign_id": {
+            "type": "string",
+            "description": "Campaign UUID"
+          },
+          "x": {
+            "type": "number",
+            "description": "X coordinate in pixels (absolute position on map image)"
+          },
+          "y": {
+            "type": "number",
+            "description": "Y coordinate in pixels (absolute position on map image)"
+          },
+          "label": {
+            "type": "string",
+            "description": "Pin label/title (e.g., 'Waterdeep', 'Goblin Camp')"
+          },
+          "referenced_card_id": {
+            "type": "integer",
+            "description": "Optional: Link pin to existing card (creates navigation reference)",
+            "nullable": true
+          },
+          "information_level_id": {
+            "type": "integer",
+            "description": "Optional: Override information level (if not set, inherits from referenced card or defaults to Common Knowledge)"
+          }
+        },
+        "required": ["parent_card_id", "campaign_id", "x", "y", "label"]
+      },
+      "output": {
+        "type": "object",
+        "properties": {
+          "pin_card_id": {
+            "type": "integer",
+            "description": "ID of newly created pin card"
+          },
+          "x": { "type": "number" },
+          "y": { "type": "number" },
+          "label": { "type": "string" },
+          "referenced_card_id": {
+            "type": "integer",
+            "nullable": true
+          },
+          "information_level_id": {
+            "type": "integer"
+          }
+        },
+        "required": ["pin_card_id", "x", "y", "label"]
+      },
+      "errors": [
+        {
+          "code": "CARD_NOT_FOUND",
+          "message": "Parent card not found: {parent_card_id}"
+        },
+        {
+          "code": "CARD_NOT_MAP_ENABLED",
+          "message": "Parent card does not have map feature enabled"
+        },
+        {
+          "code": "REFERENCED_CARD_NOT_FOUND",
+          "message": "Referenced card not found: {referenced_card_id}"
+        },
+        {
+          "code": "INVALID_COORDINATES",
+          "message": "Coordinates ({x}, {y}) are outside map bounds ({width}x{height})"
+        },
+        {
+          "code": "PERMISSION_DENIED",
+          "message": "Not authorized to modify this card"
+        }
+      ]
+    }
+  }
+}

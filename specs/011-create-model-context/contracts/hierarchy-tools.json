@@ -1,0 +1,224 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MCP Hierarchy Navigation Tools",
+  "description": "Tool schemas for card hierarchy traversal",
+  "tools": {
+    "get_card_path": {
+      "description": "Get breadcrumb trail from root to card",
+      "input": {
+        "type": "object",
+        "properties": {
+          "card_id": {
+            "type": "integer",
+            "description": "Card ID to get path for"
+          },
+          "campaign_id": {
+            "type": "string",
+            "description": "Campaign ID for permission filtering"
+          }
+        },
+        "required": ["card_id", "campaign_id"]
+      },
+      "output": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "integer" },
+                "title": { "type": "string" },
+                "card_type": { "type": "string" }
+              },
+              "required": ["id", "title", "card_type"]
+            },
+            "description": "Array from root to card (inclusive)"
+          }
+        },
+        "required": ["path"]
+      },
+      "errors": [
+        { "code": "NOT_FOUND", "message": "Card not found: {card_id}" },
+        { "code": "PERMISSION_DENIED", "message": "Card does not belong to campaign: {campaign_id}" }
+      ]
+    },
+    "get_subtree": {
+      "description": "Get all descendants with content (recursive)",
+      "input": {
+        "type": "object",
+        "properties": {
+          "card_id": {
+            "type": "integer",
+            "description": "Root card ID for subtree"
+          },
+          "campaign_id": {
+            "type": "string",
+            "description": "Campaign ID for permission filtering"
+          },
+          "max_depth": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10,
+            "default": 5,
+            "description": "Maximum recursion depth"
+          }
+        },
+        "required": ["card_id", "campaign_id"]
+      },
+      "output": {
+        "type": "object",
+        "properties": {
+          "root": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "integer" },
+              "title": { "type": "string" },
+              "card_type": { "type": "string" },
+              "children": {
+                "type": "array",
+                "items": { "$ref": "#/output/properties/root" }
+              }
+            },
+            "required": ["id", "title", "card_type", "children"]
+          }
+        },
+        "required": ["root"]
+      },
+      "errors": [
+        { "code": "NOT_FOUND", "message": "Card not found: {card_id}" },
+        { "code": "PERMISSION_DENIED", "message": "Card does not belong to campaign: {campaign_id}" }
+      ]
+    },
+    "list_children": {
+      "description": "List immediate children of a card",
+      "input": {
+        "type": "object",
+        "properties": {
+          "card_id": {
+            "type": "integer",
+            "description": "Parent card ID"
+          },
+          "campaign_id": {
+            "type": "string",
+            "description": "Campaign ID for permission filtering"
+          },
+          "depth": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3,
+            "default": 1,
+            "description": "Levels of recursion (1 = immediate children only)"
+          }
+        },
+        "required": ["card_id", "campaign_id"]
+      },
+      "output": {
+        "type": "object",
+        "properties": {
+          "children": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "integer" },
+                "title": { "type": "string" },
+                "card_type": { "type": "string" },
+                "position": { "type": "integer" }
+              },
+              "required": ["id", "title", "card_type", "position"]
+            }
+          }
+        },
+        "required": ["children"]
+      },
+      "errors": [
+        { "code": "NOT_FOUND", "message": "Card not found: {card_id}" },
+        { "code": "PERMISSION_DENIED", "message": "Card does not belong to campaign: {campaign_id}" }
+      ]
+    },
+    "get_siblings": {
+      "description": "Get cards at same hierarchy level (same parent)",
+      "input": {
+        "type": "object",
+        "properties": {
+          "card_id": {
+            "type": "integer",
+            "description": "Reference card ID"
+          },
+          "campaign_id": {
+            "type": "string",
+            "description": "Campaign ID for permission filtering"
+          }
+        },
+        "required": ["card_id", "campaign_id"]
+      },
+      "output": {
+        "type": "object",
+        "properties": {
+          "siblings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "integer" },
+                "title": { "type": "string" },
+                "card_type": { "type": "string" },
+                "position": { "type": "integer" }
+              },
+              "required": ["id", "title", "card_type", "position"]
+            }
+          }
+        },
+        "required": ["siblings"]
+      },
+      "errors": [
+        { "code": "NOT_FOUND", "message": "Card not found: {card_id}" },
+        { "code": "PERMISSION_DENIED", "message": "Card does not belong to campaign: {campaign_id}" }
+      ]
+    },
+    "get_ancestor": {
+      "description": "Traverse up hierarchy N levels",
+      "input": {
+        "type": "object",
+        "properties": {
+          "card_id": {
+            "type": "integer",
+            "description": "Starting card ID"
+          },
+          "campaign_id": {
+            "type": "string",
+            "description": "Campaign ID for permission filtering"
+          },
+          "levels_up": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10,
+            "description": "How many levels to traverse up"
+          }
+        },
+        "required": ["card_id", "campaign_id", "levels_up"]
+      },
+      "output": {
+        "type": "object",
+        "properties": {
+          "ancestor": {
+            "type": ["object", "null"],
+            "properties": {
+              "id": { "type": "integer" },
+              "title": { "type": "string" },
+              "card_type": { "type": "string" },
+              "parent_id": { "type": ["integer", "null"] }
+            },
+            "description": "Ancestor card (null if levels_up exceeds depth to root)"
+          }
+        },
+        "required": ["ancestor"]
+      },
+      "errors": [
+        { "code": "NOT_FOUND", "message": "Card not found: {card_id}" },
+        { "code": "PERMISSION_DENIED", "message": "Card does not belong to campaign: {campaign_id}" }
+      ]
+    }
+  }
+}

@@ -15,87 +15,95 @@
 
 ## Phase 3.1: Database Setup & Migrations
 
-- [ ] **T001** Create migration 005 for ImportSession + ImportBatch tables (`backend/src/db/migrations/005-add-import-tables.sql`)
-- [ ] **T002** Create migration 005 for PlanningSession table (`backend/src/db/migrations/005-add-planning-table.sql`)
-- [ ] **T003** Create migration 005 for KnowledgeGraph tables (`backend/src/db/migrations/005-add-knowledge-graphs.sql` with knowledge_graphs, graph_nodes, graph_edges)
-- [ ] **T004** Create indexes (`backend/src/db/migrations/005-add-indexes.sql`)
-- [ ] **T005** Extend cards table (`backend/src/db/migrations/005-extend-cards.sql` ADD import_session_id, import_batch_id)
+- [X] **T001** Create migration 005 for ImportSession + ImportBatch tables (`backend/src/db/migrations/005-add-import-tables.sql`)
+- [X] **T002** Create migration 005 for PlanningSession table (`backend/src/db/migrations/005-add-planning-table.sql`)
+- [X] **T003** Create migration 005 for KnowledgeGraph tables (`backend/src/db/migrations/005-add-knowledge-graphs.sql` with knowledge_graphs, graph_nodes, graph_edges)
+- [X] **T004** Create indexes (included in table creation migrations)
+- [X] **T005** Extend cards table (`backend/src/db/migrations/005-extend-cards-import.sql` ADD import_session_id, import_batch_id)
 
 ---
 
 ## Phase 3.2: Shared Types
 
-- [ ] **T006** [P] ImportSession type (`shared/types/ImportSession.ts`)
-- [ ] **T007** [P] PlanningSession type (`shared/types/PlanningSession.ts`)
-- [ ] **T008** [P] KnowledgeGraph types (`shared/types/KnowledgeGraph.ts`)
+- [X] **T006** [P] ImportSession type (`shared/types/ImportSession.ts`)
+- [X] **T007** [P] PlanningSession type (`shared/types/PlanningSession.ts`)
+- [X] **T008** [P] KnowledgeGraph types (`shared/types/KnowledgeGraph.ts`)
 
 ---
 
 ## Phase 3.3: Tests First (TDD)
 
 ### Contract Tests
-- [ ] **T009-T016** [P] Contract tests for import/planning/graphs endpoints
+- [X] **T009-T016** [P] Contract tests for import/planning/graphs endpoints
+  - import.contract.test.ts - Import API endpoints (session, upload, chat, approval, approve, revert)
+  - planning.contract.test.ts - Planning API endpoints (session CRUD, chat with SSE)
+  - knowledge-graphs.contract.test.ts - Graph CRUD operations (nodes, edges, filtering)
 
 ### Unit Tests
-- [ ] **T017-T024** [P] Unit tests for function calling, entity extraction, graph updates
+- [X] **T017-T024** [P] Unit tests for function calling, entity extraction, graph updates
+  - function-calling.test.ts - Zod schema conversion, tool registration, execution
+  - entity-extraction.test.ts - Entity extraction, deduplication, relationship detection
+  - graph-updates.test.ts - Graph operations, active filtering, atomic updates
 
 ### Integration Tests
-- [ ] **T025-T027** [P] Integration tests for full workflows
+- [X] **T025-T027** [P] Integration tests for full workflows
+  - import-workflow.test.ts - Complete import flow, batch revert, conflict detection
+  - planning-workflow.test.ts - Planning flow, immediate updates, active filtering
 
 ---
 
 ## Phase 3.4: Backend Core Implementation
 
 ### Models
-- [ ] **T028-T031** [P] Models (ImportSession, ImportBatch, PlanningSession, KnowledgeGraph, GraphNode, GraphEdge)
+- [X] **T028-T031** [P] Models (ImportSession, ImportBatch, PlanningSession, KnowledgeGraph, GraphNode, GraphEdge)
 
 ### Services - Function Calling Infrastructure
-- [ ] **T032** FunctionCallingService - OpenAI conversion
-- [ ] **T033** FunctionCallingService - Anthropic conversion
-- [ ] **T034** LLMOrchestrationService - Streaming setup
-- [ ] **T035** LLMOrchestrationService - Function calling loop
-- [ ] **T036** LLMOrchestrationService - Error handling
-- [ ] **T037** ToolRegistryService - Handler registration (import from Feature 011 tools)
-- [ ] **T038** ToolRegistryService - Execution
+- [X] **T032** FunctionCallingService - OpenAI conversion
+- [X] **T033** FunctionCallingService - Anthropic conversion
+- [X] **T034** LLMOrchestrationService - Streaming setup
+- [X] **T035** LLMOrchestrationService - Function calling loop
+- [X] **T036** LLMOrchestrationService - Error handling
+- [X] **T037** ToolRegistryService - Handler registration (import from Feature 011 tools)
+- [X] **T038** ToolRegistryService - Execution
 
 ### Services - Import/Planning Workflows
-- [ ] **T039** FileParseService (PDF/DOCX/MD parsing)
-- [ ] **T040** ImportAIService - Entity extraction (via function calling)
-- [ ] **T041** ImportAIService - Card search (using search_cards handler)
-- [ ] **T042** ImportAIService - Approval summary
-- [ ] **T043** ImportBatchService - Execute batch + revert
-- [ ] **T044** PlanningAIService - Chat handling
-- [ ] **T045** PlanningAIService - Graph context (using query_graph handler)
-- [ ] **T046** PlanningAIService - Graph updates (using update_graph handler)
+- [X] **T039** FileParseService (PDF/DOCX/MD parsing)
+- [X] **T040** ImportAIService - Entity extraction (via function calling)
+- [X] **T041** ImportAIService - Card search (using search_cards handler)
+- [X] **T042** ImportAIService - Approval summary
+- [X] **T043** ImportBatchService - Execute batch + revert
+- [X] **T044** PlanningAIService - Chat handling
+- [X] **T045** PlanningAIService - Graph context (using query_graph handler)
+- [X] **T046** PlanningAIService - Graph updates (using update_graph handler)
 
 ### Routes
-- [ ] **T047** Import routes (`backend/src/routes/import.ts`)
-- [ ] **T048** Planning routes (`backend/src/routes/planning.ts`)
-- [ ] **T049** Knowledge graph routes (`backend/src/routes/knowledge-graphs.ts`)
+- [X] **T047** Import routes (`backend/src/routes/import.ts`)
+- [X] **T048** Planning routes (`backend/src/routes/planning.ts`)
+- [X] **T049** Knowledge graph routes (`backend/src/routes/knowledge-graphs.ts`)
 
 ---
 
 ## Phase 3.5-3.7: Frontend Implementation
 
 ### Import Tab UI (T050-T054)
-- [ ] **T050-T054** ImportTab components (main, file upload, chat, approval, batch actions)
-- [ ] **T055-T056** [P] Import API clients
+- [X] **T050-T054** ImportTab components (main, file upload, chat, approval, batch actions)
+- [X] **T055-T056** [P] Import API clients
 
 ### Planning Tab UI (T057-T060)
-- [ ] **T057-T060** PlanningTab components (main, chat, graph viz, approval)
-- [ ] **T061-T062** [P] Planning API clients
+- [X] **T057-T060** PlanningTab components (main, chat, graph viz, approval)
+- [X] **T061-T062** [P] Planning API clients
 
 ### Graph Management UI (T063-T065)
-- [ ] **T063-T065** Graph components (explorer, node editor, filter panel)
+- [X] **T063-T065** Graph components (explorer, node editor, filter panel)
 
 ---
 
 ## Phase 3.8: Integration & Polish (T066-T079)
 
-- [ ] **T066-T068** Integration tasks (streaming, file parsing, batch execution, graph updates, revert)
-- [ ] **T069-T071** [P] Component tests
-- [ ] **T072-T074** E2E tests (import workflow, revert, planning with graphs)
-- [ ] **T075-T079** Documentation, validation, performance tests
+- [X] **T066-T068** Integration tasks (streaming, file parsing, batch execution, graph updates, revert)
+- [X] **T069-T071** [P] Component tests
+- [X] **T072-T074** E2E tests (import workflow, revert, planning with graphs)
+- [X] **T075-T079** Documentation, validation, performance tests
 
 ---
 

@@ -11,12 +11,14 @@ import { ViewModeToggle } from './ViewModeToggle';
 import { BlockList } from './cards/BlockList';
 import { useInformationLevel } from '../contexts/InformationLevelContext';
 import { useViewMode } from '../contexts/ViewModeContext';
+import { useAITab } from '../contexts/AITabContext';
 
 export function CampaignHomepage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [campaignLoading, setCampaignLoading] = useState(true);
+  const { openImportTab, openPlanningTab } = useAITab();
 
   // Create a virtual "homepage card" to act as parent for root-level cards
   // Using null as id signals BlockList to load root cards (parent_id IS NULL)
@@ -89,6 +91,14 @@ export function CampaignHomepage() {
           }
         }}>← Back to Campaigns</button>
         <button onClick={() => navigate(`/campaigns/${id}/settings`)}>⚙️ Settings</button>
+
+        {/* Feature 005: AI Import and Planning Tabs */}
+        <button onClick={openImportTab} title="Import AI (Ctrl+I)">
+          📥 Import
+        </button>
+        <button onClick={openPlanningTab} title="Planning AI (Ctrl+P)">
+          🗺️ Planning
+        </button>
       </div>
 
       <h1 contentEditable suppressContentEditableWarning style={{ outline: 'none', minHeight: '1em', marginBottom: '2rem' }}>

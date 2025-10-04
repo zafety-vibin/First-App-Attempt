@@ -14,6 +14,9 @@ import databaseCardRoutes from './routes/database-cards';
 import informationLevelRoutes from './routes/information-levels';
 import { imageServeRouter, imageUploadRouter } from './routes/images';
 import byollmRoutes from './routes/byollm';
+import { importRouter } from './routes/import';
+import { planningRouter } from './routes/planning';
+import { knowledgeGraphsRouter } from './routes/knowledge-graphs';
 import healthRoutes from './routes/health';
 
 const app = express();
@@ -30,6 +33,9 @@ app.use('/api/campaigns', campaignRoutes);
 app.use('/api/settings', settingRoutes);
 app.use('/api/information-levels', informationLevelRoutes); // Feature 004
 app.use('/api/byollm', byollmRoutes); // Feature 008
+app.use('/api/import', importRouter); // Feature 005
+app.use('/api/planning', planningRouter); // Feature 005
+app.use('/api/graphs', knowledgeGraphsRouter); // Feature 005
 // Image routes (Feature 003)
 app.use('/api/images', imageServeRouter);  // GET /api/images/:id (public)
 app.use('/api/cards', imageUploadRouter);  // POST /api/cards/:id/image (protected)

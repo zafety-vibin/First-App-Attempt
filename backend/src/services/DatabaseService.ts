@@ -11,7 +11,7 @@ if (!fs.existsSync(dir)) {
 }
 
 // Initialize database with WAL mode
-export const db = new Database(DB_PATH, {
+export const db: Database.Database = new Database(DB_PATH, {
   verbose: process.env.NODE_ENV === 'development' ? console.log : undefined,
 });
 
@@ -112,6 +112,37 @@ export function runMigrations(): void {
         db.exec(sql);
         console.log(`  ✓ Applied ${file}`);
       }
+    }
+  });
+
+  // Migration 6: Feature 005 - AI Import and Planning Workflows
+  runMigration(6, () => {
+    const migrationsDir = path.join(__dirname, '../db/migrations');
+    const migration005Files = [
+      '005-add-import-tables.sql',
+      '005-add-planning-table.sql',
+      '005-add-knowledge-graphs.sql',
+      '005-extend-cards-import.sql',
+    ];
+
+    for (const file of migration005Files) {
+      const filePath = path.join(migrationsDir, file);
+      if (fs.existsSync(filePath)) {
+        const sql = fs.readFileSync(filePath, 'utf-8');
+        db.exec(sql);
+        console.log(`  ✓ Applied ${file}`);
+      }
+    }
+  });
+
+  // Migration 11: Feature 011 - Model Context Protocol Integration
+  runMigration(11, () => {
+    const migrationsDir = path.join(__dirname, '../db/migrations');
+    const filePath = path.join(migrationsDir, '011-mcp-tool-logs.sql');
+    if (fs.existsSync(filePath)) {
+      const sql = fs.readFileSync(filePath, 'utf-8');
+      db.exec(sql);
+      console.log(`  ✓ Applied 011-mcp-tool-logs.sql`);
     }
   });
 

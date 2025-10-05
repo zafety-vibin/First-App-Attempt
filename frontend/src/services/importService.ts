@@ -34,7 +34,9 @@ class ImportService {
    * Create a new import session
    */
   async createSession(campaignId: string): Promise<ImportSession> {
-    const response = await apiClient.post(`/api/campaigns/${campaignId}/import/sessions`);
+    console.log('[ImportService] createSession called with campaignId:', campaignId);
+    const response = await apiClient.post(`/api/import/session`, { campaignId });
+    console.log('[ImportService] createSession response:', response.data);
     return response.data;
   }
 
@@ -64,9 +66,10 @@ class ImportService {
   ): Promise<{ message: string; entities_extracted: number }> {
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('sessionId', sessionId);
 
     const response = await apiClient.post(
-      `/api/campaigns/${campaignId}/import/sessions/${sessionId}/upload`,
+      `/api/import/upload`,
       formData,
       {
         headers: {
@@ -84,17 +87,18 @@ class ImportService {
     campaignId: string,
     sessionId: string,
     message: string,
-    onChunk: (chunk: string) => void
+    onChunk: (chunk: string) => void,
+    onCardChanged?: () => void
   ): Promise<void> {
     const response = await fetch(
-      `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/campaigns/${campaignId}/import/sessions/${sessionId}/chat`,
+      `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/import/chat`,
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`,
+          'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`,
         },
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({ sessionId, campaignId, message }),
       }
     );
 
@@ -125,6 +129,11 @@ class ImportService {
             }
             try {
               const parsed = JSON.parse(data);
+              // Handle card_changed events for real-time updates
+              if (parsed.type === 'card_changed' && onCardChanged) {
+                onCardChanged();
+              }
+              // Handle AI response content
               if (parsed.content) {
                 onChunk(parsed.content);
               }
@@ -147,7 +156,7 @@ class ImportService {
    */
   async getApprovalSummary(campaignId: string, sessionId: string): Promise<ApprovalSummaryData> {
     const response = await apiClient.get(
-      `/api/campaigns/${campaignId}/import/sessions/${sessionId}/approval-summary`
+      `/api/import/approval-summary?sessionId=${sessionId}`
     );
     return response.data;
   }
@@ -157,7 +166,8 @@ class ImportService {
    */
   async approve(campaignId: string, sessionId: string): Promise<ImportBatch> {
     const response = await apiClient.post(
-      `/api/campaigns/${campaignId}/import/sessions/${sessionId}/approve`
+      `/api/import/approve`,
+      { sessionId, campaignId }
     );
     return response.data;
   }
@@ -167,7 +177,8 @@ class ImportService {
    */
   async revertBatch(campaignId: string, batchId: string): Promise<{ message: string }> {
     const response = await apiClient.post(
-      `/api/campaigns/${campaignId}/import/batches/${batchId}/revert`
+      `/api/import/revert`,
+      { batchId }
     );
     return response.data;
   }

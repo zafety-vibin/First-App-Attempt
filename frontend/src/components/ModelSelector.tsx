@@ -33,7 +33,7 @@ export function ModelSelector({ provider, value, onChange }: ModelSelectorProps)
     try {
       setLoading(true);
 
-      const response = await fetch(`/api/byollm/models?provider=${provider}`);
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/byollm/models?provider=${provider}`);
       if (!response.ok) {
         throw new Error('Failed to load models');
       }

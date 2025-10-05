@@ -17,12 +17,14 @@ export const apiClient = axios.create({
 let currentToken: string | null = null;
 
 export function setAuthToken(token: string | null): void {
+  console.log('[setAuthToken] Setting token:', token ? `${token.substring(0, 20)}...` : 'null');
   currentToken = token;
 }
 
 // Request interceptor - inject token
 apiClient.interceptors.request.use(
   (config) => {
+    console.log('[apiClient] Request to:', config.url, 'Token:', currentToken ? `${currentToken.substring(0, 20)}...` : 'null');
     if (currentToken) {
       config.headers.Authorization = `Bearer ${currentToken}`;
     }

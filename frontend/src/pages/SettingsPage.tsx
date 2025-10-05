@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { CampaignLayout } from '../components/CampaignLayout';
 import { useInformationLevel } from '../contexts/InformationLevelContext';
 import { CustomLevelForm } from '../components/CustomLevelForm';
 import { BYOLLMSettings } from '../components/BYOLLMSettings';
@@ -58,14 +59,15 @@ export function SettingsPage() {
   }
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '900px', margin: '0 auto' }}>
-      <div style={{ marginBottom: '2rem' }}>
-        <button onClick={() => navigate(`/campaigns/${campaignId}`)}>
-          ← Back to Campaign
-        </button>
-      </div>
+    <CampaignLayout hideAIButtons={true}>
+      <div style={{ padding: '2rem', maxWidth: '900px', margin: '0 auto' }}>
+        <div style={{ marginBottom: '2rem' }}>
+          <button onClick={() => navigate(`/campaigns/${campaignId}`)}>
+            ← Back to Campaign
+          </button>
+        </div>
 
-      <h1 style={{ marginBottom: '2rem' }}>Campaign Settings</h1>
+        <h1 style={{ marginBottom: '2rem' }}>Campaign Settings</h1>
 
       {/* Information Levels Section */}
       <section className="settings-section">
@@ -366,6 +368,7 @@ export function SettingsPage() {
           margin: 0;
         }
       `}</style>
-    </div>
+      </div>
+    </CampaignLayout>
   );
 }

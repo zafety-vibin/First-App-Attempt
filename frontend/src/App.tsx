@@ -8,6 +8,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { ViewModeProvider } from './contexts/ViewModeContext';
 import { InformationLevelProvider } from './contexts/InformationLevelContext';
 import { CardProvider } from './contexts/CardContext';
+import { AITabProvider } from './contexts/AITabContext';
 import { PublicLanding } from './components/PublicLanding';
 import { CampaignManagement } from './components/CampaignManagement';
 import { CampaignHomepage } from './components/CampaignHomepage';
@@ -78,9 +79,11 @@ function App() {
       <ViewModeProvider>
         <InformationLevelProvider>
           <CardProvider>
-            <BrowserRouter>
-              <AppContent />
-            </BrowserRouter>
+            <AITabProvider>
+              <BrowserRouter>
+                <AppContent />
+              </BrowserRouter>
+            </AITabProvider>
           </CardProvider>
         </InformationLevelProvider>
       </ViewModeProvider>

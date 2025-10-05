@@ -36,6 +36,11 @@ export function ViewModeToggle() {
           top: 1rem;
           right: 1rem;
           z-index: 1000;
+          transition: right 0.3s ease-in-out;
+        }
+
+        body[data-sidebar-open] .view-mode-toggle {
+          right: 420px; /* 400px sidebar + 20px margin */
         }
 
         .toggle-button {

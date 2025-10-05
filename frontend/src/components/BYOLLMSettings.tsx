@@ -28,7 +28,7 @@ export function BYOLLMSettings({ campaignId, scope }: BYOLLMSettingsProps) {
   const [provider, setProvider] = useState<'anthropic'>('anthropic');
   const [authMethod, setAuthMethod] = useState<'oauth' | 'api_key'>('oauth'); // Default to OAuth
   const [apiKey, setApiKey] = useState('');
-  const [modelName, setModelName] = useState('claude-3-5-sonnet-20241022');
+  const [modelName, setModelName] = useState('claude-sonnet-4-5-20250929');
   const [customSystemPromptImport, setCustomSystemPromptImport] = useState('');
   const [customSystemPromptPlanning, setCustomSystemPromptPlanning] = useState('');
   const [saving, setSaving] = useState(false);
@@ -200,13 +200,51 @@ export function BYOLLMSettings({ campaignId, scope }: BYOLLMSettingsProps) {
         disabled={!!config}
       />
 
-      {/* OAuth Button (API key option hidden for simplicity) */}
+      {/* Authentication Method Selection */}
       {!config && (
+        <div className="form-section">
+          <label className="form-label">Authentication Method</label>
+          <div className="auth-method-tabs">
+            <button
+              className={`tab ${authMethod === 'oauth' ? 'active' : ''}`}
+              onClick={() => setAuthMethod('oauth')}
+              type="button"
+            >
+              OAuth 2.0
+            </button>
+            <button
+              className={`tab ${authMethod === 'api_key' ? 'active' : ''}`}
+              onClick={() => setAuthMethod('api_key')}
+              type="button"
+            >
+              API Key
+            </button>
+          </div>
+          <p className="helper-text" style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#6B7280' }}>
+            {authMethod === 'oauth'
+              ? 'Securely connect via OAuth 2.0 (may be blocked by Cloudflare)'
+              : 'Paste your API key from console.anthropic.com'
+            }
+          </p>
+        </div>
+      )}
+
+      {/* OAuth Button */}
+      {!config && authMethod === 'oauth' && (
         <OAuthButton
           provider={provider}
           scope={scope}
           campaignId={campaignId}
           onSuccess={loadConfig}
+        />
+      )}
+
+      {/* API Key Input */}
+      {!config && authMethod === 'api_key' && (
+        <APIKeyInput
+          provider={provider}
+          value={apiKey}
+          onChange={setApiKey}
         />
       )}
 

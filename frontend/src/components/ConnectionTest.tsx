@@ -35,7 +35,7 @@ export function ConnectionTest({ campaignId }: ConnectionTestProps) {
       setTesting(true);
       setResult(null);
 
-      const response = await fetch('/api/byollm/test-connection', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/byollm/test-connection`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

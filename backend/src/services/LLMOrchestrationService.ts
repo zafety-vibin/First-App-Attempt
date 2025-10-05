@@ -193,10 +193,12 @@ export class LLMOrchestrationService {
     let backoffMs = 1000;
 
     // Convert functions to Anthropic tool format
+    // getAnthropicTools() already returns {name, description, input_schema}
+    // getOpenAITools() returns {name, description, parameters}
     const tools = functions.map(fn => ({
       name: fn.name,
       description: fn.description,
-      input_schema: fn.parameters,
+      input_schema: (fn as any).input_schema || fn.parameters,
     }));
 
     // Convert messages to Anthropic format
@@ -297,15 +299,19 @@ export class LLMOrchestrationService {
     res: Response,
     messages: ChatMessage[],
     functions: FunctionDefinition[],
-    functionHandler: (name: string, params: any) => Promise<any>
+    functionHandler: (name: string, params: any) => Promise<any>,
+    headersAlreadySet: boolean = false
   ) {
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
+    // Only set headers if they haven't been set already
+    if (!headersAlreadySet) {
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+    }
 
     try {
       for await (const chunk of this.streamChatCompletion(messages, functions, functionHandler)) {
-        res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`);
+        res.write(`data: ${JSON.stringify({ delta: chunk })}\n\n`);
       }
       res.write('data: [DONE]\n\n');
     } catch (error: any) {

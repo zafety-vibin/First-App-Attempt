@@ -170,7 +170,22 @@ export class ProviderClientService extends EventEmitter {
     } catch (error: any) {
       if (axios.isAxiosError(error)) {
         const status = error.response?.status;
-        if (status === 401) {
+        const responseData = error.response?.data;
+
+        console.error('Anthropic API error:', {
+          status,
+          data: responseData,
+          modelName,
+        });
+
+        if (status === 400) {
+          // Anthropic returns detailed error in response body
+          const errorMessage = responseData?.error?.message || 'Invalid request';
+          return {
+            success: false,
+            error: `Bad request: ${errorMessage}. Check API key format (must start with sk-ant-api03-)`,
+          };
+        } else if (status === 401) {
           return {
             success: false,
             error: 'Authentication failed: Invalid API key',
@@ -179,6 +194,11 @@ export class ProviderClientService extends EventEmitter {
           return {
             success: false,
             error: 'Model access denied: Check API key permissions',
+          };
+        } else if (status === 404) {
+          return {
+            success: false,
+            error: `Model not found: ${modelName}. Check if this model is available with your API key tier.`,
           };
         } else if (status === 429) {
           return {
@@ -317,6 +337,12 @@ export class ProviderClientService extends EventEmitter {
    */
   private getAnthropicModels(): any[] {
     return [
+      {
+        name: 'claude-sonnet-4-5-20250929',
+        displayName: 'Claude 4.5 Sonnet (Latest)',
+        contextWindow: 200000,
+        maxOutput: 8192,
+      },
       {
         name: 'claude-3-5-sonnet-20241022',
         displayName: 'Claude 3.5 Sonnet',

@@ -35,7 +35,7 @@ export function CreditsDisplay({ campaignId }: CreditsDisplayProps) {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`/api/byollm/credits?campaignId=${campaignId}`);
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/byollm/credits?campaignId=${campaignId}`);
 
       if (response.status === 404) {
         // No credits data available
@@ -88,7 +88,8 @@ export function CreditsDisplay({ campaignId }: CreditsDisplayProps) {
     );
   }
 
-  const isLowBalance = credits.balance < 1.0;
+  const balance = typeof credits.balance === 'number' ? credits.balance : 0;
+  const isLowBalance = balance < 1.0;
   const lastUpdatedDate = new Date(credits.lastUpdated).toLocaleString();
 
   return (
@@ -105,7 +106,7 @@ export function CreditsDisplay({ campaignId }: CreditsDisplayProps) {
           <div className="balance-label">Balance</div>
           <div className="balance-amount">
             {credits.currency === 'USD' && '$'}
-            {credits.balance.toFixed(2)}
+            {typeof credits.balance === 'number' ? balance.toFixed(2) : 'N/A'}
             {credits.currency !== 'USD' && ` ${credits.currency}`}
           </div>
         </div>

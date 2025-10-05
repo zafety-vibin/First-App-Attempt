@@ -48,7 +48,8 @@ export function ProviderSelector({ value, onChange, disabled }: ProviderSelector
           {value === 'openai' && <div className="check-icon">✓</div>}
         </button> */}
 
-        <button
+        {/* Custom Endpoint - Temporarily hidden, backend not implemented */}
+        {/* <button
           className={`provider-option ${value === 'custom' ? 'selected' : ''}`}
           onClick={() => onChange('custom')}
           disabled={disabled}
@@ -59,7 +60,7 @@ export function ProviderSelector({ value, onChange, disabled }: ProviderSelector
             <div className="provider-description">Ollama, LM Studio, etc.</div>
           </div>
           {value === 'custom' && <div className="check-icon">✓</div>}
-        </button>
+        </button> */}
       </div>
 
       {disabled && (

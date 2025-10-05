@@ -9,6 +9,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { BlockList } from '../components/cards/BlockList';
 import { ViewModeToggle } from '../components/ViewModeToggle';
+import { CampaignLayout } from '../components/CampaignLayout';
 import { useCardContext } from '../contexts/CardContext';
 import { useCards } from '../hooks/useCards';
 import { useInformationLevel } from '../contexts/InformationLevelContext';
@@ -34,6 +35,19 @@ export function CardPage() {
     }
   }, [campaignId]);
 
+  // Listen for card changes from AI sidebar
+  useEffect(() => {
+    const handleCardChanged = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      console.log('[CardPage] Card changed event received:', customEvent.detail);
+      // Force re-render of child blocks
+      setChildrenKey(prev => prev + 1);
+    };
+
+    window.addEventListener('cardChanged', handleCardChanged);
+    return () => window.removeEventListener('cardChanged', handleCardChanged);
+  }, []);
+
   const handleTitleUpdate = async (e: React.FocusEvent<HTMLHeadingElement>) => {
     if (!currentCard) return;
     const newTitle = e.currentTarget.textContent || '';
@@ -55,48 +69,50 @@ export function CardPage() {
   }
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '900px', margin: '0 auto' }}>
-      {/* Feature 004: View Mode Toggle */}
-      <ViewModeToggle />
+    <CampaignLayout>
+      <div style={{ padding: '2rem', maxWidth: '900px', margin: '0 auto' }}>
+        {/* Feature 004: View Mode Toggle */}
+        <ViewModeToggle />
 
-      <div style={{ marginBottom: '1rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
-        <button onClick={() => navigate(`/campaigns/${campaignId}`)}>
-          ← Back to Campaign
-        </button>
-        <button onClick={() => navigate(`/campaigns/${campaignId}/settings`)}>
-          ⚙️ Settings
-        </button>
-      </div>
+        <div style={{ marginBottom: '1rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <button onClick={() => navigate(`/campaigns/${campaignId}`)}>
+            ← Back to Campaign
+          </button>
+          <button onClick={() => navigate(`/campaigns/${campaignId}/settings`)}>
+            ⚙️ Settings
+          </button>
+        </div>
 
-      {/* Page Title - Editable */}
-      <div style={{ marginBottom: '2rem' }}>
-        <h1
-          contentEditable
-          suppressContentEditableWarning
-          onBlur={handleTitleUpdate}
-          style={{ outline: 'none', minHeight: '1em' }}
-        >
-          {currentCard.title || 'Untitled'}
-        </h1>
-        <div style={{ fontSize: '12px', color: '#999' }}>
-          {currentCard.type} • Depth: {currentCard.depth}
+        {/* Page Title - Editable */}
+        <div style={{ marginBottom: '2rem' }}>
+          <h1
+            contentEditable
+            suppressContentEditableWarning
+            onBlur={handleTitleUpdate}
+            style={{ outline: 'none', minHeight: '1em' }}
+          >
+            {currentCard.title || 'Untitled'}
+          </h1>
+          <div style={{ fontSize: '12px', color: '#999' }}>
+            {currentCard.type} • Depth: {currentCard.depth}
+          </div>
+        </div>
+
+        {/* Database Properties Section (for database entries) */}
+        {currentCard.type === 'database' && currentCard.metadata?.schema && (
+          <div style={{ marginBottom: '2rem', padding: '1rem', background: '#f9f9f9', borderRadius: '4px' }}>
+            <h3 style={{ marginTop: 0 }}>Properties</h3>
+            <p style={{ color: '#666', fontSize: '14px' }}>
+              Database schema properties will be displayed here
+            </p>
+          </div>
+        )}
+
+        {/* Page Content = Child Blocks */}
+        <div style={{ marginBottom: '2rem' }}>
+          <BlockList key={childrenKey} parentCard={currentCard} campaignId={campaignId!} />
         </div>
       </div>
-
-      {/* Database Properties Section (for database entries) */}
-      {currentCard.type === 'database' && currentCard.metadata?.schema && (
-        <div style={{ marginBottom: '2rem', padding: '1rem', background: '#f9f9f9', borderRadius: '4px' }}>
-          <h3 style={{ marginTop: 0 }}>Properties</h3>
-          <p style={{ color: '#666', fontSize: '14px' }}>
-            Database schema properties will be displayed here
-          </p>
-        </div>
-      )}
-
-      {/* Page Content = Child Blocks */}
-      <div style={{ marginBottom: '2rem' }}>
-        <BlockList key={childrenKey} parentCard={currentCard} campaignId={campaignId!} />
-      </div>
-    </div>
+    </CampaignLayout>
   );
 }

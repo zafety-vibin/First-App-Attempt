@@ -12,8 +12,14 @@ import { ImportAIService } from '../services/ImportAIService';
 import { ImportBatchService } from '../services/ImportBatchService';
 import { FileParseService } from '../services/FileParseService';
 import { rowToImportSession } from '../models/ImportSession';
+import { protect } from '../middleware/auth';
+import { getImportAIPrompt } from '../prompts/import-ai-prompt';
 
 const router = Router();
+
+// All routes require authentication
+// TODO: Fix auth token injection issue - temporarily disabled for testing
+// router.use(protect);
 
 // Configure multer for file uploads
 const upload = multer({
@@ -105,7 +111,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
 
 /**
  * POST /api/import/chat
- * Chat with the import AI (SSE streaming)
+ * Chat with the import AI (SSE streaming with MCP tool calling)
  */
 router.post('/chat', async (req: Request, res: Response) => {
   try {
@@ -114,62 +120,125 @@ router.post('/chat', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Session ID, campaign ID, and message required' });
     }
 
-    // Get BYOLLM config
-    const byollmConfig = db.prepare(`
-      SELECT config FROM byollm_configs
-      WHERE campaign_id = ? AND scope = 'campaign'
-    `).get(campaignId) as any;
+    // Get BYOLLM config using BYOLLMConfigService
+    const { BYOLLMConfigService } = await import('../services/BYOLLMConfigService');
+    const byollmService = new BYOLLMConfigService();
+    const byollmConfig = await byollmService.resolveConfig(campaignId);
 
     if (!byollmConfig) {
       return res.status(400).json({ error: 'BYOLLM configuration not found' });
     }
 
-    const config = JSON.parse(byollmConfig.config);
+    // Decrypt credentials to get API key
+    const credentials = await byollmService.getDecryptedCredentials(byollmConfig.id);
+    const apiKey = 'apiKey' in credentials ? credentials.apiKey : credentials.accessToken;
+
+    // Get existing chat history
+    const session = db.prepare(`
+      SELECT chat_history FROM import_sessions WHERE id = ?
+    `).get(sessionId) as any;
+
+    const chatHistory = session ? JSON.parse(session.chat_history || '[]') : [];
+
+    // System prompt for Import AI
+    const systemPrompt = getImportAIPrompt(campaignId);
+
+    // Build messages array
+    const messages = [
+      { role: 'system', content: systemPrompt, timestamp: new Date().toISOString() },
+      ...chatHistory,
+      { role: 'user', content: message, timestamp: new Date().toISOString() }
+    ];
 
     // Initialize services
-    const importAI = new ImportAIService(db, {
-      llmConfig: {
-        provider: config.provider,
-        apiKey: config.apiKey,
-        model: config.model
-      },
-      deduplicationThreshold: 0.7
+    const { ToolRegistryService } = await import('../services/ToolRegistryService');
+    const { LLMOrchestrationService } = await import('../services/LLMOrchestrationService');
+
+    const toolRegistry = new ToolRegistryService();
+    await toolRegistry.initialize();
+
+    // Map custom provider to openai (custom endpoints are OpenAI-compatible)
+    const llmProvider = byollmConfig.provider === 'custom' ? 'openai' : byollmConfig.provider;
+
+    const llmService = new LLMOrchestrationService({
+      provider: llmProvider,
+      apiKey: apiKey,
+      model: byollmConfig.modelName
     });
 
-    await importAI.initialize();
-
-    // Extract entities
-    const entities = await importAI.extractEntities(sessionId, campaignId, message);
-
-    // Generate approval summary
-    const approvalSummary = await importAI.generateApprovalSummary(
-      sessionId,
-      entities,
-      campaignId
-    );
-
-    // Update session with approval summary
-    db.prepare(`
-      UPDATE import_sessions
-      SET status = 'pending_approval', approval_summary = ?
-      WHERE id = ?
-    `).run(JSON.stringify(approvalSummary), sessionId);
-
-    // Stream response
+    // Setup SSE headers first
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
 
-    res.write(`data: ${JSON.stringify({
-      type: 'entities',
-      entities: entities.length,
-      summary: approvalSummary
-    })}\n\n`);
+    // Function handler that enriches params with campaign_id, user_id AND sends debug messages
+    // TODO: Get userId from req.user once auth is fixed
+    const userId = req.user?.id || 'test-user-id';
+    const functionHandler = async (name: string, params: any) => {
+      const enrichedParams = { ...params, campaign_id: campaignId, user_id: userId };
 
-    res.write('data: [DONE]\n\n');
-    res.end();
+      // Send debug message about tool call
+      res.write(`data: ${JSON.stringify({
+        debug: true,
+        type: 'tool_call',
+        tool: name,
+        params: enrichedParams
+      })}\n\n`);
+
+      try {
+        const result = await toolRegistry.executeTool(name, enrichedParams);
+
+        // Send debug message about tool result
+        res.write(`data: ${JSON.stringify({
+          debug: true,
+          type: 'tool_result',
+          tool: name,
+          result
+        })}\n\n`);
+
+        // Send card_changed event for create/update/delete operations
+        if (name === 'create_card' || name === 'update_card' || name === 'delete_card' || name === 'move_card') {
+          res.write(`data: ${JSON.stringify({
+            type: 'card_changed',
+            operation: name,
+            campaignId: campaignId
+          })}\n\n`);
+        }
+
+        return result;
+      } catch (error: any) {
+        // Send debug message about tool error
+        res.write(`data: ${JSON.stringify({
+          debug: true,
+          type: 'tool_error',
+          tool: name,
+          error: error.message
+        })}\n\n`);
+        throw error;
+      }
+    };
+
+    // Get tools in appropriate format (custom endpoints use OpenAI format)
+    const tools = byollmConfig.provider === 'openai' || byollmConfig.provider === 'custom'
+      ? toolRegistry.getOpenAITools()
+      : toolRegistry.getAnthropicTools();
+
+    // Update chat history with user message
+    chatHistory.push({ role: 'user', content: message, timestamp: new Date().toISOString() });
+    db.prepare(`
+      UPDATE import_sessions
+      SET chat_history = ?
+      WHERE id = ?
+    `).run(JSON.stringify(chatHistory), sessionId);
+
+    // Stream response using LLM Orchestration Service (but headers already set)
+    await llmService.streamToSSE(res, messages as any, tools, functionHandler, true);
+
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error('Chat error:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: error.message });
+    }
   }
 });
 

@@ -14,6 +14,7 @@ import {
 import { CardService } from '../../services/CardService';
 import { db } from '../../services/DatabaseService';
 import { rowToCard, CardRow } from '../../models/Card';
+import { markdownToProseMirror } from '../utils/markdown-to-prosemirror';
 
 
 /**
@@ -34,7 +35,7 @@ export const cardToolDefinitions = [
   },
   {
     name: 'create_card',
-    description: 'Create a new card in the campaign hierarchy',
+    description: 'Create a new card in the campaign hierarchy. Content can be provided as ProseMirror JSON or as markdown text in the "text" or "markdown" field.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -50,7 +51,7 @@ export const cardToolDefinitions = [
   },
   {
     name: 'update_card',
-    description: 'Update an existing card\'s title, content, or information level',
+    description: 'Update an existing card\'s title, content, or information level. Content can be provided as ProseMirror JSON or as markdown text in the "text" or "markdown" field.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -107,6 +108,30 @@ export const cardToolDefinitions = [
 ];
 
 /**
+ * Convert content to ProseMirror format if needed
+ * Detects if content is markdown and converts it
+ */
+function normalizeContent(content: any): any {
+  if (!content) return null;
+
+  // If already ProseMirror format, return as-is
+  if (content.type === 'doc' && content.content) {
+    return content;
+  }
+
+  // If content has a "text" or "markdown" field, convert it
+  if (typeof content.text === 'string') {
+    return markdownToProseMirror(content.text);
+  }
+  if (typeof content.markdown === 'string') {
+    return markdownToProseMirror(content.markdown);
+  }
+
+  // Otherwise return as-is (could be database schema, etc.)
+  return content;
+}
+
+/**
  * Handler for read_card tool
  */
 export async function handleReadCard(params: any) {
@@ -137,13 +162,13 @@ export async function handleReadCard(params: any) {
       content: [{
         type: 'text',
         text: JSON.stringify({
-          id: parseInt(card.id),
+          id: card.id,
           campaign_id: card.campaignId,
-          parent_id: card.parentId ? parseInt(card.parentId) : null,
+          parent_id: card.parentId || null,
           title: card.title,
           card_type: card.type === 'page' ? 'map' : card.type,
           content: card.content,
-          information_level_id: card.informationLevelId === 'system' ? null : parseInt(card.informationLevelId),
+          information_level_id: card.informationLevelId === 'system' ? null : card.informationLevelId,
           position: card.position,
           created_at: Math.floor(card.createdAt.getTime() / 1000),
           updated_at: Math.floor(card.updatedAt.getTime() / 1000)
@@ -171,8 +196,11 @@ export async function handleCreateCard(params: any) {
     const validated = CreateCardInputSchema.parse(params);
     const cardService = new CardService();
 
-    // Get user context (would come from MCP session in production)
-    const userId = 'system';
+    // Get user context from enriched params (passed from import route)
+    const userId = (params as any).user_id || 'system';
+
+    // Convert content to ProseMirror format if needed
+    const normalizedContent = normalizeContent(validated.content);
 
     // Create card using CardService
     const card = await cardService.createCard({
@@ -180,7 +208,7 @@ export async function handleCreateCard(params: any) {
       parentId: validated.parent_id?.toString() || undefined,
       type: validated.card_type === 'text' ? 'text' : validated.card_type === 'map' ? 'page' : validated.card_type,
       title: validated.title,
-      content: validated.content,
+      content: normalizedContent,
       informationLevelId: validated.information_level_id?.toString(),
       position: 0 // Will be calculated by service
     }, userId);
@@ -189,13 +217,13 @@ export async function handleCreateCard(params: any) {
       content: [{
         type: 'text',
         text: JSON.stringify({
-          id: parseInt(card.id),
+          id: card.id,
           campaign_id: card.campaignId,
-          parent_id: card.parentId ? parseInt(card.parentId) : null,
+          parent_id: card.parentId || null,
           title: card.title,
           card_type: card.type === 'page' ? 'map' : card.type,
           content: card.content,
-          information_level_id: card.informationLevelId === 'system' ? null : parseInt(card.informationLevelId),
+          information_level_id: card.informationLevelId === 'system' ? null : card.informationLevelId,
           position: card.position,
           created_at: Math.floor(card.createdAt.getTime() / 1000),
           updated_at: Math.floor(card.updatedAt.getTime() / 1000)
@@ -232,8 +260,10 @@ export async function handleUpdateCard(params: any) {
     }
 
     if (validated.content !== undefined) {
+      // Convert content to ProseMirror format if needed
+      const normalizedContent = normalizeContent(validated.content);
       updates.push('content = ?');
-      values.push(JSON.stringify(validated.content));
+      values.push(JSON.stringify(normalizedContent));
     }
 
     if (validated.information_level_id !== undefined) {
@@ -279,13 +309,13 @@ export async function handleUpdateCard(params: any) {
       content: [{
         type: 'text',
         text: JSON.stringify({
-          id: parseInt(card.id),
+          id: card.id,
           campaign_id: card.campaignId,
-          parent_id: card.parentId ? parseInt(card.parentId) : null,
+          parent_id: card.parentId || null,
           title: card.title,
           card_type: card.type === 'page' ? 'map' : card.type,
           content: card.content,
-          information_level_id: card.informationLevelId === 'system' ? null : parseInt(card.informationLevelId),
+          information_level_id: card.informationLevelId === 'system' ? null : card.informationLevelId,
           position: card.position,
           created_at: Math.floor(card.createdAt.getTime() / 1000),
           updated_at: Math.floor(card.updatedAt.getTime() / 1000)
@@ -466,8 +496,8 @@ export async function handleMoveCard(params: any) {
     const validated = MoveCardInputSchema.parse(params);
     const cardService = new CardService();
 
-    // Get user context
-    const userId = 'system';
+    // Get user context from enriched params (passed from import route)
+    const userId = (params as any).user_id || 'system';
 
     // Move card using CardService
     const card = await cardService.moveCard(

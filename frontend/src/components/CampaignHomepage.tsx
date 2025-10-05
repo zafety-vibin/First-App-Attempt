@@ -9,16 +9,16 @@ import { campaignService } from '../services/campaignService';
 import { Campaign } from '../../shared/types/Campaign';
 import { ViewModeToggle } from './ViewModeToggle';
 import { BlockList } from './cards/BlockList';
+import { CampaignLayout } from './CampaignLayout';
 import { useInformationLevel } from '../contexts/InformationLevelContext';
 import { useViewMode } from '../contexts/ViewModeContext';
-import { useAITab } from '../contexts/AITabContext';
 
 export function CampaignHomepage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [campaignLoading, setCampaignLoading] = useState(true);
-  const { openImportTab, openPlanningTab } = useAITab();
+  const [contentKey, setContentKey] = useState(0);
 
   // Create a virtual "homepage card" to act as parent for root-level cards
   // Using null as id signals BlockList to load root cards (parent_id IS NULL)
@@ -50,6 +50,19 @@ export function CampaignHomepage() {
     }
   }, [id]);
 
+  // Listen for card changes from AI sidebar
+  useEffect(() => {
+    const handleCardChanged = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      console.log('[CampaignHomepage] Card changed event received:', customEvent.detail);
+      // Force re-render of content blocks
+      setContentKey(prev => prev + 1);
+    };
+
+    window.addEventListener('cardChanged', handleCardChanged);
+    return () => window.removeEventListener('cardChanged', handleCardChanged);
+  }, []);
+
   const loadCampaign = async (campaignId: string) => {
     try {
       setCampaignLoading(true);
@@ -77,38 +90,32 @@ export function CampaignHomepage() {
   }
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '900px', margin: '0 auto' }}>
-      {/* Feature 004: View Mode Toggle */}
-      <ViewModeToggle />
+    <CampaignLayout>
+      <div style={{ padding: '2rem', maxWidth: '900px', margin: '0 auto' }}>
+        {/* Feature 004: View Mode Toggle */}
+        <ViewModeToggle />
 
-      <div style={{ marginBottom: '2rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
-        <button onClick={() => {
-          try {
-            navigate('/campaigns');
-          } catch (err) {
-            console.error('Navigation error:', err);
-            window.location.href = '/campaigns';
-          }
-        }}>← Back to Campaigns</button>
-        <button onClick={() => navigate(`/campaigns/${id}/settings`)}>⚙️ Settings</button>
+        <div style={{ marginBottom: '2rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <button onClick={() => {
+            try {
+              navigate('/campaigns');
+            } catch (err) {
+              console.error('Navigation error:', err);
+              window.location.href = '/campaigns';
+            }
+          }}>← Back to Campaigns</button>
+          <button onClick={() => navigate(`/campaigns/${id}/settings`)}>⚙️ Settings</button>
+        </div>
 
-        {/* Feature 005: AI Import and Planning Tabs */}
-        <button onClick={openImportTab} title="Import AI (Ctrl+I)">
-          📥 Import
-        </button>
-        <button onClick={openPlanningTab} title="Planning AI (Ctrl+P)">
-          🗺️ Planning
-        </button>
+        <h1 contentEditable suppressContentEditableWarning style={{ outline: 'none', minHeight: '1em', marginBottom: '2rem' }}>
+          {campaign.name}
+        </h1>
+
+        {/* Campaign content - rendered as blocks just like a page (Feature 003) */}
+        {homepageCard && (
+          <BlockList key={contentKey} parentCard={homepageCard} campaignId={id!} />
+        )}
       </div>
-
-      <h1 contentEditable suppressContentEditableWarning style={{ outline: 'none', minHeight: '1em', marginBottom: '2rem' }}>
-        {campaign.name}
-      </h1>
-
-      {/* Campaign content - rendered as blocks just like a page (Feature 003) */}
-      {homepageCard && (
-        <BlockList parentCard={homepageCard} campaignId={id!} />
-      )}
-    </div>
+    </CampaignLayout>
   );
 }

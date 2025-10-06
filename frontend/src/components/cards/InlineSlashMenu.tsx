@@ -126,6 +126,7 @@ export function InlineSlashMenu({
 }: InlineSlashMenuProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const menuRef = useRef<HTMLDivElement>(null);
+  const [adjustedPosition, setAdjustedPosition] = useState(position);
 
   // Filter items by search term
   const filteredItems = searchTerm
@@ -135,6 +136,25 @@ export function InlineSlashMenu({
           item.description.toLowerCase().includes(searchTerm.toLowerCase())
       )
     : MENU_ITEMS;
+
+  // Adjust position if menu would go off-screen
+  useEffect(() => {
+    if (!menuRef.current) return;
+
+    const menuHeight = menuRef.current.offsetHeight;
+    const viewportHeight = window.innerHeight;
+    const spaceBelow = viewportHeight - position.top;
+
+    // If not enough space below, flip to above
+    if (spaceBelow < menuHeight && position.top > menuHeight) {
+      setAdjustedPosition({
+        top: position.top - menuHeight - 4,
+        left: position.left,
+      });
+    } else {
+      setAdjustedPosition(position);
+    }
+  }, [position, filteredItems.length]);
 
   // Reset selection when filter changes
   useEffect(() => {
@@ -175,8 +195,8 @@ export function InlineSlashMenu({
       className="inline-slash-menu"
       style={{
         position: 'fixed',
-        top: position.top,
-        left: position.left,
+        top: adjustedPosition.top,
+        left: adjustedPosition.left,
         zIndex: 1000,
       }}
     >
@@ -209,7 +229,7 @@ export function InlineSlashMenu({
           box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
           padding: 4px;
           min-width: 280px;
-          max-height: 400px;
+          max-height: min(400px, calc(100vh - 100px));
           overflow-y: auto;
         }
 

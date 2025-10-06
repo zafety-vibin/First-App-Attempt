@@ -45,7 +45,15 @@ export const hierarchyToolDefinitions = [
   },
   {
     name: 'list_children',
-    description: 'List all direct child cards of a specific card',
+    description: `List all direct child cards of a specific card.
+
+IMPORTANT: To list ROOT level cards (the campaign's landing page), use parent_id: null (NOT 0, NOT "null" string).
+
+Examples:
+- List root cards: list_children({"campaign_id": "...", "parent_id": null})
+- List children of card 42: list_children({"campaign_id": "...", "parent_id": 42})
+
+Root cards are typically organizational pages like: NPCs, Locations, Lore, Quests, Session Notes.`,
     inputSchema: {
       type: 'object',
       properties: {

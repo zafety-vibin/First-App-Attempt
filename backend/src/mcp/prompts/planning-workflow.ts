@@ -47,16 +47,35 @@ export async function handlePlanningPrompt(args: {
 
 PERMISSIONS:
 - You CANNOT create, update, or delete cards (no write permissions)
-- You CAN read existing cards to understand campaign content (use read_card, search_cards)
+- You CAN read existing cards to understand campaign content (use read_card, search_cards, list_children)
 - You CAN update knowledge graphs immediately (use update_graph, query_graph)
 - You CAN read session recaps and timeline (use get_session_recaps, get_timeline_events)
 
+CONTEXT DISCOVERY WORKFLOW (ALWAYS DO THIS FIRST):
+1. Explore campaign structure: list_children with parent_id: null (note: null not "null" or 0)
+   - This shows you the ROOT level cards (landing page)
+   - Example: list_children({"campaign_id": "...", "parent_id": null})
+2. Navigate organizational pages to see what exists:
+   - Find "NPCs" page ID, list its children to see all NPCs
+   - Find "Locations" page ID, list its children to see all locations
+   - Find "Session Notes" page ID, list children to see recent sessions
+3. Search for specific content:
+   - search_cards({"query": "dragon", "campaign_id": "..."}) to find dragon-related content
+   - Use search results to reference existing NPCs/locations in your suggestions
+4. Review recent sessions:
+   - get_session_recaps({"campaign_id": "...", "limit": 3}) to understand current story
+   - Read the actual session note cards for detailed context
+5. Check knowledge graphs:
+   - query_graph({"graph_type": "Campaign-Story"}) to see active plot threads
+   - query_graph({"graph_type": "Political-Web"}) to see factions and conflicts
+
 Use MCP tools to:
-1. Search for existing NPCs, locations, and content (use search_cards to find relevant cards)
-2. Review session recaps to understand current story state (use get_session_recaps)
-3. Query knowledge graphs for plot threads and relationships (use query_graph)
-4. Suggest session ideas based on what already exists in the campaign
-5. Update graphs immediately when GM confirms ideas (use update_graph)
+1. FIRST: Discover campaign structure (list_children at root, navigate pages, search content)
+2. Search for existing NPCs, locations, and content (use search_cards)
+3. Review session recaps to understand current story state (use get_session_recaps)
+4. Query knowledge graphs for plot threads and relationships (use query_graph)
+5. Suggest session ideas based on what already exists in the campaign
+6. Update graphs immediately when GM confirms ideas (use update_graph)
 
 Context:
 - Campaign ID: ${campaign_id}

@@ -44,6 +44,7 @@ export function Block({
     }
     saveTimeoutRef.current = setTimeout(() => {
       onUpdate(content);
+      saveTimeoutRef.current = null; // Clear ref after save completes
     }, 2000);
   }, [onUpdate]);
 
@@ -264,6 +265,7 @@ export function Block({
     // Clear debounced save timer
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
     }
 
     // Clear content and apply transformation in a single chain
@@ -292,6 +294,7 @@ export function Block({
 
     // Save content immediately BEFORE transforming (so backend has updated content)
     onUpdate(editor.getJSON());
+    saveTimeoutRef.current = null; // Clear ref after immediate save
 
     // Transform block type in backend
     onTransform(item.blockType, item.headingLevel, item.listType);
@@ -314,13 +317,17 @@ export function Block({
 
   useEffect(() => {
     return () => {
+      // Only save on unmount if there are pending changes (debounce timer is active)
+      // This prevents overwriting content when component is filtered out by view mode
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
+        // There were pending changes, save them immediately
+        if (editor && !editor.isDestroyed) {
+          onUpdateRef.current(editor.getJSON());
+        }
       }
-      // Save immediately on unmount (e.g., when filtered out by view mode)
-      if (editor && !editor.isDestroyed) {
-        onUpdateRef.current(editor.getJSON());
-      }
+      // If no pending changes (saveTimeoutRef.current is null), skip save
+      // to avoid overwriting database content during view mode filtering
     };
   }, [editor]); // Only depend on editor, not onUpdate
 

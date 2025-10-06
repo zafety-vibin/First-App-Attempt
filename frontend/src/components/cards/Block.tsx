@@ -47,12 +47,6 @@ export function Block({
     }, 2000);
   }, [onUpdate]);
 
-  // Get placeholder text based on block type
-  const getPlaceholder = () => {
-    if (card.type === 'page') return "Untitled";
-    return "Type '/' for commands";
-  };
-
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -92,7 +86,47 @@ export function Block({
         nested: true,
       }),
       Placeholder.configure({
-        placeholder: getPlaceholder(),
+        placeholder: ({ node, editor }) => {
+          // Page cards have title placeholder
+          if (card.type === 'page') return "Untitled";
+
+          // Check node type for formatted blocks
+          if (node.type.name === 'heading') {
+            return "Begin typing a heading...";
+          }
+
+          if (node.type.name === 'paragraph') {
+            // Check parent context for list items
+            const { $from } = editor.state.selection;
+
+            // Check if inside a blockquote
+            if ($from.node(-1)?.type.name === 'blockquote') {
+              return "Begin typing a quote...";
+            }
+
+            // Check if inside a task item
+            if ($from.node(-1)?.type.name === 'taskItem') {
+              return "Add a to-do item";
+            }
+
+            // Check if inside a list item
+            if ($from.node(-1)?.type.name === 'listItem') {
+              const listType = $from.node(-2)?.type.name;
+              if (listType === 'bulletList') {
+                return "Add a list item";
+              }
+              if (listType === 'orderedList') {
+                return "Add a list item";
+              }
+            }
+
+            return "Type '/' for commands";
+          }
+
+          return "Type '/' for commands";
+        },
+        showOnlyWhenEditable: true,
+        showOnlyCurrent: false,
       }),
     ],
     content: card.content || { type: 'doc', content: [] },

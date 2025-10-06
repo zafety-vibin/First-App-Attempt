@@ -261,6 +261,14 @@ export function Block({
 
     // Transform block type in backend
     onTransform(item.blockType, item.headingLevel, item.listType);
+
+    // Keep editor focused after transformation (for formatting changes)
+    // Use setTimeout to ensure it happens after state updates
+    setTimeout(() => {
+      if (editor && !editor.isDestroyed) {
+        editor.commands.focus('end');
+      }
+    }, 0);
   }, [editor, onTransform, onUpdate]);
 
   // Cleanup - save immediately on unmount to prevent data loss

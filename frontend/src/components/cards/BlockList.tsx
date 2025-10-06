@@ -516,8 +516,15 @@ export function BlockList({ parentCard, campaignId }: BlockListProps) {
 
       await updateCard(blockId, updates);
 
-      // Reload children to get fresh data and ensure proper component rendering
-      await loadChildren();
+      // Only reload children if the block TYPE changed (text→database, database→text)
+      // For formatting changes within same type (headings, lists, quotes), keep focus
+      const typeChanged = block.type !== newType;
+      if (typeChanged) {
+        await loadChildren();
+      } else {
+        // Keep focus on the current block for formatting changes
+        setFocusedBlockId(blockId);
+      }
     } catch (error) {
       console.error('Failed to transform block:', error);
     }

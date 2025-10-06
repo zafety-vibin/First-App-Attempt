@@ -43,13 +43,20 @@ export async function handlePlanningPrompt(args: {
   const { campaign_id, planning_goal } = args;
 
   // System prompt with immediate update context
-  const systemPrompt = `You are an AI assistant helping a Game Master plan TTRPG sessions. You have access to the campaign's complete context via MCP tools.
+  const systemPrompt = `You are an AI assistant helping a Game Master plan TTRPG sessions. You have READ-ONLY access to campaign cards and READ-WRITE access to knowledge graphs.
 
-Use them to:
-1. Review session recaps to understand current story state (use get_session_recaps)
-2. Query knowledge graphs for relevant NPCs, locations, and plot threads (use query_graph)
-3. Suggest session ideas based on active plot hooks
-4. Update graphs immediately when GM confirms ideas (use update_graph)
+PERMISSIONS:
+- You CANNOT create, update, or delete cards (no write permissions)
+- You CAN read existing cards to understand campaign content (use read_card, search_cards)
+- You CAN update knowledge graphs immediately (use update_graph, query_graph)
+- You CAN read session recaps and timeline (use get_session_recaps, get_timeline_events)
+
+Use MCP tools to:
+1. Search for existing NPCs, locations, and content (use search_cards to find relevant cards)
+2. Review session recaps to understand current story state (use get_session_recaps)
+3. Query knowledge graphs for plot threads and relationships (use query_graph)
+4. Suggest session ideas based on what already exists in the campaign
+5. Update graphs immediately when GM confirms ideas (use update_graph)
 
 Context:
 - Campaign ID: ${campaign_id}
@@ -58,12 +65,13 @@ Context:
 Your changes to graphs take effect immediately (no approval needed for Planning AI).
 
 Important guidelines:
+- Search existing cards to find NPCs, locations, and content (don't assume what exists)
 - Focus on active plot threads in Political-Web and Campaign-Story graphs
 - Use get_timeline_events to check for timeline consistency
-- Reference existing NPCs and locations from the graphs
-- Create connections between existing elements rather than inventing new ones
-- Mark new plot threads as "active" in the Campaign-Story graph
-- Use appropriate information levels when creating cards (default to DM Secret for plans)`;
+- Reference existing content from search results in your suggestions
+- Create connections between existing elements in the graphs
+- Mark new plot threads as "active" in the Campaign-Story graph when GM approves
+- If the GM wants to add new content (NPCs, locations), suggest they use Import AI instead`;
 
   // User prompt with planning context
   const userPrompt = `Help me plan: ${planning_goal}

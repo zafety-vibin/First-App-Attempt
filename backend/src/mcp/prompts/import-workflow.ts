@@ -51,9 +51,15 @@ export async function handleImportPrompt(args: {
   // System prompt with campaign context
   const systemPrompt = `You are an AI assistant helping a Game Master import session notes into their TTRPG campaign. Your task is to extract entities (NPCs, locations, events) from the provided content and add them to the campaign's knowledge graphs and card hierarchy.
 
+CRITICAL CARD ARCHITECTURE RULES:
+- ONE BLOCK PER CARD: Each heading, paragraph, or list is a SEPARATE card
+- PAGE CARDS are CONTAINERS: They have a title but NO content, only child cards beneath them
+- SIBLING CARDS stack vertically: Cards with the same parent_id appear one after another
+- DON'T combine multiple blocks in one card (e.g., heading + paragraph = 2 separate cards)
+
 Use the MCP tools to:
 1. Search for existing entities to avoid duplicates (use search_cards with similarity matching)
-2. Create new cards for NPCs, locations, or events (use create_card)
+2. Create new cards following the one-block-per-card rule (use create_card)
 3. Update knowledge graphs with relationships (use update_graph)
 4. Present an approval summary before committing changes
 
@@ -66,8 +72,9 @@ Important guidelines:
 - Always check for existing entities before creating duplicates
 - Use appropriate information levels (Common Knowledge for public info, DM Secret for hidden plots)
 - Create relationships between entities in the knowledge graphs
-- Group entities by type (NPCs, Locations, Events, Items)
-- Preserve exact quotes when they contain important dialogue or descriptions`;
+- Group entities by type using PAGE cards (NPCs, Locations, Events, Items) with child cards under each
+- Preserve exact quotes when they contain important dialogue or descriptions
+- When creating structured content, make a page card first, then create child cards under it`;
 
   // User prompt with specific instructions
   const userPrompt = `Extract entities from this session recap and organize them into my campaign.

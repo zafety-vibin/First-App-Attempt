@@ -35,7 +35,40 @@ export const cardToolDefinitions = [
   },
   {
     name: 'create_card',
-    description: 'Create a new card in the campaign hierarchy. Content can be provided as ProseMirror JSON or as markdown text in the "text" or "markdown" field.',
+    description: `Create a new card in the campaign hierarchy. IMPORTANT: Follow Notion-style architecture - each card is ONE visual block.
+
+ARCHITECTURE RULES:
+1. ONE BLOCK PER CARD - Each heading, paragraph, or list is a SEPARATE card
+2. PAGE CARDS are CONTAINERS - They have title but NO content, only child cards
+3. SIBLING CARDS stack vertically - Cards with same parent_id appear one after another
+
+CORRECT USAGE EXAMPLES:
+
+Example 1: Create a heading card
+  create_card({title: "", card_type: "text", content: {"text": "# Gandalf the Grey"}})
+
+Example 2: Create a paragraph card below it (separate card, same parent)
+  create_card({title: "", card_type: "text", content: {"text": "A wise wizard who guides the fellowship."}})
+
+Example 3: Create a structured page with children
+  // Step 1: Create page container (NO content)
+  create_card({title: "NPCs", card_type: "page", content: null})
+  // Step 2: Create child heading under the page
+  create_card({title: "", card_type: "text", content: {"text": "# Gandalf"}, parent_id: npc_page_id})
+  // Step 3: Create child paragraph under the page
+  create_card({title: "", card_type: "text", content: {"text": "Wizard of the Grey Order."}, parent_id: npc_page_id})
+
+Example 4: Create a bulleted list card
+  create_card({title: "", card_type: "text", content: {"text": "- Carries staff\\n- Wears grey robes\\n- Rides Shadowfax"}})
+
+WRONG - DO NOT DO THIS (multiple blocks in one card):
+  create_card({content: {"text": "# Heading\\n\\nParagraph\\n\\n- List"}})  // NO! Split into 3 separate cards!
+
+MARKDOWN FEATURES (use in card content):
+- Headings: # H1, ## H2, ### H3
+- Bold: **text**, Italic: *text*, Code: \`code\`
+- Lists: - bullet or 1. numbered (entire list in one card)
+- Blockquotes: > quote`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -51,7 +84,18 @@ export const cardToolDefinitions = [
   },
   {
     name: 'update_card',
-    description: 'Update an existing card\'s title, content, or information level. Content can be provided as ProseMirror JSON or as markdown text in the "text" or "markdown" field.',
+    description: `Update an existing card's title, content, or information level.
+
+Remember: Each card is ONE visual block. Don't combine multiple blocks into one card.
+
+MARKDOWN FORMAT (use "text" field):
+  content: {"text": "Updated paragraph text here."}
+  content: {"text": "# Updated Heading"}
+  content: {"text": "- Item 1\\n- Item 2\\n- Item 3"}
+
+To clear content: content: null or {"text": ""}
+
+Markdown features: # headings, **bold**, *italic*, \`code\`, - lists, > quotes`,
     inputSchema: {
       type: 'object',
       properties: {

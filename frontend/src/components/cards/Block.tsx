@@ -127,10 +127,11 @@ export function Block({
         if (event.key === 'Enter' && !event.shiftKey) {
           console.log('[Block Enter] Key pressed, showSlashMenu:', showSlashMenu);
 
-          // If slash menu is open, let the menu handle it
+          // If slash menu is open, let the menu handle it AND prevent this handler from running
           if (showSlashMenu) {
             console.log('[Block Enter] Slash menu open, letting menu handle');
-            return false;
+            event.preventDefault();
+            return true; // Prevent default TipTap behavior too
           }
 
           const { state } = view;
@@ -222,43 +223,45 @@ export function Block({
   const handleSlashMenuSelect = useCallback((item: SlashMenuItem) => {
     if (!editor) return;
 
-    // Remove the slash and search term from editor
-    const text = editor.state.doc.textContent;
-    const slashMatch = text.match(/^\/(\w*)$/); // Match at start like detection
-    if (slashMatch) {
-      const slashLength = slashMatch[0].length;
-      const { from } = editor.state.selection;
-      editor.commands.deleteRange({
-        from: from - slashLength,
-        to: from,
-      });
-    }
-
     // Close menu
     setShowSlashMenu(false);
     setSlashSearchTerm('');
 
-    // Apply transformation immediately in editor
-    if (item.headingLevel) {
-      editor.commands.setHeading({ level: item.headingLevel as 1 | 2 | 3 });
-    } else if (item.listType === 'bullet') {
-      editor.commands.toggleBulletList();
-    } else if (item.listType === 'ordered') {
-      editor.commands.toggleOrderedList();
-    } else if (item.listType === 'todo') {
-      editor.commands.toggleTaskList();
-    } else if (item.id === 'quote') {
-      editor.commands.toggleBlockquote();
-    } else if (item.id === 'text') {
-      editor.commands.setParagraph();
+    // Clear debounced save timer
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
     }
+
+    // Clear content and apply transformation in a single chain
+    const chain = editor.chain().focus();
+
+    // Select all text in current block and delete it
+    chain.selectAll().deleteSelection();
+
+    // Apply transformation
+    if (item.headingLevel) {
+      chain.setHeading({ level: item.headingLevel as 1 | 2 | 3 });
+    } else if (item.listType === 'bullet') {
+      chain.toggleBulletList();
+    } else if (item.listType === 'ordered') {
+      chain.toggleOrderedList();
+    } else if (item.listType === 'todo') {
+      chain.toggleTaskList();
+    } else if (item.id === 'quote') {
+      chain.toggleBlockquote();
+    } else if (item.id === 'text') {
+      chain.setParagraph();
+    }
+
+    // Execute the chain
+    chain.run();
+
+    // Save content immediately BEFORE transforming (so backend has updated content)
+    onUpdate(editor.getJSON());
 
     // Transform block type in backend
     onTransform(item.blockType, item.headingLevel, item.listType);
-
-    // Focus editor
-    editor.commands.focus();
-  }, [editor, onTransform]);
+  }, [editor, onTransform, onUpdate]);
 
   // Cleanup - save immediately on unmount to prevent data loss
   // Use ref to avoid re-running cleanup when onUpdate reference changes

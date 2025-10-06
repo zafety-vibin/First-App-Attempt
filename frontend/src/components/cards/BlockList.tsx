@@ -5,7 +5,7 @@
  * Manages list of blocks with Enter key creating siblings
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cardService } from '../../services/cardService';
 import { useCards } from '../../hooks/useCards';
@@ -49,9 +49,11 @@ interface SortableBlockItemProps {
   onBackspaceEmpty: (cardId: string) => void;
   onTransform: (cardId: string, newType: string, headingLevel?: number, listType?: string) => void;
   onPageClick: (cardId: string) => void;
+  onPageTitleUpdate: (cardId: string, newTitle: string) => void;
   autoFocus: boolean;
   showMenu: boolean;
   onMenuToggle: (cardId: string) => void;
+  focusPageTitle?: boolean;
 }
 
 function SortableBlockItem({
@@ -64,9 +66,11 @@ function SortableBlockItem({
   onBackspaceEmpty,
   onTransform,
   onPageClick,
+  onPageTitleUpdate,
   autoFocus,
   showMenu,
   onMenuToggle,
+  focusPageTitle = false,
 }: SortableBlockItemProps) {
   const {
     attributes,
@@ -80,6 +84,44 @@ function SortableBlockItem({
   const { getLevelById } = useInformationLevel();
   const level = getLevelById(child.informationLevelId);
   const isHierarchical = level?.hierarchical || false;
+
+  // Page title editing state
+  const [isEditingTitle, setIsEditingTitle] = useState(focusPageTitle);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-focus title input when focusPageTitle is true
+  useEffect(() => {
+    if (focusPageTitle && titleInputRef.current) {
+      titleInputRef.current.focus();
+      titleInputRef.current.select();
+    }
+  }, [focusPageTitle]);
+
+  const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const newTitle = e.currentTarget.value.trim();
+      if (newTitle !== child.title) {
+        onPageTitleUpdate(child.id, newTitle);
+      }
+      setIsEditingTitle(false);
+      onEnter(child.id);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setIsEditingTitle(false);
+      if (titleInputRef.current) {
+        titleInputRef.current.value = child.title || 'Untitled';
+      }
+    }
+  };
+
+  const handleTitleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const newTitle = e.currentTarget.value.trim();
+    if (newTitle !== child.title) {
+      onPageTitleUpdate(child.id, newTitle);
+    }
+    setIsEditingTitle(false);
+  };
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -131,12 +173,38 @@ function SortableBlockItem({
       <div className="block-content">
         {/* Page Block - Clickable, navigates */}
         {child.type === 'page' && (
-          <div
-            className="page-block"
-            onClick={() => onPageClick(child.id)}
-          >
+          <div className="page-block">
             <span className="page-icon">📄</span>
-            <span className="page-title">{child.title || 'Untitled'}</span>
+            {isEditingTitle ? (
+              <input
+                ref={titleInputRef}
+                type="text"
+                className="page-title-input"
+                defaultValue={child.title || 'Untitled'}
+                onKeyDown={handleTitleKeyDown}
+                onBlur={handleTitleBlur}
+                onClick={(e) => e.stopPropagation()}
+              />
+            ) : (
+              <>
+                <span
+                  className="page-title"
+                  onClick={() => onPageClick(child.id)}
+                >
+                  {child.title || 'Untitled'}
+                </span>
+                <button
+                  className="page-edit-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsEditingTitle(true);
+                  }}
+                  title="Edit title"
+                >
+                  ✏️
+                </button>
+              </>
+            )}
           </div>
         )}
 
@@ -459,6 +527,14 @@ export function BlockList({ parentCard, campaignId }: BlockListProps) {
     navigate(`/campaigns/${campaignId}/cards/${cardId}`);
   };
 
+  const handlePageTitleUpdate = async (cardId: string, newTitle: string) => {
+    try {
+      await updateCard(cardId, { title: newTitle });
+    } catch (error) {
+      console.error('Failed to update page title:', error);
+    }
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
 
@@ -542,9 +618,11 @@ export function BlockList({ parentCard, campaignId }: BlockListProps) {
                 onBackspaceEmpty={handleBackspaceEmpty}
                 onTransform={handleTransform}
                 onPageClick={handlePageClick}
+                onPageTitleUpdate={handlePageTitleUpdate}
                 autoFocus={child.id === focusedBlockId}
                 showMenu={menuOpenForId === child.id}
                 onMenuToggle={handleMenuToggle}
+                focusPageTitle={child.id === focusedBlockId && child.type === 'page'}
               />
             ))}
 
@@ -659,6 +737,34 @@ export function BlockList({ parentCard, campaignId }: BlockListProps) {
         .page-title {
           font-size: 14px;
           color: #374151;
+        }
+
+        .page-edit-btn {
+          opacity: 0;
+          background: none;
+          border: none;
+          cursor: pointer;
+          padding: 2px 4px;
+          font-size: 12px;
+          transition: opacity 0.1s;
+        }
+
+        .page-block:hover .page-edit-btn {
+          opacity: 1;
+        }
+
+        .page-title-input {
+          font-size: 14px;
+          color: #374151;
+          border: 1px solid #d1d5db;
+          border-radius: 3px;
+          padding: 2px 6px;
+          outline: none;
+          flex: 1;
+        }
+
+        .page-title-input:focus {
+          border-color: #3b82f6;
         }
 
         .empty-block {

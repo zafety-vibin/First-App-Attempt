@@ -173,8 +173,33 @@ export function DatabaseTableView({ databaseCard, campaignId }: DatabaseTableVie
     console.log('Search clicked');
   };
 
+  const handleDatabaseTitleUpdate = async (e: React.FocusEvent<HTMLHeadingElement>) => {
+    const newTitle = e.currentTarget.textContent || '';
+    if (newTitle !== databaseCard.title) {
+      try {
+        await apiClient.put(`/api/cards/${databaseCard.id}`, { title: newTitle });
+      } catch (error: any) {
+        console.error('Failed to update database title:', error);
+        const errorMsg = error.response?.data?.error || error.message || 'Unknown error';
+        alert(`Failed to update database title: ${errorMsg}`);
+      }
+    }
+  };
+
   return (
     <div className="database-table-view">
+      {/* Database Title */}
+      <div className="database-title-section">
+        <h3
+          contentEditable
+          suppressContentEditableWarning
+          onBlur={handleDatabaseTitleUpdate}
+          className="database-title"
+        >
+          {databaseCard.title || 'Untitled Database'}
+        </h3>
+      </div>
+
       {/* Toolbar */}
       <div className="database-toolbar">
         <button className="btn-view-type">
@@ -382,6 +407,30 @@ export function DatabaseTableView({ databaseCard, campaignId }: DatabaseTableVie
           margin: 16px 0;
           max-width: 100%;
           overflow: hidden;
+        }
+
+        .database-title-section {
+          margin-bottom: 12px;
+        }
+
+        .database-title {
+          margin: 0;
+          padding: 4px 0;
+          font-size: 18px;
+          font-weight: 600;
+          color: #111827;
+          outline: none;
+          min-height: 1em;
+          border-radius: 3px;
+          transition: background 0.1s;
+        }
+
+        .database-title:hover {
+          background: rgba(0, 0, 0, 0.02);
+        }
+
+        .database-title:focus {
+          background: rgba(0, 0, 0, 0.03);
         }
 
         .database-toolbar {

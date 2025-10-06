@@ -100,9 +100,9 @@ export function Block({
     onUpdate: ({ editor }) => {
       debouncedSave(editor.getJSON());
 
-      // Check for slash command
+      // Check for slash command - ONLY in empty cards or at the start of content
       const text = editor.state.doc.textContent;
-      const slashMatch = text.match(/\/(\w*)$/);
+      const slashMatch = text.match(/^\/(\w*)$/); // Only match if slash is at the very start
 
       if (slashMatch) {
         const searchTerm = slashMatch[1];
@@ -144,7 +144,33 @@ export function Block({
           console.log('[Block Enter] inListItem:', inListItem, 'inTaskItem:', inTaskItem);
 
           if (inListItem || inTaskItem) {
-            // Let TipTap handle list item creation
+            // Check if the current list item is empty
+            const currentNode = $from.node(-1);
+            const isEmpty = currentNode.textContent.trim().length === 0;
+
+            if (isEmpty) {
+              // Empty list item - exit the list and create new block
+              event.preventDefault();
+
+              // First, lift out of the list
+              const listType = $from.node(-2)?.type.name; // bulletList, orderedList, taskList
+              if (listType === 'bulletList') {
+                editor?.commands.liftListItem('listItem');
+              } else if (listType === 'orderedList') {
+                editor?.commands.liftListItem('listItem');
+              } else if (listType === 'taskList') {
+                editor?.commands.liftListItem('taskItem');
+              }
+
+              // Then create new sibling block
+              setTimeout(() => {
+                onEnter();
+              }, 0);
+
+              return true;
+            }
+
+            // Non-empty list item - let TipTap handle list item creation
             console.log('[Block Enter] In list, letting TipTap handle');
             return false;
           }
@@ -198,7 +224,7 @@ export function Block({
 
     // Remove the slash and search term from editor
     const text = editor.state.doc.textContent;
-    const slashMatch = text.match(/\/(\w*)$/);
+    const slashMatch = text.match(/^\/(\w*)$/); // Match at start like detection
     if (slashMatch) {
       const slashLength = slashMatch[0].length;
       const { from } = editor.state.selection;

@@ -1,0 +1,844 @@
+openapi: 3.0.3
+info:
+  title: Wrldbldr External API for Conversational Database Operations
+  description: |
+    External REST API for AI tools like Claude Desktop to perform conversational
+    operations on campaign databases. Provides read/write access to 13 category
+    database tables from Feature 014.
+
+    **LOCALHOST TESTING ONLY** - No authentication, runs on port 3002.
+
+    **Key Features:**
+    - Query, create, update, delete operations for 13 database categories
+    - Hierarchy navigation for parent-child relationships
+    - Session recap timeline queries
+    - Knowledge graph operations
+    - Information level filtering via X-View-Mode header
+    - Campaign ownership isolation
+    - Full audit logging for all operations
+  version: 1.0.0
+  contact:
+    name: Wrldbldr Development Team
+  license:
+    name: Prototype - Localhost Only
+    url: https://localhost
+
+servers:
+  - url: http://localhost:3002/api/v1/external
+    description: Localhost development server (testing only)
+
+tags:
+  - name: Health
+    description: Connection verification and health checks
+  - name: Database Query
+    description: Query operations for 13 category tables
+  - name: Database Create
+    description: Create new entries in category tables
+  - name: Database Update
+    description: Update existing entries in category tables
+  - name: Database Delete
+    description: Delete entries from category tables (with confirmation)
+  - name: Hierarchy
+    description: Navigate parent-child relationships in categories
+  - name: Session Recaps
+    description: Timeline queries for session recaps
+  - name: Knowledge Graphs
+    description: Query and work with knowledge graphs
+
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      description: |
+        Verifies external API connection and returns basic status information.
+        AI tools should call this first to confirm connectivity.
+      operationId: getHealth
+      tags:
+        - Health
+      responses:
+        '200':
+          description: API is healthy and ready
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [healthy]
+                  timestamp:
+                    type: string
+                    format: date-time
+                  version:
+                    type: string
+                  uptime_seconds:
+                    type: integer
+                example:
+                  status: healthy
+                  timestamp: '2025-01-10T12:00:00Z'
+                  version: '1.0.0'
+                  uptime_seconds: 3600
+        '503':
+          description: Service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /campaigns/{campaignId}/database/{category}:
+    get:
+      summary: Query database entries
+      description: |
+        Query entries from specified category table with optional filters,
+        pagination, and sorting. Supports conversational queries via filter parameters.
+
+        **Information Filtering**: Respects X-View-Mode header for player_knowledge filtering.
+        **Campaign Isolation**: Automatically filters by campaignId.
+      operationId: queryDatabaseEntries
+      tags:
+        - Database Query
+      parameters:
+        - $ref: '#/components/parameters/CampaignIdParam'
+        - $ref: '#/components/parameters/CategoryParam'
+        - $ref: '#/components/parameters/ViewModeHeader'
+        - name: filter
+          in: query
+          description: JSON object of filter conditions (e.g., {"name": "Marcus", "faction_id": "xyz"})
+          required: false
+          schema:
+            type: string
+          example: '{"core_status":"active","tags":["important"]}'
+        - name: search
+          in: query
+          description: Full-text search query (searches name and description fields)
+          required: false
+          schema:
+            type: string
+          example: 'Thieves Guild'
+        - name: page
+          in: query
+          description: Page number (1-indexed)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Entries per page (max 100)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 100
+        - name: sort
+          in: query
+          description: Sort field (prefix with - for descending, e.g., "-created_at")
+          required: false
+          schema:
+            type: string
+          example: '-created_at'
+      responses:
+        '200':
+          description: Query successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryResponse'
+        '400':
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Campaign or category not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      summary: Create database entry
+      description: |
+        Create a new entry in specified category table. Validates against category schema.
+
+        **Required Fields**: At minimum, 'name' field must be provided.
+        **Automatic Fields**: id, campaign_id, created_at, updated_at are auto-populated.
+      operationId: createDatabaseEntry
+      tags:
+        - Database Create
+      parameters:
+        - $ref: '#/components/parameters/CampaignIdParam'
+        - $ref: '#/components/parameters/CategoryParam'
+        - $ref: '#/components/parameters/ViewModeHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEntryRequest'
+            examples:
+              createNPC:
+                summary: Create NPC example
+                value:
+                  name: Marcus the Merchant
+                  description: A wealthy trader who deals in rare goods
+                  race: Human
+                  faction_id: thieves-guild-123
+                  player_knowledge: common_knowledge
+                  tags: [merchant, quest-giver]
+              createLocation:
+                summary: Create Location example
+                value:
+                  name: The Rusty Anchor
+                  description: A weathered tavern in the docks district
+                  location_type: tavern
+                  parent_location_id: docks-district-456
+                  player_knowledge: common_knowledge
+      responses:
+        '201':
+          description: Entry created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateResponse'
+        '400':
+          description: Validation error or constraint violation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Campaign or category not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /campaigns/{campaignId}/database/{category}/{entryId}:
+    patch:
+      summary: Update database entry
+      description: |
+        Update existing entry with partial field updates. Only provided fields are modified.
+
+        **Validation**: Updates must satisfy category schema constraints.
+        **Automatic Fields**: updated_at is automatically refreshed.
+      operationId: updateDatabaseEntry
+      tags:
+        - Database Update
+      parameters:
+        - $ref: '#/components/parameters/CampaignIdParam'
+        - $ref: '#/components/parameters/CategoryParam'
+        - $ref: '#/components/parameters/EntryIdParam'
+        - $ref: '#/components/parameters/ViewModeHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateEntryRequest'
+            example:
+              description: A fallen knight corrupted by dark magic, now serving sinister forces
+              alignment: Chaotic Evil
+              tags: [corrupted, antagonist, boss]
+      responses:
+        '200':
+          description: Entry updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateResponse'
+        '400':
+          description: Validation error or constraint violation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Entry not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: Delete database entry (requires confirmation)
+      description: |
+        Delete entry from category table. Two-phase confirmation workflow:
+
+        **Phase 1** (confirm=false or omitted): Returns preview of deletion impact
+        **Phase 2** (confirm=true): Actually deletes the entry
+
+        Confirmation tokens expire after 60 seconds.
+      operationId: deleteDatabaseEntry
+      tags:
+        - Database Delete
+      parameters:
+        - $ref: '#/components/parameters/CampaignIdParam'
+        - $ref: '#/components/parameters/CategoryParam'
+        - $ref: '#/components/parameters/EntryIdParam'
+        - $ref: '#/components/parameters/ViewModeHeader'
+        - name: confirm
+          in: query
+          description: Set to true to confirm deletion (Phase 2)
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Phase 1 - Deletion preview (confirm=false)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeletePreviewResponse'
+        '204':
+          description: Phase 2 - Entry deleted successfully (confirm=true)
+        '400':
+          description: Invalid request or confirmation expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Entry not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /campaigns/{campaignId}/database/{category}/{entryId}/children:
+    get:
+      summary: Navigate hierarchy - Get children
+      description: |
+        Get child entries for categories supporting parent-child relationships:
+        - locations (parent_location_id)
+        - npcs (superior_npc_id for chain of command)
+
+        **Depth Control**: Optional depth parameter for multi-level traversal.
+      operationId: getHierarchyChildren
+      tags:
+        - Hierarchy
+      parameters:
+        - $ref: '#/components/parameters/CampaignIdParam'
+        - $ref: '#/components/parameters/CategoryParam'
+        - $ref: '#/components/parameters/EntryIdParam'
+        - $ref: '#/components/parameters/ViewModeHeader'
+        - name: depth
+          in: query
+          description: Levels of hierarchy to traverse (1 = direct children only)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 5
+            default: 1
+      responses:
+        '200':
+          description: Children retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HierarchyResponse'
+        '400':
+          description: Category does not support hierarchy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Parent entry not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /campaigns/{campaignId}/recaps:
+    get:
+      summary: Query session recap timeline
+      description: |
+        Query session recaps with timeline filtering and search capabilities.
+
+        **Timeline Queries**: Filter by session number range or date range
+        **Search**: Full-text search across summary, key_events, player_decisions
+      operationId: querySessionRecaps
+      tags:
+        - Session Recaps
+      parameters:
+        - $ref: '#/components/parameters/CampaignIdParam'
+        - $ref: '#/components/parameters/ViewModeHeader'
+        - name: start_session
+          in: query
+          description: Starting session number (inclusive)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+        - name: end_session
+          in: query
+          description: Ending session number (inclusive)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+        - name: search
+          in: query
+          description: Search query for session content
+          required: false
+          schema:
+            type: string
+          example: 'Dragon of Ash Peak'
+        - name: limit
+          in: query
+          description: Maximum number of recaps to return
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+        - name: sort
+          in: query
+          description: Sort order (session_date or session_number, prefix with - for descending)
+          required: false
+          schema:
+            type: string
+            default: '-session_number'
+      responses:
+        '200':
+          description: Recaps retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecapsResponse'
+        '400':
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Campaign not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /campaigns/{campaignId}/graphs:
+    get:
+      summary: Query knowledge graphs
+      description: |
+        Query knowledge graphs for campaign (Feature 005/006 integration).
+
+        **Graph Types**: Geographical, Political-Web, World-Foundations, Campaign-Story
+        **Node Filtering**: Filter nodes by type, attributes, or relationships
+      operationId: queryKnowledgeGraphs
+      tags:
+        - Knowledge Graphs
+      parameters:
+        - $ref: '#/components/parameters/CampaignIdParam'
+        - $ref: '#/components/parameters/ViewModeHeader'
+        - name: graph_type
+          in: query
+          description: Filter by specific graph type
+          required: false
+          schema:
+            type: string
+            enum: [Geographical, Political-Web, World-Foundations, Campaign-Story]
+        - name: node_type
+          in: query
+          description: Filter nodes by type (e.g., 'faction', 'npc', 'location')
+          required: false
+          schema:
+            type: string
+        - name: include_edges
+          in: query
+          description: Include relationship edges in response
+          required: false
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: Graphs retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GraphsResponse'
+        '400':
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Campaign not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  parameters:
+    CampaignIdParam:
+      name: campaignId
+      in: path
+      description: Campaign UUID
+      required: true
+      schema:
+        type: string
+        format: uuid
+      example: '550e8400-e29b-41d4-a716-446655440000'
+
+    CategoryParam:
+      name: category
+      in: path
+      description: Database category table name
+      required: true
+      schema:
+        type: string
+        enum:
+          - npcs
+          - locations
+          - factions
+          - session_recaps
+          - quests
+          - player_characters
+          - lore_entries
+          - world_rules
+          - planar_forces
+          - session_prep
+          - custom_mechanics
+          - items
+          - creatures
+      example: npcs
+
+    EntryIdParam:
+      name: entryId
+      in: path
+      description: Database entry UUID
+      required: true
+      schema:
+        type: string
+        format: uuid
+      example: '660e8400-e29b-41d4-a716-446655440001'
+
+    ViewModeHeader:
+      name: X-View-Mode
+      in: header
+      description: |
+        Information level filtering mode (Feature 004 integration).
+        - dm_view: Return all entries including DM-only content
+        - player_view: Filter out DM-only entries and strip dm_* fields
+      required: false
+      schema:
+        type: string
+        enum: [dm_view, player_view]
+        default: dm_view
+      example: dm_view
+
+  schemas:
+    QueryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            type: object
+            description: Database entry matching category schema
+        pagination:
+          type: object
+          properties:
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 100
+            total:
+              type: integer
+              example: 42
+            total_pages:
+              type: integer
+              example: 1
+        operation_id:
+          type: string
+          format: uuid
+          description: Audit log reference for this operation
+          example: '770e8400-e29b-41d4-a716-446655440002'
+        execution_time_ms:
+          type: integer
+          description: Query execution time in milliseconds
+          example: 45
+
+    CreateEntryRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: Entity name (required)
+          example: Marcus the Merchant
+        description:
+          type: string
+          nullable: true
+          description: Rich text description
+          example: A wealthy trader in rare goods
+        core_status:
+          type: string
+          enum: [active, draft, archived, hidden]
+          default: active
+        player_knowledge:
+          type: string
+          nullable: true
+          description: Information level (e.g., common_knowledge, dm_only)
+          example: common_knowledge
+        tags:
+          type: array
+          items:
+            type: string
+          example: [merchant, quest-giver]
+        custom_fields:
+          type: object
+          additionalProperties: true
+          description: User-defined custom fields
+      additionalProperties: true
+      description: Category-specific fields vary by table (see Feature 014 schemas)
+
+    CreateResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          description: Created entry with all fields populated
+        operation_id:
+          type: string
+          format: uuid
+          example: '880e8400-e29b-41d4-a716-446655440003'
+        execution_time_ms:
+          type: integer
+          example: 32
+
+    UpdateEntryRequest:
+      type: object
+      minProperties: 1
+      additionalProperties: true
+      description: Partial update - only provided fields are modified
+      example:
+        description: Updated description text
+        tags: [updated-tag]
+
+    UpdateResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          description: Updated entry with all current field values
+        operation_id:
+          type: string
+          format: uuid
+          example: '990e8400-e29b-41d4-a716-446655440004'
+        execution_time_ms:
+          type: integer
+          example: 28
+
+    DeletePreviewResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: 'Deletion preview - confirm to proceed'
+        preview:
+          type: object
+          properties:
+            entry:
+              type: object
+              description: Entry to be deleted
+            affected_references:
+              type: array
+              items:
+                type: object
+                properties:
+                  table:
+                    type: string
+                    example: npcs
+                  field:
+                    type: string
+                    example: faction_id
+                  count:
+                    type: integer
+                    example: 5
+              description: Other entities that reference this entry
+            will_cascade:
+              type: boolean
+              description: Whether deletion will cascade to child records
+              example: false
+        confirmation_token:
+          type: string
+          description: Token for Phase 2 confirmation (60s expiry)
+          example: 'confirm-123456-abcdef'
+        expires_at:
+          type: string
+          format: date-time
+          example: '2025-01-10T12:01:00Z'
+
+    HierarchyResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            parent:
+              type: object
+              description: Parent entry
+            children:
+              type: array
+              items:
+                type: object
+                description: Child entries with optional nested children
+            depth:
+              type: integer
+              description: Levels traversed
+              example: 1
+        operation_id:
+          type: string
+          format: uuid
+          example: 'aa0e8400-e29b-41d4-a716-446655440005'
+        execution_time_ms:
+          type: integer
+          example: 67
+
+    RecapsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            type: object
+            description: Session recap entries (see Feature 014 session_recaps schema)
+        pagination:
+          type: object
+          properties:
+            limit:
+              type: integer
+              example: 10
+            total:
+              type: integer
+              example: 25
+        operation_id:
+          type: string
+          format: uuid
+          example: 'bb0e8400-e29b-41d4-a716-446655440006'
+        execution_time_ms:
+          type: integer
+          example: 52
+
+    GraphsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              graph_type:
+                type: string
+                example: Political-Web
+              nodes:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    type:
+                      type: string
+                    attributes:
+                      type: object
+              edges:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    from:
+                      type: string
+                    to:
+                      type: string
+                    relationship:
+                      type: string
+        operation_id:
+          type: string
+          format: uuid
+          example: 'cc0e8400-e29b-41d4-a716-446655440007'
+        execution_time_ms:
+          type: integer
+          example: 89
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              enum:
+                - VALIDATION_ERROR
+                - NOT_FOUND
+                - PERMISSION_DENIED
+                - CONSTRAINT_VIOLATION
+                - INTERNAL_ERROR
+                - INVALID_CATEGORY
+                - CONFIRMATION_EXPIRED
+              example: VALIDATION_ERROR
+            message:
+              type: string
+              description: Human-readable error message
+              example: 'Required field "name" is missing'
+            details:
+              type: object
+              additionalProperties: true
+              description: Additional error context for debugging
+            suggestion:
+              type: string
+              description: AI-friendly suggestion for corrective action
+              example: 'Please provide a name field in your request body'
+        operation_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Audit log reference if operation was logged before error
+          example: 'dd0e8400-e29b-41d4-a716-446655440008'
+
+  securitySchemes:
+    # No authentication for localhost testing
+    # Campaign ownership validated via campaignId in URL
+
+security: []

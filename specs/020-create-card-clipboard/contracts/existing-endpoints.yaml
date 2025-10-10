@@ -1,0 +1,214 @@
+# Feature 020: Card Clipboard Operations - Existing Endpoints Reference
+# This feature uses EXISTING Feature 003 endpoints - NO NEW ENDPOINTS NEEDED
+# Clipboard logic is entirely CLIENT-SIDE
+
+openapi: 3.0.3
+info:
+  title: Card Clipboard Operations - Existing Endpoints
+  description: |
+    Feature 020 leverages existing Feature 003 card endpoints for clipboard operations.
+    All clipboard state management happens client-side. The backend only sees standard
+    card operations (move, delete) that are called in bulk for multi-card operations.
+  version: 1.0.0
+
+# These endpoints from Feature 003 are used by clipboard operations:
+
+paths:
+  /cards/{id}/move:
+    patch:
+      summary: Move card to new parent (PRIMARY CLIPBOARD ENDPOINT)
+      description: |
+        EXISTING ENDPOINT from Feature 003 (specs/003-create-a-notion/contracts/cards.yaml)
+
+        **Clipboard Usage:**
+        - Single card paste: Called once with destination parent
+        - Multi-card paste: Called sequentially for each card in selection
+        - Preserves relative positions when pasting multiple cards
+
+        **Enhanced Validation for Clipboard (FR-022, FR-036):**
+        - Circular hierarchy check: Verify destination is not in card's subtree
+        - Cross-campaign check: Verify card and destination are in same campaign
+        - Wiki card check (FR-031): Reject if card is database type
+
+        **Error Codes:**
+        - 400: Invalid move (circular reference, cross-campaign, database card)
+        - 404: Card or destination not found (handle deleted cards gracefully)
+        - 422: Validation error with specific message
+
+      operationId: moveCard
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Card ID to move (from clipboard)
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [new_parent_id, position]
+              properties:
+                new_parent_id:
+                  type: string
+                  format: uuid
+                  nullable: true
+                  description: |
+                    Destination parent card ID
+                    - null = paste at root level
+                    - Must be in same campaign as source card
+                    - Cannot be descendant of source card
+                position:
+                  type: integer
+                  minimum: 0
+                  description: |
+                    Position within new parent
+                    - For multi-card paste, positions are calculated sequentially
+                    - Preserves relative order of pasted cards
+
+      responses:
+        '200':
+          description: Card moved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '../../../003-create-a-notion/contracts/cards.yaml#/components/schemas/Card'
+
+        '400':
+          description: |
+            Invalid move operation. Enhanced for clipboard:
+            - "Cannot move database cards" (FR-031)
+            - "Cannot paste cards from different campaign" (FR-036)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - "Cannot move database cards"
+                      - "Cannot paste cards from different campaign"
+                      - "Invalid parent_id"
+
+        '404':
+          description: |
+            Card or destination not found.
+            Frontend should handle gracefully for deleted clipboard cards.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Card not found"
+
+        '422':
+          description: |
+            Validation error. Enhanced for clipboard:
+            - "Cannot move card into its own subtree" (FR-022)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - "Cannot move card into its own subtree"
+                      - "Maximum nesting depth exceeded (50 levels)"
+
+  /cards/{id}:
+    delete:
+      summary: Delete card (USED FOR MULTI-DELETE)
+      description: |
+        EXISTING ENDPOINT from Feature 003 (specs/003-create-a-notion/contracts/cards.yaml)
+
+        **Clipboard Usage:**
+        - Single card delete: Standard delete call
+        - Multi-card delete (FR-029): Called sequentially for each selected card
+        - Delete key shortcut triggers this for all selected cards
+
+        **Cascade Behavior:**
+        - Deletes entire subtree (all descendants)
+        - Frontend should warn user about subtree deletion
+
+        **No Additional Validation Needed:**
+        - Existing permission checks sufficient
+        - Existing cascade behavior handles subtrees
+
+      operationId: deleteCard
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: force
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: Force delete even if referenced by database entries
+
+      responses:
+        '200':
+          description: Card deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted_count:
+                    type: integer
+                    description: Number of cards deleted (includes subtree)
+
+        '404':
+          description: Card not found (already deleted)
+
+        '409':
+          description: Card is referenced, requires force=true
+
+  /cards/{id}/subtree:
+    get:
+      summary: Get entire subtree (USED FOR VALIDATION)
+      description: |
+        EXISTING ENDPOINT from Feature 003 (specs/003-create-a-notion/contracts/cards.yaml)
+
+        **Clipboard Usage:**
+        - Pre-paste validation: Check if destination is in source's subtree
+        - Multi-card validation: Verify no circular references in batch
+        - Used by frontend to disable invalid paste targets
+
+      operationId: getSubtree
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+
+      responses:
+        '200':
+          description: Card subtree for validation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  root:
+                    $ref: '../../../003-create-a-notion/contracts/cards.yaml#/components/schemas/Card'
+                  descendants:
+                    type: array
+                    items:
+                      $ref: '../../../003-create-a-notion/contracts/cards.yaml#/components/schemas/Card'
+
+# No new components needed - all schemas from Feature 003

@@ -1,0 +1,956 @@
+openapi: 3.0.3
+info:
+  title: Wrldbldr MCP Manager - Structured Category Database API
+  description: |
+    REST API for 13 structured TTRPG category tables with CRUD operations.
+
+    **Information Level Filtering**: Use X-View-Mode header (dm_view | player_view).
+    Player view filters entities and strips dm_* fields.
+
+    **Categories**: NPCs, Locations, Factions, Session Recaps, Quests, Player Characters,
+    Lore Entries, World Rules, Planar Forces, Session Prep, Custom Mechanics, Items, Creatures.
+  version: 1.0.0
+  contact:
+    name: Feature 014 - Structured Category Database Foundation
+
+servers:
+  - url: http://localhost:3001/api
+    description: Local development server
+
+security:
+  - BearerAuth: []
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Keycloak access token
+
+  parameters:
+    ViewModeHeader:
+      name: X-View-Mode
+      in: header
+      required: false
+      schema:
+        type: string
+        enum: [dm_view, player_view]
+        default: dm_view
+      description: Information level filtering mode
+
+    EntityId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Entity ID
+
+    CampaignFilter:
+      name: campaign_id
+      in: query
+      required: false
+      schema:
+        type: string
+        format: uuid
+      description: Filter by campaign ID
+
+    StatusFilter:
+      name: core_status
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [active, archived, draft, hidden]
+      description: Filter by core status
+
+    PlayerKnowledgeFilter:
+      name: player_knowledge
+      in: query
+      required: false
+      schema:
+        type: string
+      description: Filter by information level
+
+    TagsFilter:
+      name: tags
+      in: query
+      required: false
+      schema:
+        type: array
+        items:
+          type: string
+      description: Filter by tags (comma-separated)
+
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        default: 100
+        maximum: 500
+      description: Maximum number of results
+
+    Offset:
+      name: offset
+      in: query
+      required: false
+      schema:
+        type: integer
+        default: 0
+      description: Offset for pagination
+
+    SortBy:
+      name: sort_by
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [created_at, updated_at, name]
+        default: created_at
+      description: Sort field
+
+    SortOrder:
+      name: sort_order
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [asc, desc]
+        default: desc
+      description: Sort order
+
+  schemas:
+    # Universal Fields (inherited by all categories)
+    UniversalFields:
+      type: object
+      required:
+        - id
+        - campaign_id
+        - name
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        campaign_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          nullable: true
+        core_status:
+          type: string
+          enum: [active, archived, draft, hidden]
+          default: active
+        player_knowledge:
+          type: string
+          nullable: true
+          default: common_knowledge
+          description: Information level (common_knowledge, player_knowledge, dm_only, custom, or null)
+        tags:
+          type: array
+          items:
+            type: string
+          default: []
+        created_at:
+          type: integer
+          format: int64
+          readOnly: true
+          description: Unix timestamp
+        updated_at:
+          type: integer
+          format: int64
+          readOnly: true
+          description: Unix timestamp
+        custom_fields:
+          type: object
+          additionalProperties: true
+          default: {}
+          description: User-defined JSON fields
+
+    # NPC Schema
+    NPC:
+      allOf:
+        - $ref: '#/components/schemas/UniversalFields'
+        - type: object
+          properties:
+            race:
+              type: string
+              nullable: true
+            class:
+              type: array
+              items:
+                type: string
+              nullable: true
+            level:
+              type: integer
+              nullable: true
+              minimum: 1
+            alignment:
+              type: string
+              nullable: true
+            appearance:
+              type: string
+              nullable: true
+            personality_traits:
+              type: string
+              nullable: true
+            motivation:
+              type: string
+              nullable: true
+            relationship_to_party:
+              type: string
+              nullable: true
+            faction_id:
+              type: string
+              format: uuid
+              nullable: true
+            locations:
+              type: array
+              items:
+                type: string
+                format: uuid
+              default: []
+            dm_secrets:
+              type: string
+              nullable: true
+              description: Stripped in player_view
+            dm_plot_relevance:
+              type: string
+              nullable: true
+              description: Stripped in player_view
+
+    # Location Schema
+    Location:
+      allOf:
+        - $ref: '#/components/schemas/UniversalFields'
+        - type: object
+          properties:
+            location_type:
+              type: string
+              nullable: true
+            population:
+              type: integer
+              nullable: true
+              minimum: 0
+            cultural_characteristics:
+              type: string
+              nullable: true
+            parent_location_id:
+              type: string
+              format: uuid
+              nullable: true
+            notable_npcs:
+              type: array
+              items:
+                type: string
+                format: uuid
+              default: []
+            factions_present:
+              type: array
+              items:
+                type: string
+                format: uuid
+              default: []
+            connected_locations:
+              type: array
+              items:
+                type: string
+                format: uuid
+              default: []
+            dm_secrets:
+              type: string
+              nullable: true
+              description: Stripped in player_view
+
+    # Faction Schema
+    Faction:
+      allOf:
+        - $ref: '#/components/schemas/UniversalFields'
+        - type: object
+          properties:
+            faction_type:
+              type: string
+              nullable: true
+            power_level:
+              type: string
+              nullable: true
+            resources:
+              type: string
+              nullable: true
+            beliefs:
+              type: string
+              nullable: true
+            goals:
+              type: string
+              nullable: true
+            methods:
+              type: string
+              nullable: true
+            leader_id:
+              type: string
+              format: uuid
+              nullable: true
+            key_members:
+              type: array
+              items:
+                type: string
+                format: uuid
+              default: []
+            allied_factions:
+              type: array
+              items:
+                type: string
+                format: uuid
+              default: []
+            rival_factions:
+              type: array
+              items:
+                type: string
+                format: uuid
+              default: []
+            territory:
+              type: array
+              items:
+                type: string
+                format: uuid
+              default: []
+            dm_true_agenda:
+              type: string
+              nullable: true
+              description: Stripped in player_view
+
+    # Session Recap Schema
+    SessionRecap:
+      allOf:
+        - $ref: '#/components/schemas/UniversalFields'
+        - type: object
+          properties:
+            session_date:
+              type: integer
+              format: int64
+              nullable: true
+              description: Unix timestamp of actual game session
+            in_game_date_start:
+              type: string
+              nullable: true
+            in_game_date_end:
+              type: string
+              nullable: true
+            time_passed:
+              type: string
+              nullable: true
+            summary:
+              type: string
+              nullable: true
+            key_events:
+              type: array
+              items:
+                type: string
+              nullable: true
+            player_decisions:
+              type: array
+              items:
+                type: string
+              nullable: true
+            is_canon:
+              type: integer
+              enum: [1]
+              default: 1
+              readOnly: true
+            canonical_status:
+              type: string
+              enum: [canon]
+              default: canon
+              readOnly: true
+            npcs_encountered:
+              type: array
+              items:
+                type: string
+                format: uuid
+              default: []
+            locations_visited:
+              type: array
+              items:
+                type: string
+                format: uuid
+              default: []
+            quests_progressed:
+              type: array
+              items:
+                type: string
+                format: uuid
+              default: []
+            loot_acquired:
+              type: array
+              items:
+                type: string
+                format: uuid
+              default: []
+            dm_consequences:
+              type: string
+              nullable: true
+              description: Stripped in player_view
+            dm_behind_scenes:
+              type: string
+              nullable: true
+              description: Stripped in player_view
+
+    # Quest Schema
+    Quest:
+      allOf:
+        - $ref: '#/components/schemas/UniversalFields'
+        - type: object
+          properties:
+            status:
+              type: string
+              enum: [not_started, in_progress, completed, failed]
+              default: not_started
+            objectives:
+              type: array
+              items:
+                type: string
+              default: []
+            rewards:
+              type: string
+              nullable: true
+            quest_giver_id:
+              type: string
+              format: uuid
+              nullable: true
+            started_session_id:
+              type: string
+              format: uuid
+              nullable: true
+            completed_session_id:
+              type: string
+              format: uuid
+              nullable: true
+            related_npcs:
+              type: array
+              items:
+                type: string
+                format: uuid
+              default: []
+            related_locations:
+              type: array
+              items:
+                type: string
+                format: uuid
+              default: []
+            dm_true_objective:
+              type: string
+              nullable: true
+              description: Stripped in player_view
+            dm_consequences:
+              type: string
+              nullable: true
+              description: Stripped in player_view
+
+    # (Additional schemas for remaining 8 categories would follow same pattern)
+    # For brevity, showing structure - implementation would include all 13
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+        details:
+          type: string
+
+    ListResponse:
+      type: object
+      required:
+        - data
+        - pagination
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+        pagination:
+          type: object
+          required:
+            - limit
+            - offset
+            - total
+          properties:
+            limit:
+              type: integer
+            offset:
+              type: integer
+            total:
+              type: integer
+
+paths:
+  # NPCs Endpoints
+  /npcs:
+    get:
+      summary: List NPCs
+      tags: [NPCs]
+      parameters:
+        - $ref: '#/components/parameters/ViewModeHeader'
+        - $ref: '#/components/parameters/CampaignFilter'
+        - $ref: '#/components/parameters/StatusFilter'
+        - $ref: '#/components/parameters/PlayerKnowledgeFilter'
+        - $ref: '#/components/parameters/TagsFilter'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/SortBy'
+        - $ref: '#/components/parameters/SortOrder'
+      responses:
+        '200':
+          description: List of NPCs
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ListResponse'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/NPC'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      summary: Create NPC
+      tags: [NPCs]
+      parameters:
+        - $ref: '#/components/parameters/ViewModeHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NPC'
+      responses:
+        '201':
+          description: NPC created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NPC'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /npcs/{id}:
+    get:
+      summary: Get NPC by ID
+      tags: [NPCs]
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+        - $ref: '#/components/parameters/ViewModeHeader'
+      responses:
+        '200':
+          description: NPC details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NPC'
+        '404':
+          description: NPC not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      summary: Update NPC
+      tags: [NPCs]
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+        - $ref: '#/components/parameters/ViewModeHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NPC'
+      responses:
+        '200':
+          description: NPC updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NPC'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: NPC not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Delete NPC
+      tags: [NPCs]
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+      responses:
+        '204':
+          description: NPC deleted
+        '404':
+          description: NPC not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Locations Endpoints (same CRUD pattern)
+  /locations:
+    get:
+      summary: List Locations
+      tags: [Locations]
+      parameters:
+        - $ref: '#/components/parameters/ViewModeHeader'
+        - $ref: '#/components/parameters/CampaignFilter'
+        - $ref: '#/components/parameters/StatusFilter'
+        - $ref: '#/components/parameters/PlayerKnowledgeFilter'
+        - $ref: '#/components/parameters/TagsFilter'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/SortBy'
+        - $ref: '#/components/parameters/SortOrder'
+      responses:
+        '200':
+          description: List of Locations
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ListResponse'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Location'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      summary: Create Location
+      tags: [Locations]
+      parameters:
+        - $ref: '#/components/parameters/ViewModeHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Location'
+      responses:
+        '201':
+          description: Location created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Location'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /locations/{id}:
+    get:
+      summary: Get Location by ID
+      tags: [Locations]
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+        - $ref: '#/components/parameters/ViewModeHeader'
+      responses:
+        '200':
+          description: Location details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Location'
+        '404':
+          description: Location not found
+
+    put:
+      summary: Update Location
+      tags: [Locations]
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+        - $ref: '#/components/parameters/ViewModeHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Location'
+      responses:
+        '200':
+          description: Location updated
+
+    delete:
+      summary: Delete Location
+      tags: [Locations]
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+      responses:
+        '204':
+          description: Location deleted
+
+  # Factions Endpoints (same CRUD pattern)
+  /factions:
+    get:
+      summary: List Factions
+      tags: [Factions]
+      parameters:
+        - $ref: '#/components/parameters/ViewModeHeader'
+        - $ref: '#/components/parameters/CampaignFilter'
+        - $ref: '#/components/parameters/StatusFilter'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: List of Factions
+
+    post:
+      summary: Create Faction
+      tags: [Factions]
+      parameters:
+        - $ref: '#/components/parameters/ViewModeHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Faction'
+      responses:
+        '201':
+          description: Faction created
+
+  /factions/{id}:
+    get:
+      summary: Get Faction by ID
+      tags: [Factions]
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+        - $ref: '#/components/parameters/ViewModeHeader'
+      responses:
+        '200':
+          description: Faction details
+
+    put:
+      summary: Update Faction
+      tags: [Factions]
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+      requestBody:
+        required: true
+      responses:
+        '200':
+          description: Faction updated
+
+    delete:
+      summary: Delete Faction
+      tags: [Factions]
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+      responses:
+        '204':
+          description: Faction deleted
+
+  # Session Recaps Endpoints
+  /session-recaps:
+    get:
+      summary: List Session Recaps
+      tags: [Session Recaps]
+      parameters:
+        - $ref: '#/components/parameters/ViewModeHeader'
+        - $ref: '#/components/parameters/CampaignFilter'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: List of Session Recaps
+
+    post:
+      summary: Create Session Recap
+      tags: [Session Recaps]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionRecap'
+      responses:
+        '201':
+          description: Session Recap created
+
+  /session-recaps/{id}:
+    get:
+      summary: Get Session Recap by ID
+      tags: [Session Recaps]
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+        - $ref: '#/components/parameters/ViewModeHeader'
+      responses:
+        '200':
+          description: Session Recap details
+
+    put:
+      summary: Update Session Recap
+      tags: [Session Recaps]
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+      responses:
+        '200':
+          description: Session Recap updated
+
+    delete:
+      summary: Delete Session Recap
+      tags: [Session Recaps]
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+      responses:
+        '204':
+          description: Session Recap deleted
+
+  # Quests Endpoints
+  /quests:
+    get:
+      summary: List Quests
+      tags: [Quests]
+      parameters:
+        - $ref: '#/components/parameters/ViewModeHeader'
+        - $ref: '#/components/parameters/CampaignFilter'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: List of Quests
+
+    post:
+      summary: Create Quest
+      tags: [Quests]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Quest'
+      responses:
+        '201':
+          description: Quest created
+
+  /quests/{id}:
+    get:
+      summary: Get Quest by ID
+      tags: [Quests]
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+      responses:
+        '200':
+          description: Quest details
+
+    put:
+      summary: Update Quest
+      tags: [Quests]
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+      responses:
+        '200':
+          description: Quest updated
+
+    delete:
+      summary: Delete Quest
+      tags: [Quests]
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+      responses:
+        '204':
+          description: Quest deleted
+
+  # NOTE: Remaining 8 categories (Player Characters, Lore Entries, World Rules,
+  # Planar Forces, Session Prep, Custom Mechanics, Items, Creatures) follow
+  # identical CRUD pattern with category-specific schemas.
+  #
+  # Full implementation would include all 65 endpoints (13 categories x 5 operations).
+  # This contract demonstrates the pattern used across all categories.
+
+tags:
+  - name: NPCs
+    description: NPC entity operations
+  - name: Locations
+    description: Location entity operations
+  - name: Factions
+    description: Faction entity operations
+  - name: Session Recaps
+    description: Session Recap entity operations
+  - name: Quests
+    description: Quest entity operations
+  - name: Player Characters
+    description: Player Character entity operations
+  - name: Lore Entries
+    description: Lore Entry entity operations
+  - name: World Rules
+    description: World Rule entity operations
+  - name: Planar Forces
+    description: Planar Force entity operations
+  - name: Session Prep
+    description: Session Prep entity operations
+  - name: Custom Mechanics
+    description: Custom Mechanic entity operations
+  - name: Items
+    description: Item entity operations
+  - name: Creatures
+    description: Creature entity operations

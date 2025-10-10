@@ -1,0 +1,781 @@
+openapi: 3.0.0
+info:
+  title: Campaign Setup Wizard API
+  version: 1.0.0
+  description: |
+    API endpoints for the 4-step Campaign Setup Wizard. Provides wizard status check,
+    theme configuration retrieval, and wizard completion with settings persistence.
+
+servers:
+  - url: http://localhost:3001/api
+    description: Local development server
+
+paths:
+  /campaigns/{campaignId}/wizard/status:
+    get:
+      summary: Check wizard display status
+      description: |
+        Determines if the wizard should be displayed for this campaign.
+        Returns true if campaign_settings does not exist, false if settings already configured.
+      operationId: getWizardStatus
+      tags:
+        - Campaign Wizard
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Campaign ID
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Wizard status retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  shouldShowWizard:
+                    type: boolean
+                    description: True if wizard should display, false if already configured
+                  existingSettings:
+                    $ref: '#/components/schemas/CampaignSettings'
+                    nullable: true
+                    description: Existing settings if configured, null otherwise
+              examples:
+                showWizard:
+                  summary: Wizard should display
+                  value:
+                    shouldShowWizard: true
+                    existingSettings: null
+                alreadyConfigured:
+                  summary: Campaign already configured
+                  value:
+                    shouldShowWizard: false
+                    existingSettings:
+                      id: 1
+                      campaign_id: 42
+                      theme: high_fantasy
+                      category_labels:
+                        npcs: Characters
+                        locations: Realms
+                        factions: Kingdoms
+                        planar_forces: Pantheon
+                        items: Artifacts
+                        creatures: Beasts
+                        lore: Lore
+                        world_rules: World Rules
+                        session_prep: Session Prep
+                        session_recaps: Session Recaps
+                        quests: Quests
+                        player_characters: Player Characters
+                        custom_mechanics: Custom Mechanics
+                      enabled_categories:
+                        - npcs
+                        - locations
+                        - factions
+                        - planar_forces
+                        - items
+                        - creatures
+                        - lore
+                        - world_rules
+                        - session_prep
+                        - session_recaps
+                        - quests
+                        - player_characters
+                        - custom_mechanics
+                      created_at: 1736524800
+                      updated_at: 1736524800
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/CampaignNotFound'
+
+  /campaigns/{campaignId}/wizard/themes:
+    get:
+      summary: Get preset theme configurations
+      description: |
+        Returns all 5 preset theme configurations with category label mappings.
+        Used to populate Step 1 (Style Selection) of the wizard.
+      operationId: getWizardThemes
+      tags:
+        - Campaign Wizard
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Campaign ID
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Theme configurations retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  themes:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ThemeDescriptor'
+              examples:
+                allThemes:
+                  summary: All 5 preset themes
+                  value:
+                    themes:
+                      - id: high_fantasy
+                        name: High Fantasy
+                        description: Epic worlds of magic, kingdoms, and ancient artifacts
+                        labels:
+                          npcs: Characters
+                          locations: Realms
+                          factions: Kingdoms
+                          planar_forces: Pantheon
+                          items: Artifacts
+                          creatures: Beasts
+                          lore: Lore
+                          world_rules: World Rules
+                          session_prep: Session Prep
+                          session_recaps: Session Recaps
+                          quests: Quests
+                          player_characters: Player Characters
+                          custom_mechanics: Custom Mechanics
+                        previewCategories:
+                          - Pantheon
+                          - Kingdoms
+                          - Realms
+                          - Artifacts
+                      - id: cyberpunk
+                        name: Cyberpunk
+                        description: Neon-lit streets, mega-corporations, and high-tech low-life
+                        labels:
+                          locations: Districts
+                          factions: Corporations
+                          quests: Missions
+                          player_characters: Runners
+                          items: Gear
+                          npcs: NPCs
+                          planar_forces: Planar Forces
+                          creatures: Creatures
+                          lore: Lore
+                          world_rules: World Rules
+                          session_prep: Session Prep
+                          session_recaps: Session Recaps
+                          custom_mechanics: Custom Mechanics
+                        previewCategories:
+                          - Corporations
+                          - Districts
+                          - Runners
+                          - Gear
+                      - id: sci_fi
+                        name: Sci-Fi
+                        description: Space exploration, advanced technology, and cosmic mysteries
+                        labels:
+                          lore: Archives
+                          world_rules: Physics
+                          locations: Sectors
+                          planar_forces: Cosmic Forces
+                          quests: Objectives
+                          player_characters: Crew
+                          custom_mechanics: Tech Mods
+                          items: Tech
+                          creatures: Xenofauna
+                          npcs: NPCs
+                          factions: Factions
+                          session_prep: Session Prep
+                          session_recaps: Session Recaps
+                        previewCategories:
+                          - Archives
+                          - Sectors
+                          - Tech Mods
+                          - Xenofauna
+                      - id: modern
+                        name: Modern
+                        description: Contemporary settings with organizations, tasks, and equipment
+                        labels:
+                          lore: Background
+                          locations: Places
+                          factions: Organizations
+                          planar_forces: Beliefs
+                          quests: Tasks
+                          items: Equipment
+                          npcs: NPCs
+                          creatures: Creatures
+                          world_rules: World Rules
+                          session_prep: Session Prep
+                          session_recaps: Session Recaps
+                          player_characters: Player Characters
+                          custom_mechanics: Custom Mechanics
+                        previewCategories:
+                          - Organizations
+                          - Background
+                          - Places
+                          - Equipment
+                      - id: custom
+                        name: Custom
+                        description: Define your own category names to fit your unique setting
+                        labels:
+                          npcs: NPCs
+                          locations: Locations
+                          factions: Factions
+                          planar_forces: Planar Forces
+                          items: Items
+                          creatures: Creatures
+                          lore: Lore
+                          world_rules: World Rules
+                          session_prep: Session Prep
+                          session_recaps: Session Recaps
+                          quests: Quests
+                          player_characters: Player Characters
+                          custom_mechanics: Custom Mechanics
+                        previewCategories:
+                          - (You choose all names)
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/CampaignNotFound'
+
+  /campaigns/{campaignId}/wizard/complete:
+    post:
+      summary: Complete wizard and persist settings
+      description: |
+        Finalizes wizard configuration by persisting campaign_settings and optionally
+        creating World-Foundations knowledge graph with starter world_rules entries.
+        Transaction is atomic - all operations succeed or all rollback on failure.
+      operationId: completeWizard
+      tags:
+        - Campaign Wizard
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Campaign ID
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WizardCompleteRequest'
+            examples:
+              withWorldFoundations:
+                summary: Complete wizard with World-Foundations setup
+                value:
+                  theme: high_fantasy
+                  categoryLabels:
+                    npcs: Characters
+                    locations: Realms
+                    factions: Kingdoms
+                    planar_forces: Pantheon
+                    items: Artifacts
+                    creatures: Beasts
+                    lore: Lore
+                    world_rules: World Rules
+                    session_prep: Session Prep
+                    session_recaps: Session Recaps
+                    quests: Quests
+                    player_characters: Player Characters
+                    custom_mechanics: Custom Mechanics
+                  enabledCategories:
+                    - npcs
+                    - locations
+                    - factions
+                    - planar_forces
+                    - items
+                    - creatures
+                    - lore
+                    - world_rules
+                    - session_prep
+                    - session_recaps
+                    - quests
+                    - player_characters
+                    - custom_mechanics
+                  worldFoundationsAnswers:
+                    - questionId: 1
+                      answer: Magic flows through ley lines. Mages must channel energy from these lines.
+                    - questionId: 2
+                      answer: Medieval / Renaissance
+                    - questionId: 3
+                      answer: Material plane connected to Feywild and Shadowfell via portals.
+              withoutWorldFoundations:
+                summary: Complete wizard without World-Foundations setup
+                value:
+                  theme: cyberpunk
+                  categoryLabels:
+                    locations: Districts
+                    factions: Corporations
+                    quests: Missions
+                    player_characters: Runners
+                    items: Gear
+                    npcs: NPCs
+                    planar_forces: Planar Forces
+                    creatures: Creatures
+                    lore: Lore
+                    world_rules: World Rules
+                    session_prep: Session Prep
+                    session_recaps: Session Recaps
+                    custom_mechanics: Custom Mechanics
+                  enabledCategories:
+                    - npcs
+                    - locations
+                    - factions
+                    - items
+                    - lore
+                    - world_rules
+                    - session_prep
+                    - session_recaps
+                    - quests
+                    - player_characters
+                    - custom_mechanics
+              customTheme:
+                summary: Complete wizard with custom theme
+                value:
+                  theme: custom
+                  categoryLabels:
+                    npcs: Denizens
+                    locations: Territories
+                    factions: Clans
+                    planar_forces: Spirits
+                    items: Relics
+                    creatures: Monsters
+                    lore: Chronicles
+                    world_rules: Laws
+                    session_prep: Planning
+                    session_recaps: Journals
+                    quests: Missions
+                    player_characters: Heroes
+                    custom_mechanics: House Rules
+                  enabledCategories:
+                    - npcs
+                    - locations
+                    - factions
+                    - planar_forces
+                    - items
+                    - lore
+                    - world_rules
+                    - session_prep
+                    - session_recaps
+                    - quests
+                    - player_characters
+                    - custom_mechanics
+      responses:
+        '201':
+          description: Wizard completed successfully, settings persisted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  settings:
+                    $ref: '#/components/schemas/CampaignSettings'
+                  worldFoundationsGraph:
+                    $ref: '#/components/schemas/KnowledgeGraph'
+                    nullable: true
+                    description: Created World-Foundations graph if applicable
+                  worldRulesCreated:
+                    type: integer
+                    description: Number of world_rules entries created
+                    example: 3
+              examples:
+                withWorldFoundations:
+                  summary: Success with World-Foundations setup
+                  value:
+                    success: true
+                    settings:
+                      id: 1
+                      campaign_id: 42
+                      theme: high_fantasy
+                      category_labels:
+                        npcs: Characters
+                        locations: Realms
+                        factions: Kingdoms
+                        planar_forces: Pantheon
+                        items: Artifacts
+                        creatures: Beasts
+                        lore: Lore
+                        world_rules: World Rules
+                        session_prep: Session Prep
+                        session_recaps: Session Recaps
+                        quests: Quests
+                        player_characters: Player Characters
+                        custom_mechanics: Custom Mechanics
+                      enabled_categories:
+                        - npcs
+                        - locations
+                        - factions
+                        - planar_forces
+                        - items
+                        - creatures
+                        - lore
+                        - world_rules
+                        - session_prep
+                        - session_recaps
+                        - quests
+                        - player_characters
+                        - custom_mechanics
+                      created_at: 1736524800
+                      updated_at: 1736524800
+                    worldFoundationsGraph:
+                      id: 1
+                      campaign_id: 42
+                      graph_type: world_foundations
+                      toggle_state: enabled
+                      created_at: 1736524800
+                      updated_at: 1736524800
+                    worldRulesCreated: 3
+                withoutWorldFoundations:
+                  summary: Success without World-Foundations setup
+                  value:
+                    success: true
+                    settings:
+                      id: 2
+                      campaign_id: 43
+                      theme: cyberpunk
+                      category_labels:
+                        locations: Districts
+                        factions: Corporations
+                        quests: Missions
+                        player_characters: Runners
+                        items: Gear
+                        npcs: NPCs
+                        planar_forces: Planar Forces
+                        creatures: Creatures
+                        lore: Lore
+                        world_rules: World Rules
+                        session_prep: Session Prep
+                        session_recaps: Session Recaps
+                        custom_mechanics: Custom Mechanics
+                      enabled_categories:
+                        - npcs
+                        - locations
+                        - factions
+                        - items
+                        - lore
+                        - world_rules
+                        - session_prep
+                        - session_recaps
+                        - quests
+                        - player_characters
+                        - custom_mechanics
+                      created_at: 1736524810
+                      updated_at: 1736524810
+                    worldFoundationsGraph: null
+                    worldRulesCreated: 0
+        '400':
+          description: Invalid request body or validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidTheme:
+                  summary: Invalid theme value
+                  value:
+                    error: Validation failed
+                    details: theme must be one of: high_fantasy, cyberpunk, sci_fi, modern, custom
+                missingCategoryLabels:
+                  summary: Custom theme missing labels
+                  value:
+                    error: Validation failed
+                    details: Custom theme requires all 13 category labels
+                invalidCategoryName:
+                  summary: Category name too long
+                  value:
+                    error: Validation failed
+                    details: Category name 'npcs' must be 50 characters or less
+                insufficientCategories:
+                  summary: Too few enabled categories
+                  value:
+                    error: Validation failed
+                    details: enabledCategories must contain at least 11 categories
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/CampaignNotFound'
+        '409':
+          description: Campaign already has settings configured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                alreadyConfigured:
+                  summary: Settings already exist
+                  value:
+                    error: Wizard already completed
+                    details: Campaign already has settings. Use settings API to update configuration.
+        '500':
+          description: Database transaction failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                transactionFailed:
+                  summary: Transaction rollback
+                  value:
+                    error: Failed to save campaign settings
+                    details: Database transaction failed, all changes rolled back
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Keycloak JWT token from authentication
+
+  schemas:
+    CampaignSettings:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Settings ID (auto-increment)
+        campaign_id:
+          type: integer
+          description: Foreign key to campaigns table
+        theme:
+          type: string
+          enum:
+            - high_fantasy
+            - cyberpunk
+            - sci_fi
+            - modern
+            - custom
+          description: Selected theme from wizard
+        category_labels:
+          type: object
+          description: JSON object mapping internal category names to display names
+          additionalProperties:
+            type: string
+          example:
+            npcs: Characters
+            locations: Realms
+            factions: Kingdoms
+        enabled_categories:
+          type: array
+          items:
+            type: string
+          description: Array of enabled category internal names (11-13 categories)
+          minItems: 11
+          maxItems: 13
+          example:
+            - npcs
+            - locations
+            - factions
+            - planar_forces
+            - items
+            - creatures
+            - lore
+            - world_rules
+            - session_prep
+            - session_recaps
+            - quests
+            - player_characters
+            - custom_mechanics
+        created_at:
+          type: integer
+          description: Unix timestamp of creation
+        updated_at:
+          type: integer
+          description: Unix timestamp of last update
+      required:
+        - id
+        - campaign_id
+        - theme
+        - category_labels
+        - enabled_categories
+        - created_at
+        - updated_at
+
+    ThemeDescriptor:
+      type: object
+      properties:
+        id:
+          type: string
+          enum:
+            - high_fantasy
+            - cyberpunk
+            - sci_fi
+            - modern
+            - custom
+          description: Theme identifier
+        name:
+          type: string
+          description: Display name for theme
+          example: High Fantasy
+        description:
+          type: string
+          description: Brief description of theme setting
+          example: Epic worlds of magic, kingdoms, and ancient artifacts
+        labels:
+          type: object
+          description: Category label mappings for this theme
+          additionalProperties:
+            type: string
+          example:
+            npcs: Characters
+            locations: Realms
+            factions: Kingdoms
+        previewCategories:
+          type: array
+          items:
+            type: string
+          description: 4-5 most distinctive category names to preview
+          example:
+            - Pantheon
+            - Kingdoms
+            - Realms
+            - Artifacts
+      required:
+        - id
+        - name
+        - description
+        - labels
+        - previewCategories
+
+    WizardCompleteRequest:
+      type: object
+      properties:
+        theme:
+          type: string
+          enum:
+            - high_fantasy
+            - cyberpunk
+            - sci_fi
+            - modern
+            - custom
+          description: Selected theme
+        categoryLabels:
+          type: object
+          description: Category label mappings (all 13 categories)
+          additionalProperties:
+            type: string
+            minLength: 1
+            maxLength: 50
+        enabledCategories:
+          type: array
+          items:
+            type: string
+          description: Enabled category internal names (11-13)
+          minItems: 11
+          maxItems: 13
+        worldFoundationsAnswers:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorldFoundationsAnswer'
+          description: Optional answers from World-Foundations questionnaire
+      required:
+        - theme
+        - categoryLabels
+        - enabledCategories
+
+    WorldFoundationsAnswer:
+      type: object
+      properties:
+        questionId:
+          type: integer
+          description: Question ID (1-4)
+          minimum: 1
+          maximum: 4
+        answer:
+          type: string
+          description: User's answer text
+          maxLength: 1000
+      required:
+        - questionId
+        - answer
+
+    KnowledgeGraph:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Graph ID
+        campaign_id:
+          type: integer
+          description: Foreign key to campaigns table
+        graph_type:
+          type: string
+          description: Graph type identifier
+          example: world_foundations
+        toggle_state:
+          type: string
+          enum:
+            - enabled
+            - disabled
+          description: Graph toggle state
+        created_at:
+          type: integer
+          description: Unix timestamp of creation
+        updated_at:
+          type: integer
+          description: Unix timestamp of last update
+      required:
+        - id
+        - campaign_id
+        - graph_type
+        - toggle_state
+        - created_at
+        - updated_at
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+        details:
+          type: string
+          description: Additional error details
+      required:
+        - error
+
+  responses:
+    UnauthorizedError:
+      description: Unauthorized - missing or invalid JWT token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: Unauthorized
+            details: Invalid or missing authentication token
+
+    ForbiddenError:
+      description: Forbidden - user does not own this campaign
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: Forbidden
+            details: You do not have permission to access this campaign
+
+    CampaignNotFound:
+      description: Campaign not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: Not Found
+            details: Campaign with ID 42 does not exist

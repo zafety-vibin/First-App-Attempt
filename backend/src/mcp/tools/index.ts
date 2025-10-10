@@ -10,7 +10,10 @@ import {
   handleUpdateCard,
   handleDeleteCard,
   handleSearchCards,
-  handleMoveCard
+  handleMoveCard,
+  handleCreateCardsBatch,
+  handleReadCardsBatch,
+  handleUpdateCardsBatch
 } from './card-tools';
 
 import {
@@ -56,8 +59,8 @@ import {
 } from './map-tools';
 
 /**
- * Complete registry of all 22 MCP tools
- * (6 card + 5 hierarchy + 4 graph + 2 recap + 2 info-level + 3 database + 2 map = 24 total)
+ * Complete registry of all MCP tools
+ * (9 card [6 individual + 3 batch] + 5 hierarchy + 4 graph + 2 recap + 2 info-level + 3 database + 2 map = 27 total)
  */
 export const TOOL_REGISTRY = [
   ...cardToolDefinitions,
@@ -74,7 +77,7 @@ export const TOOL_REGISTRY = [
  */
 export async function dispatchToolCall(name: string, params: any): Promise<any> {
   switch (name) {
-    // Card tools (6)
+    // Card tools (9: 6 individual + 3 batch)
     case 'read_card':
       return await handleReadCard(params);
     case 'create_card':
@@ -87,6 +90,12 @@ export async function dispatchToolCall(name: string, params: any): Promise<any> 
       return await handleSearchCards(params);
     case 'move_card':
       return await handleMoveCard(params);
+    case 'create_cards_batch':
+      return await handleCreateCardsBatch(params);
+    case 'read_cards_batch':
+      return await handleReadCardsBatch(params);
+    case 'update_cards_batch':
+      return await handleUpdateCardsBatch(params);
 
     // Hierarchy tools (5)
     case 'get_card_path':

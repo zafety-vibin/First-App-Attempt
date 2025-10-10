@@ -23,7 +23,8 @@
       "Bash(docker logs wrldbldr-backend --tail 100)",
       "Bash(docker logs:*)",
       "Read(//c/Users/zmanl/Projects/VVD-mimic/**)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

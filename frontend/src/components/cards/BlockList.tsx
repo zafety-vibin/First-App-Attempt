@@ -304,7 +304,7 @@ export function BlockList({ parentCard, campaignId }: BlockListProps) {
       const newBlock = await createCard({
         type: 'text',
         campaignId,
-        parentId: parentCard.id === null ? null : parentCard.id,
+        parentId: parentCard.id === null ? '0' : parentCard.id, // Use "0" for root level
         position,
         title: null,
         content: { type: 'doc', content: [] },
@@ -361,7 +361,7 @@ export function BlockList({ parentCard, campaignId }: BlockListProps) {
       const newBlock = await createCard({
         type: 'text',
         campaignId,
-        parentId: parentCard.id === null ? null : parentCard.id,
+        parentId: parentCard.id === null ? '0' : parentCard.id, // Use "0" for root level
         position: newPosition,
         title: null,
         content: { type: 'doc', content: [] },
@@ -584,7 +584,7 @@ export function BlockList({ parentCard, campaignId }: BlockListProps) {
       const newCard = await createCard({
         type: 'text',
         campaignId: campaignId,
-        parentId: parentCard.id === null ? null : parentCard.id,
+        parentId: parentCard.id === null ? '0' : parentCard.id, // Use "0" for root level
         position: 0,
         content: { type: 'doc', content: [] },
         informationLevelId: selectedLevelId, // Feature 004: Use active level from Easel

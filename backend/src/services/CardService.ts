@@ -35,8 +35,8 @@ export class CardService {
       throw new Error('Campaign not found or access denied');
     }
 
-    // Validate parent exists and belongs to same campaign
-    if (data.parentId) {
+    // Validate parent exists and belongs to same campaign (skip for root level "0")
+    if (data.parentId && data.parentId !== '0') {
       const parent = db.prepare('SELECT * FROM cards WHERE id = ? AND campaign_id = ?').get(data.parentId, data.campaignId);
       if (!parent) {
         throw new Error('Parent card not found');
@@ -67,7 +67,7 @@ export class CardService {
     const cardData = {
       id: cardId,
       type: data.type,
-      parentId: data.parentId || null,
+      parentId: data.parentId || '0', // Use "0" for root cards
       campaignId: data.campaignId,
       path,
       position: data.position,
@@ -107,8 +107,8 @@ export class CardService {
    * Format: /campaign-id/card-id or /campaign-id/parent-id/child-id
    */
   calculatePath(cardId: string, parentId: string | null, campaignId: string): string {
-    if (!parentId) {
-      // Root card
+    if (!parentId || parentId === '0') {
+      // Root card (parentId is null or "0")
       return `/${campaignId}/${cardId}`;
     }
 
@@ -334,8 +334,8 @@ export class CardService {
    * Validate depth for new card creation
    */
   validateDepth(parentId: string | null, campaignId: string): void {
-    if (!parentId) {
-      // Root card (depth 0) is always valid
+    if (!parentId || parentId === '0') {
+      // Root card (depth 0, parentId null or "0") is always valid
       return;
     }
 

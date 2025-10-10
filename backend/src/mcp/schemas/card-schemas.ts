@@ -28,7 +28,7 @@ export const ReadCardOutputSchema = z.object({
 // create_card schemas
 export const CreateCardInputSchema = z.object({
   campaign_id: z.string().min(1),
-  parent_id: z.string().nullable().optional(),
+  parent_id: z.string().optional().default("0"), // "0" = root level (changed from nullable null)
   title: z.string().max(255), // Allow empty titles for BLOCK cards
   card_type: z.enum(['text', 'database', 'map']),
   content: z.record(z.any()).optional(),
@@ -102,4 +102,55 @@ export const MoveCardOutputSchema = z.object({
     id: z.string(),
     position: z.number().int()
   }))
+});
+
+// Batch operation schemas
+
+// create_cards_batch schemas
+export const CreateCardsBatchInputSchema = z.object({
+  campaign_id: z.string().min(1),
+  parent_id: z.string().default("0"), // All cards created under this parent
+  cards: z.array(z.object({
+    card_type: z.enum(['text', 'page', 'database']),
+    title: z.string().max(255).nullable().optional(), // Only for page/database
+    content: z.record(z.any()).nullable().optional(), // Only for text cards
+    information_level_id: z.string().nullable().optional()
+  })).min(1).max(100), // Allow 1-100 cards per batch
+  user_id: z.string().optional() // Enriched by route
+});
+
+export const CreateCardsBatchOutputSchema = z.object({
+  success: z.boolean(),
+  created_count: z.number().int(),
+  cards: z.array(ReadCardOutputSchema)
+});
+
+// read_cards_batch schemas
+export const ReadCardsBatchInputSchema = z.object({
+  campaign_id: z.string().min(1),
+  card_ids: z.array(z.string()).min(1).max(50), // 1-50 cards per batch
+  user_id: z.string().optional() // Enriched by route
+});
+
+export const ReadCardsBatchOutputSchema = z.object({
+  cards: z.array(ReadCardOutputSchema),
+  not_found: z.array(z.string()) // Card IDs that don't exist
+});
+
+// update_cards_batch schemas
+export const UpdateCardsBatchInputSchema = z.object({
+  campaign_id: z.string().min(1),
+  updates: z.array(z.object({
+    card_id: z.string().min(1),
+    title: z.string().max(255).nullable().optional(),
+    content: z.record(z.any()).nullable().optional(),
+    information_level_id: z.string().nullable().optional()
+  })).min(1).max(100), // 1-100 updates per batch
+  user_id: z.string().optional() // Enriched by route
+});
+
+export const UpdateCardsBatchOutputSchema = z.object({
+  success: z.boolean(),
+  updated_count: z.number().int(),
+  cards: z.array(ReadCardOutputSchema)
 });

@@ -24,7 +24,7 @@ export const hierarchyToolDefinitions = [
     inputSchema: {
       type: 'object',
       properties: {
-        card_id: { type: 'number' },
+        card_id: { type: 'string' },
         campaign_id: { type: 'string' }
       },
       required: ['card_id', 'campaign_id']
@@ -36,7 +36,7 @@ export const hierarchyToolDefinitions = [
     inputSchema: {
       type: 'object',
       properties: {
-        card_id: { type: 'number' },
+        card_id: { type: 'string' },
         campaign_id: { type: 'string' },
         max_depth: { type: 'number', minimum: 1, maximum: 10 }
       },
@@ -47,17 +47,19 @@ export const hierarchyToolDefinitions = [
     name: 'list_children',
     description: `List all direct child cards of a specific card.
 
-IMPORTANT: To list ROOT level cards (the campaign's landing page), use parent_id: null (NOT 0, NOT "null" string).
+IMPORTANT: To list ROOT level cards (the campaign's landing page), use parent_id: "0" (string zero).
+If you omit parent_id, it defaults to "0" automatically.
 
 Examples:
-- List root cards: list_children({"campaign_id": "...", "parent_id": null})
-- List children of card 42: list_children({"campaign_id": "...", "parent_id": 42})
+- List root cards: list_children({"campaign_id": "..."})  ← parent_id defaults to "0"
+- List root cards explicitly: list_children({"campaign_id": "...", "parent_id": "0"})
+- List children of specific card: list_children({"campaign_id": "...", "parent_id": "abc-123-uuid"})
 
 Root cards are typically organizational pages like: NPCs, Locations, Lore, Quests, Session Notes.`,
     inputSchema: {
       type: 'object',
       properties: {
-        parent_id: { type: ['number', 'null'] },
+        parent_id: { type: 'string' },
         campaign_id: { type: 'string' }
       },
       required: ['campaign_id']
@@ -69,7 +71,7 @@ Root cards are typically organizational pages like: NPCs, Locations, Lore, Quest
     inputSchema: {
       type: 'object',
       properties: {
-        card_id: { type: 'number' },
+        card_id: { type: 'string' },
         campaign_id: { type: 'string' }
       },
       required: ['card_id', 'campaign_id']
@@ -81,7 +83,7 @@ Root cards are typically organizational pages like: NPCs, Locations, Lore, Quest
     inputSchema: {
       type: 'object',
       properties: {
-        card_id: { type: 'number' },
+        card_id: { type: 'string' },
         campaign_id: { type: 'string' },
         ancestor_type: { type: 'string', enum: ['text', 'database', 'map'] }
       },
@@ -255,8 +257,9 @@ export async function handleListChildren(params: any) {
   try {
     const validated = ListChildrenInputSchema.parse(params);
 
-    // If parent_id is provided, verify it exists
-    if (validated.parent_id !== null) {
+    // If parent_id is "0" (root level), skip verification
+    // Otherwise verify parent exists
+    if (validated.parent_id !== "0") {
       const parentRow = db.prepare(`
         SELECT id FROM cards
         WHERE id = ? AND campaign_id = ?
@@ -275,15 +278,13 @@ export async function handleListChildren(params: any) {
       }
     }
 
-    // Get all children
+    // Get all children (for root level, parent_id = "0")
     const childRows = db.prepare(`
       SELECT * FROM cards
-      WHERE parent_id ${validated.parent_id !== null ? '= ?' : 'IS NULL'}
+      WHERE parent_id = ?
         AND campaign_id = ?
       ORDER BY position ASC
-    `).all(
-      ...(validated.parent_id !== null ? [validated.parent_id, validated.campaign_id] : [validated.campaign_id])
-    ) as CardRow[];
+    `).all(validated.parent_id, validated.campaign_id) as CardRow[];
 
     const children = childRows.map(row => {
       const card = rowToCard(row);
@@ -344,15 +345,16 @@ export async function handleGetSiblings(params: any) {
     }
 
     // Get all siblings (same parent, excluding self)
+    // Root cards have parent_id = "0"
+    const parentIdForQuery = targetRow.parent_id || '0';
+
     const siblingRows = db.prepare(`
       SELECT * FROM cards
-      WHERE parent_id ${targetRow.parent_id ? '= ?' : 'IS NULL'}
+      WHERE parent_id = ?
         AND campaign_id = ?
         AND id != ?
       ORDER BY position ASC
-    `).all(
-      ...(targetRow.parent_id ? [targetRow.parent_id, validated.campaign_id, validated.card_id] : [validated.campaign_id, validated.card_id])
-    ) as CardRow[];
+    `).all(parentIdForQuery, validated.campaign_id, validated.card_id) as CardRow[];
 
     const siblings = siblingRows.map(row => {
       const card = rowToCard(row);

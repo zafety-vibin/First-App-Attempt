@@ -5,6 +5,7 @@
 
 import { importPromptDefinition, handleImportPrompt } from './import-workflow';
 import { planningPromptDefinition, handlePlanningPrompt } from './planning-workflow';
+import { campaignStructureExamplesDefinition, handleCampaignStructureExamples } from './campaign-structure-examples';
 
 // Prompt definition interface
 interface PromptDefinition {
@@ -21,7 +22,8 @@ interface PromptDefinition {
 // Registry of all available prompts
 export const PROMPT_REGISTRY: PromptDefinition[] = [
   importPromptDefinition,
-  planningPromptDefinition
+  planningPromptDefinition,
+  campaignStructureExamplesDefinition
 ];
 
 /**
@@ -42,6 +44,8 @@ export async function handleGetPrompt(name: string, args: any): Promise<{
     return handleImportPrompt(args);
   } else if (name === 'planning_workflow') {
     return handlePlanningPrompt(args);
+  } else if (name === 'campaign_structure_examples') {
+    return handleCampaignStructureExamples(args);
   }
 
   // No matching prompt found

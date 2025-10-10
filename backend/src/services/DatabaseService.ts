@@ -45,6 +45,16 @@ export function runMigrations(): void {
     db.exec(schema);
   });
 
+  // Migration 2: Change root cards from parent_id = NULL to parent_id = "0" (REVERTED IN MIGRATION 12)
+  runMigration(2, () => {
+    console.log('Updating root cards: parent_id NULL → "0"');
+    db.pragma('foreign_keys = OFF');
+    const stmt = db.prepare('UPDATE cards SET parent_id = ? WHERE parent_id IS NULL');
+    const result = stmt.run('0');
+    db.pragma('foreign_keys = ON');
+    console.log(`  ✓ Updated ${result.changes} root cards to use parent_id = "0"`);
+  });
+
   // Migration 3: Feature 003 - Card-Based Content Architecture
   runMigration(3, () => {
     const migrationsDir = path.join(__dirname, '../db/migrations');
@@ -144,6 +154,88 @@ export function runMigrations(): void {
       db.exec(sql);
       console.log(`  ✓ Applied 011-mcp-tool-logs.sql`);
     }
+  });
+
+  // Migration 12: REMOVED - This was a mistake, we want to keep "0" for root cards
+  // See migration 13 for the correct fix
+
+  // Migration 13: Remove foreign key constraint on parent_id and restore "0" for root cards
+  runMigration(13, () => {
+    console.log('Fixing parent_id: removing FK constraint and restoring "0" for root cards');
+
+    // SQLite requires recreating table to remove foreign key
+    db.pragma('foreign_keys = OFF');
+
+    // Drop cards_new if it exists from a previous failed migration
+    db.exec(`DROP TABLE IF EXISTS cards_new;`);
+
+    // Create new cards table without parent_id FK constraint
+    db.exec(`
+      CREATE TABLE cards_new (
+        id TEXT PRIMARY KEY,
+        type TEXT NOT NULL,
+        parent_id TEXT,
+        campaign_id TEXT NOT NULL,
+        path TEXT NOT NULL,
+        position INTEGER NOT NULL,
+        depth INTEGER NOT NULL DEFAULT 0,
+        title TEXT,
+        content TEXT,
+        metadata TEXT,
+        cover_image_url TEXT,
+        icon_emoji TEXT,
+        created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+        updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+        information_level_id TEXT DEFAULT 'system',
+        import_session_id TEXT,
+        import_batch_id TEXT,
+        FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
+        FOREIGN KEY (information_level_id) REFERENCES information_levels(id),
+        FOREIGN KEY (import_session_id) REFERENCES import_sessions(id) ON DELETE SET NULL,
+        FOREIGN KEY (import_batch_id) REFERENCES import_batches(id) ON DELETE SET NULL,
+        CHECK (type IN ('page', 'database', 'text', 'image')),
+        CHECK (depth >= 0 AND depth <= 50),
+        CHECK (length(icon_emoji) <= 4)
+      );
+    `);
+
+    // Copy data from old table
+    db.exec(`
+      INSERT INTO cards_new (
+        id, type, parent_id, campaign_id, path, position, depth,
+        title, content, metadata, cover_image_url, icon_emoji,
+        created_at, updated_at, information_level_id,
+        import_session_id, import_batch_id
+      )
+      SELECT
+        id, type, parent_id, campaign_id, path, position, depth,
+        title, content, metadata, cover_image_url, icon_emoji,
+        created_at, updated_at, information_level_id,
+        import_session_id, import_batch_id
+      FROM cards;
+    `);
+
+    // Drop old table
+    db.exec(`DROP TABLE cards;`);
+
+    // Rename new table
+    db.exec(`ALTER TABLE cards_new RENAME TO cards;`);
+
+    // Recreate indexes
+    db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_cards_campaign ON cards(campaign_id);
+      CREATE INDEX IF NOT EXISTS idx_cards_parent ON cards(parent_id);
+      CREATE INDEX IF NOT EXISTS idx_cards_path ON cards(path);
+      CREATE INDEX IF NOT EXISTS idx_cards_position ON cards(parent_id, position);
+      CREATE INDEX IF NOT EXISTS idx_cards_information_level ON cards(information_level_id);
+      CREATE INDEX IF NOT EXISTS idx_cards_hierarchical_secret ON cards(information_level_id, path);
+    `);
+
+    // Update NULL parent_id to "0"
+    const result = db.prepare('UPDATE cards SET parent_id = ? WHERE parent_id IS NULL').run('0');
+    console.log(`  ✓ Updated ${result.changes} root cards to use parent_id = "0"`);
+
+    db.pragma('foreign_keys = ON');
   });
 
   console.log('✓ Database initialized');

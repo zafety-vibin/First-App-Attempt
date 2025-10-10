@@ -211,9 +211,12 @@ export function Block({
             return false;
           }
 
-          // Not in a list - create sibling block
+          // Not in a list - split current block and create sibling block
           console.log('[Block Enter] Creating sibling block');
           event.preventDefault();
+
+          // TODO: Implement content splitting - for now just create new empty block
+          // Future: Extract content after cursor, pass to onEnter, clear from current block
           onEnter();
           return true;
         }

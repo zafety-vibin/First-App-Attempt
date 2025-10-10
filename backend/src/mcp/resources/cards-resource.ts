@@ -122,13 +122,13 @@ export async function handleCardsResource(uri: string): Promise<{
         }]
       };
     } else {
-      // Get root-level cards (no parent)
+      // Get root-level cards (parent_id = "0")
       const rootCards = db.prepare(`
         SELECT id, title, type, information_level_id, position
         FROM cards
-        WHERE parent_id IS NULL AND campaign_id = ?
+        WHERE parent_id = ? AND campaign_id = ?
         ORDER BY position ASC
-      `).all(campaignId) as any[];
+      `).all('0', campaignId) as any[];
 
       // Build hierarchical structure for each root card
       const hierarchy = rootCards.map((card: any) => {

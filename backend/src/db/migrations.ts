@@ -24,18 +24,20 @@ export const migrations: Migration[] = [
       console.log('Migration 1: Initial schema applied via schema.sql');
     },
   },
-  // Future migrations will be added here
-  // {
-  //   version: 2,
-  //   description: 'Add byollm_config column to users',
-  //   up: (db) => {
-  //     db.exec(`ALTER TABLE users ADD COLUMN byollm_config TEXT`);
-  //   },
-  //   down: (db) => {
-  //     // SQLite doesn't support DROP COLUMN easily
-  //     // Would need to recreate table
-  //   },
-  // },
+  {
+    version: 2,
+    description: 'Change root cards from parent_id = NULL to parent_id = "0"',
+    up: (db) => {
+      console.log('Updating root cards: parent_id NULL → "0"');
+      const stmt = db.prepare('UPDATE cards SET parent_id = ? WHERE parent_id IS NULL');
+      const result = stmt.run('0');
+      console.log(`Updated ${result.changes} root cards to use parent_id = "0"`);
+    },
+    down: (db) => {
+      console.log('Reverting root cards: parent_id "0" → NULL');
+      db.prepare('UPDATE cards SET parent_id = NULL WHERE parent_id = ?').run('0');
+    },
+  },
 ];
 
 /**

@@ -43,9 +43,9 @@ router.get('/', async (req: Request, res: Response) => {
       return;
     }
 
-    // Build query
-    let query = 'SELECT * FROM cards WHERE campaign_id = ? AND parent_id IS NULL';
-    const params: any[] = [campaign_id];
+    // Build query (parent_id = "0" for root level cards)
+    let query = 'SELECT * FROM cards WHERE campaign_id = ? AND parent_id = ?';
+    const params: any[] = [campaign_id, '0'];
 
     if (type && typeof type === 'string') {
       query += ' AND type = ?';
@@ -95,7 +95,7 @@ router.post('/', async (req: Request, res: Response) => {
       {
         type,
         campaignId: campaign_id,
-        parentId: parent_id || null,
+        parentId: parent_id || '0', // Default to "0" for root level
         position,
         title,
         content,
@@ -388,7 +388,7 @@ router.patch('/:id/move', async (req: Request, res: Response) => {
       return;
     }
 
-    const card = await cardService.moveCard(id, new_parent_id || null, position, userId);
+    const card = await cardService.moveCard(id, new_parent_id || '0', position, userId);
 
     res.status(200).json(card);
   } catch (error: any) {

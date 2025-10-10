@@ -47,7 +47,7 @@ export const GetSubtreeOutputSchema = z.object({
 
 // list_children schemas
 export const ListChildrenInputSchema = z.object({
-  parent_id: z.number().int().nullable(),
+  parent_id: z.string().optional().default("0"), // "0" = root level (changed from nullable null)
   campaign_id: z.string().min(1)
 });
 

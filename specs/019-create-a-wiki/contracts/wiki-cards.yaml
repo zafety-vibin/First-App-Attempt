@@ -1,0 +1,475 @@
+openapi: 3.0.3
+info:
+  title: Wiki Portal API
+  description: |
+    REST API for wiki card management in Feature 019.
+
+    **IMPORTANT**: Wiki is separate from database entities (Features 014+).
+    - Wiki tables: `wiki_cards`, `wiki_hierarchy`
+    - Database tables: `npcs`, `locations`, `factions`, etc.
+    - AI tools (017/018) query databases only, NOT wiki
+
+    Wiki provides optional GM organizational tool using Feature 003 card architecture.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3001/api
+    description: Local development server
+
+security:
+  - BearerAuth: []
+
+paths:
+  /campaigns/{campaignId}/wiki/cards:
+    get:
+      summary: Get all wiki cards for campaign
+      description: |
+        Returns all wiki cards for specified campaign, optionally filtered by view mode.
+        Respects information level filtering (dm_secret, player_knowledge, common_knowledge).
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: viewMode
+          in: query
+          description: Filter by view mode (dm_view shows all, player_view filters out dm_secret)
+          schema:
+            type: string
+            enum: [dm_view, player_view]
+            default: dm_view
+      responses:
+        '200':
+          description: List of wiki cards with hierarchy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cards:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/WikiCard'
+                  hierarchy:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/WikiHierarchy'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      summary: Create new wiki card
+      description: Creates a new wiki card with optional parent for hierarchy
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWikiCardRequest'
+      responses:
+        '201':
+          description: Wiki card created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WikiCard'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /campaigns/{campaignId}/wiki/cards/{cardId}:
+    get:
+      summary: Get single wiki card by ID
+      description: Returns wiki card with full content and breadcrumb path
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: cardId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Wiki card details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  card:
+                    $ref: '#/components/schemas/WikiCard'
+                  breadcrumbs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/WikiCardBreadcrumb'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      summary: Update wiki card
+      description: |
+        Updates wiki card title, content, or information level.
+        Creates version backup before update.
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: cardId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWikiCardRequest'
+      responses:
+        '200':
+          description: Wiki card updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WikiCard'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      summary: Delete wiki card
+      description: |
+        Deletes wiki card and optionally handles children (cascade or orphan).
+        Also deletes related hierarchy entries.
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: cardId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: childAction
+          in: query
+          description: How to handle child cards (cascade delete or orphan to root)
+          schema:
+            type: string
+            enum: [cascade, orphan]
+            default: orphan
+      responses:
+        '204':
+          description: Wiki card deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /campaigns/{campaignId}/wiki/cards/{cardId}/move:
+    post:
+      summary: Move wiki card to new parent
+      description: |
+        Changes wiki card parent in hierarchy, with circular reference validation.
+        Updates order_index for new sibling position.
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: cardId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MoveWikiCardRequest'
+      responses:
+        '200':
+          description: Wiki card moved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WikiHierarchy'
+        '400':
+          description: Bad request (circular reference detected, invalid parent, etc.)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Circular reference detected"
+                details: "Card 5 cannot be moved under card 10 (would create cycle)"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /campaigns/{campaignId}/wiki/cards/reorder:
+    post:
+      summary: Reorder wiki card siblings
+      description: |
+        Updates order_index for multiple cards in single transaction.
+        Used for drag-and-drop reordering within same parent.
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                parent_wiki_card_id:
+                  type: integer
+                  nullable: true
+                  description: Parent card ID (null for root level)
+                card_orders:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      child_wiki_card_id:
+                        type: integer
+                      order_index:
+                        type: integer
+              required:
+                - card_orders
+      responses:
+        '200':
+          description: Cards reordered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  updated_count:
+                    type: integer
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Keycloak JWT token
+
+  schemas:
+    WikiCard:
+      type: object
+      properties:
+        wiki_card_id:
+          type: integer
+        campaign_id:
+          type: integer
+        user_id:
+          type: string
+          description: Keycloak sub (creator)
+        title:
+          type: string
+          maxLength: 500
+        content:
+          type: string
+          nullable: true
+          description: TipTap ProseMirror JSON
+        player_knowledge:
+          type: string
+          enum: [dm_secret, player_knowledge, common_knowledge]
+        version:
+          type: integer
+        created_at:
+          type: integer
+          description: Unix timestamp
+        updated_at:
+          type: integer
+          description: Unix timestamp
+      required:
+        - wiki_card_id
+        - campaign_id
+        - user_id
+        - title
+        - player_knowledge
+        - version
+        - created_at
+        - updated_at
+
+    WikiHierarchy:
+      type: object
+      properties:
+        wiki_hierarchy_id:
+          type: integer
+        parent_wiki_card_id:
+          type: integer
+          nullable: true
+        child_wiki_card_id:
+          type: integer
+        order_index:
+          type: integer
+        created_at:
+          type: integer
+      required:
+        - wiki_hierarchy_id
+        - child_wiki_card_id
+        - order_index
+        - created_at
+
+    WikiCardBreadcrumb:
+      type: object
+      properties:
+        wiki_card_id:
+          type: integer
+        title:
+          type: string
+        depth:
+          type: integer
+      required:
+        - wiki_card_id
+        - title
+        - depth
+
+    CreateWikiCardRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 500
+        content:
+          type: string
+          nullable: true
+          description: TipTap ProseMirror JSON
+        player_knowledge:
+          type: string
+          enum: [dm_secret, player_knowledge, common_knowledge]
+          default: common_knowledge
+        parent_wiki_card_id:
+          type: integer
+          nullable: true
+          description: Parent card ID for hierarchy (null for root)
+      required:
+        - title
+
+    UpdateWikiCardRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 500
+        content:
+          type: string
+          nullable: true
+        player_knowledge:
+          type: string
+          enum: [dm_secret, player_knowledge, common_knowledge]
+      minProperties: 1
+
+    MoveWikiCardRequest:
+      type: object
+      properties:
+        new_parent_wiki_card_id:
+          type: integer
+          nullable: true
+          description: New parent card ID (null for root level)
+        order_index:
+          type: integer
+          description: Position among new siblings (defaults to end)
+      required:
+        - new_parent_wiki_card_id
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        details:
+          type: string
+          nullable: true
+      required:
+        - error
+
+  responses:
+    BadRequest:
+      description: Bad request (validation error, invalid parameters, etc.)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Validation failed"
+            details: "Title exceeds 500 character limit"
+
+    Unauthorized:
+      description: Unauthorized (missing or invalid token)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Unauthorized"
+            details: "Invalid or expired token"
+
+    Forbidden:
+      description: Forbidden (user does not own campaign)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Forbidden"
+            details: "You do not have permission to access this campaign"
+
+    NotFound:
+      description: Not found (campaign or card does not exist)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Not found"
+            details: "Wiki card with ID 123 does not exist"

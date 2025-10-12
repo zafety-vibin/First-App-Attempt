@@ -115,6 +115,17 @@ export function runMigrations(): void {
     }
   });
 
+  // Migration 11: Feature 011 - Model Context Protocol Integration
+  runMigration(11, () => {
+    const migrationsDir = path.join(__dirname, '../db/migrations');
+    const filePath = path.join(migrationsDir, '011-mcp-tool-logs.sql');
+    if (fs.existsSync(filePath)) {
+      const sql = fs.readFileSync(filePath, 'utf-8');
+      db.exec(sql);
+      console.log(`  ✓ Applied 011-mcp-tool-logs.sql`);
+    }
+  });
+
   console.log('✓ Database initialized');
   logDatabaseInfo();
 }

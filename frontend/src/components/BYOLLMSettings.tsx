@@ -25,9 +25,10 @@ interface BYOLLMSettingsProps {
 export function BYOLLMSettings({ campaignId, scope }: BYOLLMSettingsProps) {
   const [loading, setLoading] = useState(true);
   const [config, setConfig] = useState<BYOLLMConfig | null>(null);
-  const [provider, setProvider] = useState<'anthropic'>('anthropic');
-  const [authMethod, setAuthMethod] = useState<'oauth' | 'api_key'>('oauth'); // Default to OAuth
+  const [provider, setProvider] = useState<'anthropic' | 'openai' | 'custom'>('anthropic');
+  const [authMethod, setAuthMethod] = useState<'oauth' | 'api_key'>('api_key'); // Default to API Key
   const [apiKey, setApiKey] = useState('');
+  const [customEndpointUrl, setCustomEndpointUrl] = useState('');
   const [modelName, setModelName] = useState('claude-3-5-sonnet-20241022');
   const [customSystemPromptImport, setCustomSystemPromptImport] = useState('');
   const [customSystemPromptPlanning, setCustomSystemPromptPlanning] = useState('');
@@ -68,6 +69,7 @@ export function BYOLLMSettings({ campaignId, scope }: BYOLLMSettingsProps) {
       // Populate form
       setProvider(data.provider);
       setAuthMethod(data.authMethod);
+      setCustomEndpointUrl(data.customEndpointUrl || '');
       setModelName(data.modelName || 'claude-3-5-sonnet-20241022');
       setCustomSystemPromptImport(data.customSystemPromptImport || '');
       setCustomSystemPromptPlanning(data.customSystemPromptPlanning || '');
@@ -90,8 +92,13 @@ export function BYOLLMSettings({ campaignId, scope }: BYOLLMSettingsProps) {
         throw new Error('API key required');
       }
 
-      if (authMethod === 'api_key' && !apiKey.startsWith('sk-ant-api03-')) {
+      if (authMethod === 'api_key' && provider === 'anthropic' && !apiKey.startsWith('sk-ant-api03-')) {
         throw new Error('Invalid Anthropic API key format (must start with sk-ant-api03-)');
+      }
+
+      // Validate custom endpoint
+      if (provider === 'custom' && !customEndpointUrl) {
+        throw new Error('Custom endpoint URL required');
       }
 
       // Save config
@@ -110,6 +117,7 @@ export function BYOLLMSettings({ campaignId, scope }: BYOLLMSettingsProps) {
             apiKey,
           },
           modelName,
+          customEndpointUrl: provider === 'custom' ? customEndpointUrl : null,
           customSystemPromptImport: customSystemPromptImport || null,
           customSystemPromptPlanning: customSystemPromptPlanning || null,
         }),
@@ -196,12 +204,67 @@ export function BYOLLMSettings({ campaignId, scope }: BYOLLMSettingsProps) {
       {/* Provider Selection */}
       <ProviderSelector
         value={provider}
-        onChange={setProvider}
+        onChange={(newProvider) => {
+          setProvider(newProvider);
+          // Custom endpoints always use API key
+          if (newProvider === 'custom') {
+            setAuthMethod('api_key');
+          }
+        }}
         disabled={!!config}
       />
 
-      {/* OAuth Button (API key option hidden for simplicity) */}
-      {!config && (
+      {/* Auth Method Selection (for Anthropic only) */}
+      {!config && provider === 'anthropic' && (
+        <div className="form-section">
+          <label className="form-label">Authentication Method</label>
+          <div className="auth-method-tabs">
+            <button
+              className={`tab ${authMethod === 'api_key' ? 'active' : ''}`}
+              onClick={() => setAuthMethod('api_key')}
+            >
+              API Key
+            </button>
+            <button
+              className={`tab ${authMethod === 'oauth' ? 'active' : ''}`}
+              onClick={() => setAuthMethod('oauth')}
+            >
+              OAuth 2.0
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* API Key Input */}
+      {!config && authMethod === 'api_key' && (
+        <APIKeyInput
+          value={apiKey}
+          onChange={setApiKey}
+          provider={provider}
+        />
+      )}
+
+      {/* Custom Endpoint URL */}
+      {!config && provider === 'custom' && (
+        <div className="form-section">
+          <label className="form-label">
+            Endpoint URL
+          </label>
+          <input
+            type="text"
+            value={customEndpointUrl}
+            onChange={(e) => setCustomEndpointUrl(e.target.value)}
+            placeholder="http://localhost:11434/v1"
+            className="text-input"
+          />
+          <p className="helper-text">
+            OpenAI-compatible endpoint (e.g., Ollama, LM Studio, LocalAI)
+          </p>
+        </div>
+      )}
+
+      {/* OAuth Button (only for OAuth method) */}
+      {!config && authMethod === 'oauth' && (
         <OAuthButton
           provider={provider}
           scope={scope}
@@ -365,6 +428,28 @@ export function BYOLLMSettings({ campaignId, scope }: BYOLLMSettingsProps) {
         .tab:disabled {
           opacity: 0.5;
           cursor: not-allowed;
+        }
+
+        .text-input {
+          width: 100%;
+          padding: 0.75rem;
+          border: 2px solid #D1D5DB;
+          border-radius: 0.5rem;
+          font-size: 0.875rem;
+          transition: border-color 0.15s;
+        }
+
+        .text-input:focus {
+          outline: none;
+          border-color: #3B82F6;
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .helper-text {
+          margin-top: 0.5rem;
+          font-size: 0.75rem;
+          color: #9CA3AF;
+          font-style: italic;
         }
 
         .config-status {

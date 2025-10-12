@@ -1,0 +1,692 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MCP Graph Tools Contract",
+  "description": "JSON Schema definitions for 13 MCP tools supporting knowledge graph operations with temporal awareness and confidence decay. Extends Feature 011 MCP server with graph_type parameter for multi-graph support.",
+  "version": "1.0.0",
+  "tools": [
+    {
+      "name": "create_entities",
+      "description": "Create multiple entities in a knowledge graph. All entities start with confidence 1.0. Entity types and observations are completely user-defined (e.g., 'NPC', 'Faction', 'Location', 'Deity', 'Event'). Use for batch entity creation during graph initialization or Planning AI conversations.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph_type": {
+            "type": "string",
+            "description": "Graph type identifier: 'world-foundations', 'political-web', 'geographical', 'campaign-story', or 'custom:{typename}'. Used to look up the KnowledgeGraph instance.",
+            "pattern": "^(world-foundations|political-web|geographical|campaign-story|custom:.+)$"
+          },
+          "entities": {
+            "type": "array",
+            "description": "Array of entities to create",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Unique entity name within graph (max 200 characters)",
+                  "maxLength": 200,
+                  "minLength": 1
+                },
+                "entityType": {
+                  "type": "string",
+                  "description": "User-defined entity type (e.g., 'NPC', 'Faction', 'Location', 'Deity', 'Event', 'Plot Thread', 'Magic System')"
+                },
+                "observations": {
+                  "type": "array",
+                  "description": "Free-form text observations for entity details and cross-graph context",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": []
+                },
+                "informationLevelId": {
+                  "type": "string",
+                  "description": "Information level ID for view mode filtering (defaults to 'system'). Set to 'dm-secret' for DM-only entities.",
+                  "default": "system"
+                }
+              },
+              "required": ["name", "entityType"]
+            },
+            "minItems": 1
+          }
+        },
+        "required": ["graph_type", "entities"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "created_count": {
+            "type": "integer",
+            "description": "Number of entities successfully created"
+          },
+          "entity_names": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Array of created entity names"
+          }
+        },
+        "required": ["created_count", "entity_names"]
+      }
+    },
+    {
+      "name": "create_relations",
+      "description": "Create multiple relations between entities in a knowledge graph. Relation types are user-defined (e.g., 'allied with', 'contains', 'caused by'). Relation confidence is calculated as average of connected entities' confidence.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph_type": {
+            "type": "string",
+            "description": "Graph type identifier",
+            "pattern": "^(world-foundations|political-web|geographical|campaign-story|custom:.+)$"
+          },
+          "relations": {
+            "type": "array",
+            "description": "Array of relations to create",
+            "items": {
+              "type": "object",
+              "properties": {
+                "from": {
+                  "type": "string",
+                  "description": "Name of source entity (must exist in graph)"
+                },
+                "to": {
+                  "type": "string",
+                  "description": "Name of target entity (must exist in graph, cannot be same as 'from')"
+                },
+                "relationType": {
+                  "type": "string",
+                  "description": "User-defined relation type (e.g., 'allied with', 'opposes', 'contains', 'caused by', 'leads to')"
+                },
+                "metadata": {
+                  "type": "object",
+                  "description": "Optional metadata (e.g., {strength: 0.8, description: 'secret alliance'})",
+                  "default": {}
+                }
+              },
+              "required": ["from", "to", "relationType"]
+            },
+            "minItems": 1
+          }
+        },
+        "required": ["graph_type", "relations"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "created_count": {
+            "type": "integer",
+            "description": "Number of relations successfully created"
+          },
+          "relation_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Array of created relation IDs (UUIDs)"
+          }
+        },
+        "required": ["created_count", "relation_ids"]
+      }
+    },
+    {
+      "name": "add_observations",
+      "description": "Append free-form text observations to an entity. Observations are used for entity details and cross-graph context (e.g., 'current location: Waterdeep'). Each observation has independent confidence decay.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph_type": {
+            "type": "string",
+            "description": "Graph type identifier",
+            "pattern": "^(world-foundations|political-web|geographical|campaign-story|custom:.+)$"
+          },
+          "entity_name": {
+            "type": "string",
+            "description": "Name of entity to add observations to (must exist in graph)"
+          },
+          "observations": {
+            "type": "array",
+            "description": "Array of observation texts to append",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1
+          }
+        },
+        "required": ["graph_type", "entity_name", "observations"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "entity_name": {
+            "type": "string",
+            "description": "Name of entity updated"
+          },
+          "new_observation_count": {
+            "type": "integer",
+            "description": "Number of observations added"
+          }
+        },
+        "required": ["entity_name", "new_observation_count"]
+      }
+    },
+    {
+      "name": "search_entities",
+      "description": "Search entities by name or entity type with optional confidence filtering. Returns entities sorted by confidence (high first). Auto-reinforces returned entities by updating last_accessed timestamp.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph_type": {
+            "type": "string",
+            "description": "Graph type identifier",
+            "pattern": "^(world-foundations|political-web|geographical|campaign-story|custom:.+)$"
+          },
+          "query": {
+            "type": "string",
+            "description": "Search query string (matches entity name or entity type, case-insensitive substring match)"
+          },
+          "min_confidence": {
+            "type": "number",
+            "description": "Minimum confidence threshold (0.0 to 1.0). Entities below this are excluded. Default: 0.0 (no filtering).",
+            "minimum": 0.0,
+            "maximum": 1.0,
+            "default": 0.0
+          }
+        },
+        "required": ["graph_type", "query"]
+      },
+      "outputSchema": {
+        "type": "array",
+        "description": "Array of entities sorted by confidence (high first)",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "entityType": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number",
+              "description": "Calculated confidence (0.0 to 1.0)",
+              "minimum": 0.0,
+              "maximum": 1.0
+            },
+            "pinned": {
+              "type": "boolean",
+              "description": "Whether entity is pinned (confidence locked at 1.0)"
+            },
+            "observations": {
+              "type": "array",
+              "description": "Array of observations with individual confidence scores",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string"
+                  },
+                  "confidence": {
+                    "type": "number",
+                    "minimum": 0.0,
+                    "maximum": 1.0
+                  }
+                },
+                "required": ["text", "confidence"]
+              }
+            }
+          },
+          "required": ["name", "entityType", "confidence", "pinned", "observations"]
+        }
+      }
+    },
+    {
+      "name": "read_graph",
+      "description": "Read entire graph with optional confidence threshold filtering. Returns entities and relations. Read-only operation (does NOT auto-reinforce entities). Use for snapshot queries.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph_type": {
+            "type": "string",
+            "description": "Graph type identifier",
+            "pattern": "^(world-foundations|political-web|geographical|campaign-story|custom:.+)$"
+          },
+          "confidence_threshold": {
+            "type": "number",
+            "description": "Minimum confidence threshold for entities and relations. Default: 0.0 (no filtering).",
+            "minimum": 0.0,
+            "maximum": 1.0,
+            "default": 0.0
+          }
+        },
+        "required": ["graph_type"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "graph_type": {
+            "type": "string"
+          },
+          "graph_name": {
+            "type": "string",
+            "description": "Display name of graph instance"
+          },
+          "decay_rate": {
+            "type": "number",
+            "description": "Current decay rate configuration"
+          },
+          "confidence_threshold": {
+            "type": "number",
+            "description": "Configured active entity threshold"
+          },
+          "entities": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "entityType": {
+                  "type": "string"
+                },
+                "confidence": {
+                  "type": "number"
+                },
+                "pinned": {
+                  "type": "boolean"
+                }
+              },
+              "required": ["name", "entityType", "confidence", "pinned"]
+            }
+          },
+          "relations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "from": {
+                  "type": "string",
+                  "description": "Source entity name"
+                },
+                "to": {
+                  "type": "string",
+                  "description": "Target entity name"
+                },
+                "relationType": {
+                  "type": "string"
+                },
+                "confidence": {
+                  "type": "number",
+                  "description": "Average of from and to entity confidence"
+                }
+              },
+              "required": ["from", "to", "relationType", "confidence"]
+            }
+          }
+        },
+        "required": ["graph_type", "graph_name", "decay_rate", "confidence_threshold", "entities", "relations"]
+      }
+    },
+    {
+      "name": "delete_entities",
+      "description": "Delete multiple entities from graph. Cascades to delete relations connected to these entities. Cannot be undone except via graph revert.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph_type": {
+            "type": "string",
+            "description": "Graph type identifier",
+            "pattern": "^(world-foundations|political-web|geographical|campaign-story|custom:.+)$"
+          },
+          "entity_names": {
+            "type": "array",
+            "description": "Array of entity names to delete",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1
+          }
+        },
+        "required": ["graph_type", "entity_names"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted_count": {
+            "type": "integer",
+            "description": "Number of entities successfully deleted"
+          }
+        },
+        "required": ["deleted_count"]
+      }
+    },
+    {
+      "name": "delete_relations",
+      "description": "Delete multiple relations from graph by relation ID. Does not affect entities.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph_type": {
+            "type": "string",
+            "description": "Graph type identifier",
+            "pattern": "^(world-foundations|political-web|geographical|campaign-story|custom:.+)$"
+          },
+          "relation_ids": {
+            "type": "array",
+            "description": "Array of relation IDs (UUIDs) to delete",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1
+          }
+        },
+        "required": ["graph_type", "relation_ids"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted_count": {
+            "type": "integer",
+            "description": "Number of relations successfully deleted"
+          }
+        },
+        "required": ["deleted_count"]
+      }
+    },
+    {
+      "name": "delete_observations",
+      "description": "Delete specific observations from an entity by exact text match. Does not delete the entity itself.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph_type": {
+            "type": "string",
+            "description": "Graph type identifier",
+            "pattern": "^(world-foundations|political-web|geographical|campaign-story|custom:.+)$"
+          },
+          "entity_name": {
+            "type": "string",
+            "description": "Name of entity to remove observations from"
+          },
+          "observation_texts": {
+            "type": "array",
+            "description": "Array of observation texts to delete (exact match)",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1
+          }
+        },
+        "required": ["graph_type", "entity_name", "observation_texts"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted_count": {
+            "type": "integer",
+            "description": "Number of observations successfully deleted"
+          }
+        },
+        "required": ["deleted_count"]
+      }
+    },
+    {
+      "name": "pin_entity",
+      "description": "Pin or unpin an entity to prevent/enable confidence decay. Pinned entities maintain confidence 1.0 regardless of time or access patterns. Use for critical entities like BBEGs, major factions, or key locations.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph_type": {
+            "type": "string",
+            "description": "Graph type identifier",
+            "pattern": "^(world-foundations|political-web|geographical|campaign-story|custom:.+)$"
+          },
+          "entity_name": {
+            "type": "string",
+            "description": "Name of entity to pin/unpin"
+          },
+          "pinned": {
+            "type": "boolean",
+            "description": "true = pin entity (lock confidence at 1.0), false = unpin entity (enable decay)"
+          }
+        },
+        "required": ["graph_type", "entity_name", "pinned"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "entity_name": {
+            "type": "string"
+          },
+          "pinned": {
+            "type": "boolean",
+            "description": "New pinned status"
+          },
+          "confidence": {
+            "type": "number",
+            "description": "Current confidence (1.0 if pinned, calculated if unpinned)"
+          }
+        },
+        "required": ["entity_name", "pinned", "confidence"]
+      }
+    },
+    {
+      "name": "get_entity_with_confidence",
+      "description": "Get detailed entity information including all observations with individual confidence scores. Auto-reinforces entity by updating last_accessed timestamp.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph_type": {
+            "type": "string",
+            "description": "Graph type identifier",
+            "pattern": "^(world-foundations|political-web|geographical|campaign-story|custom:.+)$"
+          },
+          "entity_name": {
+            "type": "string",
+            "description": "Name of entity to retrieve"
+          }
+        },
+        "required": ["graph_type", "entity_name"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "entityType": {
+            "type": "string"
+          },
+          "confidence": {
+            "type": "number",
+            "description": "Entity confidence (0.0 to 1.0)"
+          },
+          "created_at": {
+            "type": "integer",
+            "description": "Unix timestamp of entity creation"
+          },
+          "last_accessed": {
+            "type": "integer",
+            "description": "Unix timestamp of last access (just updated by this call)"
+          },
+          "pinned": {
+            "type": "boolean"
+          },
+          "observations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string"
+                },
+                "confidence": {
+                  "type": "number"
+                },
+                "created_at": {
+                  "type": "integer",
+                  "description": "Unix timestamp"
+                },
+                "last_accessed": {
+                  "type": "integer",
+                  "description": "Unix timestamp"
+                }
+              },
+              "required": ["text", "confidence", "created_at", "last_accessed"]
+            }
+          }
+        },
+        "required": ["name", "entityType", "confidence", "created_at", "last_accessed", "pinned", "observations"]
+      }
+    },
+    {
+      "name": "reinforce_entity",
+      "description": "Manually reinforce an entity to increase confidence. Updates last_accessed timestamp to current time. Use when user provides refresher information after AI expresses uncertainty.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph_type": {
+            "type": "string",
+            "description": "Graph type identifier",
+            "pattern": "^(world-foundations|political-web|geographical|campaign-story|custom:.+)$"
+          },
+          "entity_name": {
+            "type": "string",
+            "description": "Name of entity to reinforce"
+          },
+          "boost_amount": {
+            "type": "number",
+            "description": "Optional confidence boost amount (0.01 to 0.5). Defaults to graph's reinforcement_amount (default 0.1).",
+            "minimum": 0.01,
+            "maximum": 0.5
+          }
+        },
+        "required": ["graph_type", "entity_name"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "entity_name": {
+            "type": "string"
+          },
+          "old_confidence": {
+            "type": "number",
+            "description": "Confidence before reinforcement"
+          },
+          "new_confidence": {
+            "type": "number",
+            "description": "Confidence after reinforcement (clamped to 1.0 max)"
+          },
+          "last_accessed": {
+            "type": "integer",
+            "description": "Unix timestamp of last access (updated to now)"
+          }
+        },
+        "required": ["entity_name", "old_confidence", "new_confidence", "last_accessed"]
+      }
+    },
+    {
+      "name": "revert_graph",
+      "description": "Revert graph to previous version (1-deep backup). Restores all entities, relations, observations, confidence metadata (last_accessed, pinned status), and graph configuration. Use when user made a mistake during graph update. Cannot be undone.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph_type": {
+            "type": "string",
+            "description": "Graph type identifier",
+            "pattern": "^(world-foundations|political-web|geographical|campaign-story|custom:.+)$"
+          }
+        },
+        "required": ["graph_type"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "graph_type": {
+            "type": "string"
+          },
+          "graph_name": {
+            "type": "string"
+          },
+          "reverted_to_timestamp": {
+            "type": "integer",
+            "description": "Unix timestamp of backup version"
+          },
+          "entities_count": {
+            "type": "integer",
+            "description": "Number of entities restored"
+          },
+          "relations_count": {
+            "type": "integer",
+            "description": "Number of relations restored"
+          }
+        },
+        "required": ["graph_type", "graph_name", "reverted_to_timestamp", "entities_count", "relations_count"]
+      }
+    },
+    {
+      "name": "create_graph_instance",
+      "description": "Create a new knowledge graph instance. Allows multiple instances per graph type (e.g., 'Political-Web: Waterdeep', 'Political-Web: Baldur's Gate'). Use during Planning AI conversations when user requests new graph.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "campaign_id": {
+            "type": "string",
+            "description": "Campaign ID (UUID) to create graph in"
+          },
+          "graph_type": {
+            "type": "string",
+            "description": "Graph type identifier: 'world-foundations', 'political-web', 'geographical', 'campaign-story', or 'custom:{typename}'",
+            "pattern": "^(world-foundations|political-web|geographical|campaign-story|custom:.+)$"
+          },
+          "graph_name": {
+            "type": "string",
+            "description": "Unique display name within campaign (e.g., 'Political-Web: Waterdeep'). Must be unique per campaign.",
+            "minLength": 1
+          },
+          "decay_rate": {
+            "type": "number",
+            "description": "Decay rate (0.0 to 1.0). Defaults: world-foundations=0.0, political-web=0.1, campaign-story=0.2, geographical=0.05",
+            "minimum": 0.0,
+            "maximum": 1.0
+          }
+        },
+        "required": ["campaign_id", "graph_type", "graph_name", "decay_rate"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "graph_id": {
+            "type": "string",
+            "description": "UUID of created graph"
+          },
+          "graph_type": {
+            "type": "string"
+          },
+          "graph_name": {
+            "type": "string"
+          },
+          "decay_rate": {
+            "type": "number"
+          }
+        },
+        "required": ["graph_id", "graph_type", "graph_name", "decay_rate"]
+      }
+    }
+  ],
+  "metadata": {
+    "feature": "006-create-the-knowledge",
+    "extends": "Feature 011 MCP Tools",
+    "mcp_server_path": "backend/src/mcp/tools/graph-tools.ts",
+    "mcp_schemas_path": "backend/src/mcp/schemas/graph-schemas.ts",
+    "middleware": ["permissions.ts", "transactions.ts", "logging.ts"],
+    "performance_targets": {
+      "single_entity_read": "<100ms",
+      "search_100_results": "<500ms",
+      "confidence_calculation_500_entities": "<10ms"
+    }
+  }
+}

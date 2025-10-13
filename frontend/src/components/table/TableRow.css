@@ -1,0 +1,38 @@
+.table-row {
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  transition: background-color 0.15s ease;
+}
+
+.table-row-clickable {
+  cursor: pointer;
+}
+
+.table-row-clickable:hover {
+  background-color: var(--bg-hover, #f9fafb);
+}
+
+.table-row-clickable:focus-visible {
+  outline: 2px solid var(--color-primary, #3b82f6);
+  outline-offset: -2px;
+}
+
+.table-cell {
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  color: var(--text-primary, #1f2937);
+  vertical-align: middle;
+}
+
+.table-cell:first-child {
+  padding-left: 1.5rem;
+}
+
+.table-cell:last-child {
+  padding-right: 1.5rem;
+}
+
+/* Empty cell placeholder */
+.table-cell em {
+  color: var(--text-tertiary, #9ca3af);
+  font-style: normal;
+}

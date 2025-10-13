@@ -33,6 +33,7 @@ export function Block({
 }: BlockProps) {
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const cardIdRef = useRef(card.id);
+  const isTransformingRef = useRef(false); // Track if we're in the middle of a transformation
   const [showSlashMenu, setShowSlashMenu] = useState(false);
   const [slashMenuPosition, setSlashMenuPosition] = useState({ top: 0, left: 0 });
   const [slashSearchTerm, setSlashSearchTerm] = useState('');
@@ -194,7 +195,11 @@ export function Block({
 
   // Handle slash menu selection
   const handleSlashMenuSelect = useCallback((item: SlashMenuItem) => {
-    if (!editor) return;
+    console.log('[Block] handleSlashMenuSelect called with item:', item);
+    if (!editor) {
+      console.log('[Block] No editor, returning');
+      return;
+    }
 
     // Remove the slash and search term from editor
     const text = editor.state.doc.textContent;
@@ -212,7 +217,21 @@ export function Block({
     setShowSlashMenu(false);
     setSlashSearchTerm('');
 
-    // Apply transformation immediately in editor
+    // Check if this is a structural transformation (page, database, image)
+    const isStructuralTransform = ['page', 'database', 'image'].includes(item.blockType);
+
+    if (isStructuralTransform) {
+      console.log('[Block] Structural transformation detected, canceling debounced saves');
+      // Cancel any pending debounced saves to prevent race condition
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+      // Mark that we're transforming to prevent unmount save
+      isTransformingRef.current = true;
+    }
+
+    // Apply transformation immediately in editor (only for text formatting, not structural changes)
     if (item.headingLevel) {
       editor.commands.setHeading({ level: item.headingLevel as 1 | 2 | 3 });
     } else if (item.listType === 'bullet') {
@@ -228,7 +247,18 @@ export function Block({
     }
 
     // Transform block type in backend
-    onTransform(item.blockType, item.headingLevel, item.listType);
+    console.log('[Block] Calling onTransform with:', item.blockType, item.headingLevel, item.listType);
+    try {
+      const result = onTransform(item.blockType, item.headingLevel, item.listType);
+      if (result && typeof result.then === 'function') {
+        result.catch((err: any) => {
+          console.error('[Block] onTransform promise rejected:', err);
+        });
+      }
+      console.log('[Block] onTransform called successfully');
+    } catch (err: any) {
+      console.error('[Block] onTransform threw error:', err);
+    }
 
     // Focus editor
     editor.commands.focus();
@@ -247,8 +277,13 @@ export function Block({
         clearTimeout(saveTimeoutRef.current);
       }
       // Save immediately on unmount (e.g., when filtered out by view mode)
-      if (editor && !editor.isDestroyed) {
+      // BUT skip save if we're in the middle of a structural transformation
+      // to prevent race condition where unmount save reverts the transformation
+      if (editor && !editor.isDestroyed && !isTransformingRef.current) {
+        console.log('[Block] Unmounting, saving content');
         onUpdateRef.current(editor.getJSON());
+      } else if (isTransformingRef.current) {
+        console.log('[Block] Unmounting during transformation, skipping save to prevent race condition');
       }
     };
   }, [editor]); // Only depend on editor, not onUpdate

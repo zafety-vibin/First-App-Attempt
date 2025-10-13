@@ -1,0 +1,52 @@
+/*
+ * DeleteConfirmation uses ConfirmDialog internally,
+ * so most styles come from ConfirmDialog.css
+ * This file includes any additional delete-specific styling
+ */
+
+/* Red danger button styling for delete confirmation */
+.confirm-dialog-confirm-danger {
+  background-color: var(--color-danger, #dc3545);
+  color: #ffffff;
+}
+
+.confirm-dialog-confirm-danger:hover:not(:disabled) {
+  background-color: var(--color-danger-dark, #bd2130);
+}
+
+.confirm-dialog-confirm-danger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Loading state for delete button */
+.confirm-dialog-confirm-danger:disabled::before {
+  content: '';
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-right: 0.5rem;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: delete-confirmation-spin 0.8s linear infinite;
+}
+
+@keyframes delete-confirmation-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Entity name emphasis in message */
+.confirm-dialog-message {
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--color-text-primary, #1a1a1a);
+}
+
+/* Accessibility: Focus visible state for danger button */
+.confirm-dialog-confirm-danger:focus-visible {
+  outline: 2px solid var(--color-danger, #dc3545);
+  outline-offset: 2px;
+}

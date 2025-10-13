@@ -175,7 +175,15 @@ router.get('/', async (req: Request, res: Response) => {
 
     // Note: dm_* field stripping is handled by applyInformationFilter middleware
 
-    res.status(200).json(recaps);
+    res.status(200).json({
+      data: recaps,
+      pagination: {
+        currentPage: 1,
+        pageSize: recaps.length,
+        totalPages: 1,
+        totalCount: recaps.length
+      }
+    });
   } catch (error: any) {
     console.error('List session recaps error:', error);
     res.status(500).json({ error: 'Failed to fetch session recaps', details: error.message });

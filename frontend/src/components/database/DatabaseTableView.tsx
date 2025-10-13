@@ -45,7 +45,7 @@ export function DatabaseTableView({ databaseCard, campaignId }: DatabaseTableVie
 
   const loadAvailableCards = async () => {
     try {
-      const response = await apiClient.get(`/api/campaigns/${campaignId}/cards`);
+      const response = await apiClient.get(`/campaigns/${campaignId}/cards`);
       setAvailableCards(response.data || []);
     } catch (error) {
       console.error('Failed to load available cards:', error);
@@ -62,7 +62,7 @@ export function DatabaseTableView({ databaseCard, campaignId }: DatabaseTableVie
   const loadEntries = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get(`/api/cards/${databaseCard.id}/entries`);
+      const response = await apiClient.get(`/cards/${databaseCard.id}/entries`);
       setEntries(response.data.entries || []);
     } catch (error: any) {
       console.error('Failed to load entries:', error);
@@ -79,7 +79,7 @@ export function DatabaseTableView({ databaseCard, campaignId }: DatabaseTableVie
 
   const handleEntryTitleChange = async (entryId: string, newTitle: string) => {
     try {
-      await apiClient.put(`/api/cards/${databaseCard.id}/entries/${entryId}`, {
+      await apiClient.put(`/cards/${databaseCard.id}/entries/${entryId}`, {
         title: newTitle,
       });
       // Reload entries to reflect the change
@@ -93,7 +93,7 @@ export function DatabaseTableView({ databaseCard, campaignId }: DatabaseTableVie
 
   const handleCellValueChange = async (entryId: string, columnId: string, newValue: any) => {
     try {
-      await apiClient.put(`/api/cards/${databaseCard.id}/entries/${entryId}`, {
+      await apiClient.put(`/cards/${databaseCard.id}/entries/${entryId}`, {
         values: {
           [columnId]: newValue,
         },
@@ -110,7 +110,7 @@ export function DatabaseTableView({ databaseCard, campaignId }: DatabaseTableVie
   const handleNewEntry = async () => {
     try {
       console.log('Creating new entry for database:', databaseCard.id);
-      const response = await apiClient.post(`/api/cards/${databaseCard.id}/entries`, {
+      const response = await apiClient.post(`/cards/${databaseCard.id}/entries`, {
         title: 'Untitled',
         values: {},
       });
@@ -150,7 +150,7 @@ export function DatabaseTableView({ databaseCard, campaignId }: DatabaseTableVie
         columnData.options = options;
       }
 
-      const response = await apiClient.post(`/api/cards/${databaseCard.id}/columns`, columnData);
+      const response = await apiClient.post(`/cards/${databaseCard.id}/columns`, columnData);
 
       console.log('Updated schema:', response.data);
       setSchema({ columns: response.data.columns || [] });

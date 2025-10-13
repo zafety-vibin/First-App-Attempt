@@ -1,0 +1,13 @@
+/* LocationLandingCard Component Styles */
+/* Inherits base styles from NPCLandingCard.css */
+
+.location-landing-card {
+  /* Additional location-specific styles if needed */
+}
+
+.item-badge-type {
+  background: var(--badge-type-bg, #fef3c7);
+  color: var(--badge-type-text, #92400e);
+}
+
+/* All other styles inherited from base landing-card styles in NPCLandingCard.css */

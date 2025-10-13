@@ -413,7 +413,15 @@ router.get('/:id/related', async (req: Request, res: Response) => {
       });
     }
 
-    res.status(200).json({ data: relatedRules, total: relatedRules.length });
+    res.status(200).json({
+      data: relatedRules,
+      pagination: {
+        currentPage: 1,
+        pageSize: relatedRules.length,
+        totalPages: 1,
+        totalCount: relatedRules.length
+      }
+    });
   } catch (error: any) {
     console.error('Get related world rules error:', error);
     res.status(500).json({ error: 'Failed to fetch related world rules' });
@@ -455,7 +463,15 @@ router.get('/search/:campaignId', async (req: Request, res: Response) => {
       });
     }
 
-    res.status(200).json({ data: worldRules, total: worldRules.length });
+    res.status(200).json({
+      data: worldRules,
+      pagination: {
+        currentPage: 1,
+        pageSize: worldRules.length,
+        totalPages: 1,
+        totalCount: worldRules.length
+      }
+    });
   } catch (error: any) {
     if (error.message.includes('not found') || error.message.includes('access denied')) {
       res.status(403).json({ error: error.message });

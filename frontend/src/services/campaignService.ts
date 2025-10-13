@@ -10,7 +10,7 @@ export const campaignService = {
    * Get all campaigns for current user
    */
   async getCampaigns(): Promise<{ campaigns: Campaign[]; total: number }> {
-    const response = await apiClient.get('/api/campaigns');
+    const response = await apiClient.get('/campaigns');
     return response.data;
   },
 
@@ -18,7 +18,7 @@ export const campaignService = {
    * Get campaign by ID
    */
   async getCampaign(id: string): Promise<Campaign> {
-    const response = await apiClient.get(`/api/campaigns/${id}`);
+    const response = await apiClient.get(`/campaigns/${id}`);
     return response.data;
   },
 
@@ -26,7 +26,7 @@ export const campaignService = {
    * Create new campaign
    */
   async createCampaign(name: string): Promise<Campaign> {
-    const response = await apiClient.post('/api/campaigns', { name });
+    const response = await apiClient.post('/campaigns', { name });
     return response.data;
   },
 
@@ -37,7 +37,7 @@ export const campaignService = {
     id: string,
     updates: { name?: string; publicAccessEnabled?: boolean; publicPassword?: string | null }
   ): Promise<Campaign> {
-    const response = await apiClient.put(`/api/campaigns/${id}`, updates);
+    const response = await apiClient.put(`/campaigns/${id}`, updates);
     return response.data;
   },
 
@@ -45,6 +45,6 @@ export const campaignService = {
    * Delete campaign
    */
   async deleteCampaign(id: string): Promise<void> {
-    await apiClient.delete(`/api/campaigns/${id}`);
+    await apiClient.delete(`/campaigns/${id}`);
   },
 };

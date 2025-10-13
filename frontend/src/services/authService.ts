@@ -10,7 +10,7 @@ export const authService = {
    * Login with token (simplified)
    */
   async login(token: string): Promise<{ user: User; sessionId: string }> {
-    const response = await apiClient.post('/api/auth/login', { token });
+    const response = await apiClient.post('/auth/login', { token });
     return response.data;
   },
 
@@ -18,7 +18,7 @@ export const authService = {
    * Logout
    */
   async logout(): Promise<void> {
-    await apiClient.post('/api/auth/logout');
+    await apiClient.post('/auth/logout');
   },
 
   /**
@@ -26,7 +26,7 @@ export const authService = {
    */
   async validate(): Promise<{ valid: boolean; user?: User }> {
     try {
-      const response = await apiClient.get('/api/auth/validate');
+      const response = await apiClient.get('/auth/validate');
       return response.data;
     } catch (error) {
       return { valid: false };

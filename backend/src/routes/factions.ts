@@ -43,7 +43,16 @@ router.get('/', async (req: Request, res: Response) => {
 
     const factions = await factionService.getByCampaign(campaign_id, userId);
 
-    res.status(200).json({ factions, total: factions.length });
+    // Return format expected by frontend
+    res.status(200).json({
+      data: factions,
+      pagination: {
+        currentPage: 1,
+        pageSize: factions.length,
+        totalPages: 1,
+        totalCount: factions.length
+      }
+    });
   } catch (error: any) {
     if (error.message.includes('not found') || error.message.includes('access denied')) {
       res.status(403).json({ error: error.message });

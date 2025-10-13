@@ -1,0 +1,99 @@
+.table-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  background-color: white;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  flex-wrap: wrap;
+}
+
+.table-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.table-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+/* Action button styles (for buttons passed as children) */
+.table-toolbar-actions button,
+.table-toolbar-actions a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 0.375rem;
+  transition: all 0.15s ease;
+}
+
+.table-toolbar-actions .toolbar-action-primary {
+  border: none;
+  background-color: var(--color-primary, #3b82f6);
+  color: white;
+  cursor: pointer;
+}
+
+.table-toolbar-actions .toolbar-action-primary:hover {
+  background-color: var(--color-primary-dark, #2563eb);
+}
+
+.table-toolbar-actions .toolbar-action-primary:focus-visible {
+  outline: 2px solid var(--color-primary, #3b82f6);
+  outline-offset: 2px;
+}
+
+.table-toolbar-actions .toolbar-action-secondary {
+  border: 1px solid var(--border-color, #e5e7eb);
+  background-color: white;
+  color: var(--text-primary, #1f2937);
+  cursor: pointer;
+}
+
+.table-toolbar-actions .toolbar-action-secondary:hover {
+  background-color: var(--bg-hover, #f9fafb);
+  border-color: var(--border-hover, #d1d5db);
+}
+
+.table-toolbar-actions .toolbar-action-secondary:focus-visible {
+  outline: 2px solid var(--color-primary, #3b82f6);
+  outline-offset: 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .table-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .table-toolbar-left {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .table-toolbar-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .table-toolbar-actions button,
+  .table-toolbar-actions a {
+    flex: 1;
+    justify-content: center;
+  }
+}

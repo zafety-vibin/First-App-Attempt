@@ -358,7 +358,7 @@ CREATE TABLE IF NOT EXISTS planar_forces (
 -- ============================================================================
 -- 10. SESSION PREP TABLE
 -- ============================================================================
-CREATE TABLE IF NOT EXISTS session_prep (
+CREATE TABLE IF NOT EXISTS session_preps (
   -- Universal fields
   id TEXT PRIMARY KEY,
   campaign_id TEXT NOT NULL,
@@ -570,9 +570,9 @@ CREATE INDEX IF NOT EXISTS idx_planar_forces_player_knowledge ON planar_forces(p
 CREATE INDEX IF NOT EXISTS idx_planar_forces_high_priest_id ON planar_forces(high_priest_id);
 
 -- Session Prep indexes
-CREATE INDEX IF NOT EXISTS idx_session_prep_campaign_id ON session_prep(campaign_id);
-CREATE INDEX IF NOT EXISTS idx_session_prep_core_status ON session_prep(core_status);
-CREATE INDEX IF NOT EXISTS idx_session_prep_planned_date ON session_prep(planned_date);
+CREATE INDEX IF NOT EXISTS idx_session_prep_campaign_id ON session_preps(campaign_id);
+CREATE INDEX IF NOT EXISTS idx_session_prep_core_status ON session_preps(core_status);
+CREATE INDEX IF NOT EXISTS idx_session_prep_planned_date ON session_preps(planned_date);
 
 -- Custom Mechanics indexes
 CREATE INDEX IF NOT EXISTS idx_custom_mechanics_campaign_id ON custom_mechanics(campaign_id);

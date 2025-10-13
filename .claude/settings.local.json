@@ -21,7 +21,11 @@
       "Bash(docker exec:*)",
       "Read(//c/Users/zmanl/Projects/VVD-mimic/specs/008-create-byollm-configuration/**)",
       "Bash(docker logs wrldbldr-backend --tail 100)",
-      "Bash(docker logs:*)"
+      "Bash(docker logs:*)",
+      "Read(//c/Users/zmanl/Projects/VVD-mimic/specs/015-create-the-dashboard/**)",
+      "mcp__chrome-devtools__fill",
+      "mcp__chrome-devtools__evaluate_script",
+      "mcp__chrome-devtools__handle_dialog"
     ],
     "deny": [],
     "ask": []

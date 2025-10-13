@@ -1,0 +1,168 @@
+/* SessionTimelineCard Component Styles */
+/* Inherits base styles from NPCLandingCard.css */
+
+.session-timeline-card {
+  /* Additional timeline-specific styles */
+}
+
+.stat-in-game-date {
+  padding: 0.75rem;
+  background: var(--stat-bg, #f9fafb);
+  border-radius: 6px;
+  text-align: center;
+}
+
+.stat-value-text {
+  display: block;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary, #111827);
+  margin-top: 0.25rem;
+}
+
+.timeline-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.timeline-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.timeline-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.timeline-section-title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary, #6b7280);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.timeline-section-link {
+  padding: 0.25rem 0.75rem;
+  background: transparent;
+  color: var(--link-color, #3b82f6);
+  border: 1px solid var(--link-border, #93c5fd);
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.timeline-section-link:hover {
+  background: var(--link-hover-bg, #eff6ff);
+  border-color: var(--link-hover-border, #60a5fa);
+}
+
+.timeline-section-link:focus {
+  outline: 2px solid var(--focus-ring, #3b82f6);
+  outline-offset: 2px;
+}
+
+.timeline-item-button {
+  display: block;
+  width: 100%;
+  padding: 1rem;
+  background: var(--timeline-item-bg, #ffffff);
+  border: 1px solid var(--timeline-item-border, #e5e7eb);
+  border-radius: 6px;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.timeline-item-button:hover {
+  background: var(--timeline-item-hover-bg, #f9fafb);
+  border-color: var(--timeline-item-hover-border, #d1d5db);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.timeline-item-button:focus {
+  outline: 2px solid var(--focus-ring, #3b82f6);
+  outline-offset: 2px;
+}
+
+.timeline-item-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.timeline-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.timeline-item-session {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary, #111827);
+}
+
+.timeline-item-date {
+  font-size: 0.875rem;
+  color: var(--text-secondary, #6b7280);
+}
+
+.timeline-item-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary, #111827);
+}
+
+.timeline-item-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.timeline-item-badge-status {
+  background: var(--badge-status-bg, #dbeafe);
+  color: var(--badge-status-text, #1e40af);
+}
+
+.timeline-item-description {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text-secondary, #6b7280);
+  line-height: 1.5;
+}
+
+.timeline-item-time {
+  font-size: 0.875rem;
+  color: var(--text-tertiary, #9ca3af);
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .timeline-sections {
+    gap: 1rem;
+  }
+
+  .timeline-item-button {
+    padding: 0.75rem;
+  }
+
+  .timeline-item-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+}
+
+/* All other styles inherited from base landing-card styles in NPCLandingCard.css */

@@ -17,10 +17,13 @@ export const cardService = {
    * Get root cards for a campaign
    */
   async getRootCards(campaignId: string, type?: string): Promise<Card[]> {
+    console.log('[cardService.getRootCards] Called with campaignId:', campaignId, 'type:', type);
     const params = new URLSearchParams({ campaign_id: campaignId });
     if (type) params.append('type', type);
 
-    const response = await apiClient.get(`/api/cards?${params}`);
+    console.log('[cardService.getRootCards] About to make API request to /cards');
+    const response = await apiClient.get(`/cards?${params}`);
+    console.log('[cardService.getRootCards] Got response, cards:', response.data.cards.length);
     return response.data.cards;
   },
 
@@ -28,7 +31,7 @@ export const cardService = {
    * Get a single card by ID
    */
   async getCard(cardId: string): Promise<Card> {
-    const response = await apiClient.get(`/api/cards/${cardId}`);
+    const response = await apiClient.get(`/cards/${cardId}`);
     return response.data;
   },
 
@@ -36,7 +39,10 @@ export const cardService = {
    * Get child cards of a parent
    */
   async getChildren(parentId: string): Promise<Card[]> {
-    const response = await apiClient.get(`/api/cards/${parentId}/children`);
+    console.log('[cardService.getChildren] Called with parentId:', parentId);
+    console.log('[cardService.getChildren] About to make API request to /cards/:id/children');
+    const response = await apiClient.get(`/cards/${parentId}/children`);
+    console.log('[cardService.getChildren] Got response, cards:', response.data.cards.length);
     return response.data.cards;
   },
 
@@ -44,7 +50,7 @@ export const cardService = {
    * Get entire subtree of a card (recursive)
    */
   async getSubtree(cardId: string): Promise<Card[]> {
-    const response = await apiClient.get(`/api/cards/${cardId}/subtree`);
+    const response = await apiClient.get(`/cards/${cardId}/subtree`);
     return response.data.cards;
   },
 
@@ -65,7 +71,7 @@ export const cardService = {
       icon_emoji: data.iconEmoji || null,
       information_level_id: data.informationLevelId || 'system', // Feature 004
     };
-    const response = await apiClient.post('/api/cards', payload);
+    const response = await apiClient.post('/cards', payload);
     return response.data;
   },
 
@@ -83,7 +89,7 @@ export const cardService = {
       icon_emoji: data.iconEmoji,
       information_level_id: data.informationLevelId, // Feature 004
     };
-    const response = await apiClient.put(`/api/cards/${cardId}`, payload);
+    const response = await apiClient.put(`/cards/${cardId}`, payload);
     return response.data;
   },
 
@@ -91,7 +97,7 @@ export const cardService = {
    * Delete a card (and all children)
    */
   async deleteCard(cardId: string): Promise<void> {
-    await apiClient.delete(`/api/cards/${cardId}`);
+    await apiClient.delete(`/cards/${cardId}`);
   },
 
   /**
@@ -102,7 +108,7 @@ export const cardService = {
       new_parent_id: data.newParentId,
       position: data.position,
     };
-    const response = await apiClient.patch(`/api/cards/${cardId}/move`, payload);
+    const response = await apiClient.patch(`/cards/${cardId}/move`, payload);
     return response.data;
   },
 
@@ -113,7 +119,7 @@ export const cardService = {
     const payload = {
       position: data.position,
     };
-    const response = await apiClient.patch(`/api/cards/${cardId}/reorder`, payload);
+    const response = await apiClient.patch(`/cards/${cardId}/reorder`, payload);
     return response.data;
   },
 };

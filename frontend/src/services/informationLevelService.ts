@@ -15,7 +15,7 @@ export const informationLevelService = {
    * List information levels for campaign (4 defaults + custom levels)
    */
   async listInformationLevels(campaignId: string): Promise<{ levels: InformationLevel[] }> {
-    const response = await apiClient.get(`/api/information-levels?campaign_id=${campaignId}`);
+    const response = await apiClient.get(`/information-levels?campaign_id=${campaignId}`);
     return response.data;
   },
 
@@ -23,7 +23,7 @@ export const informationLevelService = {
    * Get information level by ID
    */
   async getInformationLevel(levelId: string): Promise<InformationLevel> {
-    const response = await apiClient.get(`/api/information-levels/${levelId}`);
+    const response = await apiClient.get(`/information-levels/${levelId}`);
     return response.data;
   },
 
@@ -31,7 +31,7 @@ export const informationLevelService = {
    * Create custom information level
    */
   async createInformationLevel(data: CreateInformationLevelPayload): Promise<InformationLevel> {
-    const response = await apiClient.post('/api/information-levels', {
+    const response = await apiClient.post('/information-levels', {
       name: data.name,
       color: data.color,
       hierarchical: data.hierarchical,
@@ -47,7 +47,7 @@ export const informationLevelService = {
     levelId: string,
     data: UpdateInformationLevelPayload
   ): Promise<InformationLevel> {
-    const response = await apiClient.put(`/api/information-levels/${levelId}`, data);
+    const response = await apiClient.put(`/information-levels/${levelId}`, data);
     return response.data;
   },
 
@@ -57,7 +57,7 @@ export const informationLevelService = {
   async deleteInformationLevel(
     levelId: string
   ): Promise<{ reverted_cards_count: number; warning: string }> {
-    const response = await apiClient.delete(`/api/information-levels/${levelId}?confirm=true`);
+    const response = await apiClient.delete(`/information-levels/${levelId}?confirm=true`);
     return response.data;
   },
 };

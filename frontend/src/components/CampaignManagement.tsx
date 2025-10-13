@@ -138,7 +138,7 @@ export function CampaignManagement() {
                     padding: '1rem',
                     cursor: 'pointer',
                   }}
-                  onClick={() => navigate(`/campaigns/${campaign.id}`)}
+                  onClick={() => navigate(`/campaigns/${campaign.id}/dashboard`)}
                 >
                   <h3>{campaign.name}</h3>
                   <p style={{ fontSize: '0.875rem', color: '#666', margin: '0.5rem 0' }}>

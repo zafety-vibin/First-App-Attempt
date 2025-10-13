@@ -1,0 +1,67 @@
+/* Empty State Component Styles */
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+  min-height: 300px;
+}
+
+.empty-state-icon {
+  font-size: 48px;
+  color: #9ca3af;
+  margin-bottom: 16px;
+}
+
+.empty-state-icon svg {
+  width: 64px;
+  height: 64px;
+  stroke: currentColor;
+}
+
+.empty-state-content {
+  max-width: 400px;
+  margin-bottom: 24px;
+}
+
+.empty-state-message {
+  font-size: 18px;
+  font-weight: 600;
+  color: #374151;
+  margin: 0 0 8px 0;
+}
+
+.empty-state-description {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.empty-state-action {
+  padding: 10px 20px;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.empty-state-action:hover {
+  background-color: #2563eb;
+}
+
+.empty-state-action:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+.empty-state-action:active {
+  background-color: #1d4ed8;
+}

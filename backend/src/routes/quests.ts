@@ -413,7 +413,15 @@ router.get('/by-npc/:npcId', async (req: Request, res: Response) => {
 
     // Note: Service method now handles viewMode filtering at SQL level
 
-    res.status(200).json({ data: quests, total: quests.length });
+    res.status(200).json({
+      data: quests,
+      pagination: {
+        currentPage: 1,
+        pageSize: quests.length,
+        totalPages: 1,
+        totalCount: quests.length
+      }
+    });
   } catch (error: any) {
     console.error('Get quests by NPC error:', error);
     res.status(500).json({ error: 'Failed to fetch quests' });
@@ -456,7 +464,15 @@ router.get('/by-location/:locationId', async (req: Request, res: Response) => {
 
     // Note: Service method now handles viewMode filtering at SQL level
 
-    res.status(200).json({ data: quests, total: quests.length });
+    res.status(200).json({
+      data: quests,
+      pagination: {
+        currentPage: 1,
+        pageSize: quests.length,
+        totalPages: 1,
+        totalCount: quests.length
+      }
+    });
   } catch (error: any) {
     console.error('Get quests by location error:', error);
     res.status(500).json({ error: 'Failed to fetch quests' });
@@ -499,7 +515,15 @@ router.get('/by-session/:sessionId', async (req: Request, res: Response) => {
 
     // Note: Service method now handles viewMode filtering at SQL level
 
-    res.status(200).json({ data: quests, total: quests.length });
+    res.status(200).json({
+      data: quests,
+      pagination: {
+        currentPage: 1,
+        pageSize: quests.length,
+        totalPages: 1,
+        totalCount: quests.length
+      }
+    });
   } catch (error: any) {
     console.error('Get quests by session error:', error);
     res.status(500).json({ error: 'Failed to fetch quests' });

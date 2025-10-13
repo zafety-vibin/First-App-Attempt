@@ -79,7 +79,7 @@
 
 ## Phase 3.2: API Services Layer (13 Category Services)
 
-### T006 [P]: Extend apiClient.ts with view mode interceptor
+### T006 [P]: Extend apiClient.ts with view mode interceptor ✅
 **File**: `frontend/src/services/apiClient.ts`
 **Description**: Extend existing Axios apiClient from Feature 002 with X-View-Mode header interceptor. Read viewMode from localStorage key `viewMode_{campaignId}` (default dm_view). Add header to all requests: `config.headers['X-View-Mode'] = viewMode`. Preserve existing auth token interceptor from Feature 002.
 **Dependencies**: Feature 002 apiClient exists
@@ -167,37 +167,37 @@
 
 ## Phase 3.3: Custom Hooks Layer
 
-### T020 [P]: Create useCategory hook
+### T020 [P]: Create useCategory hook ✅
 **File**: `frontend/src/hooks/useCategory.ts`
 **Description**: Create generic hook for category CRUD operations. Hook signature: `useCategory<T>(category: CategoryName, campaignId: string)`. Returns: `{ entities, loading, error, create, update, delete, refresh }`. Uses appropriate service from T007-T019 based on category parameter. Wraps React Query or manual state management.
 **Dependencies**: T007-T019 (all category services)
 **Success Criteria**: Generic hook works with any category, returns typed data, CRUD operations trigger API calls and re-fetch
 
-### T021 [P]: Create usePagination hook
+### T021 [P]: Create usePagination hook ✅
 **File**: `frontend/src/hooks/usePagination.ts`
 **Description**: Create pagination state management hook. Hook signature: `usePagination(initialPageSize: number)`. Returns: `{ currentPage, pageSize, totalPages, totalCount, setPage, setPageSize, setTotalCount }`. Persist pageSize to sessionStorage key `tablePageSize`. Reset to page 1 when pageSize changes.
 **Dependencies**: None
 **Success Criteria**: Hook manages pagination state, pageSize persisted, totalPages calculated correctly
 
-### T022 [P]: Create useSorting hook
+### T022 [P]: Create useSorting hook ✅
 **File**: `frontend/src/hooks/useSorting.ts`
 **Description**: Create table sorting state hook. Hook signature: `useSorting(defaultColumn: string, defaultDirection: 'asc' | 'desc')`. Returns: `{ sortColumn, sortDirection, setSorting, toggleSort(column: string) }`. Toggle cycles: null → asc → desc → asc.
 **Dependencies**: None
 **Success Criteria**: Hook manages sort state, toggleSort cycles correctly, state can be serialized to URL params
 
-### T023 [P]: Create useSearchFilter hook
+### T023 [P]: Create useSearchFilter hook ✅
 **File**: `frontend/src/hooks/useSearchFilter.ts`
 **Description**: Create search and filter state hook with debouncing. Hook signature: `useSearchFilter()`. Returns: `{ searchText, setSearchText (debounced 300ms), filters, setFilters, clearFilters, activeFilterCount }`. Filters include: coreStatus[], playerKnowledge[], tags[], customFilters{}. Debounce search input to reduce API calls.
 **Dependencies**: None
 **Success Criteria**: Hook debounces search input 300ms, filters state managed, clearFilters resets to defaults
 
-### T024: Create useThematicLabels hook
+### T024: Create useThematicLabels hook ✅
 **File**: `frontend/src/hooks/useThematicLabels.ts`
 **Description**: Create thematic naming lookup hook. Hook signature: `useThematicLabels(campaignId: string)`. Fetches campaign settings (theme, category_labels) via GET /campaigns/{campaignId}/settings. Returns: `{ theme, categoryLabels: Record<CategoryName, string>, getCategoryLabel(category): string, loading, error }`. Cache response in React Query or state.
 **Dependencies**: T003 (thematicNames utility), apiClient
 **Success Criteria**: Hook fetches campaign theme, returns themed labels, getCategoryLabel function works, data cached
 
-### T025: Create useSidebarState hook
+### T025: Create useSidebarState hook ✅
 **File**: `frontend/src/hooks/useSidebarState.ts`
 **Description**: Create sidebar collapse state management hook with localStorage persistence. Hook signature: `useSidebarState(campaignId: string)`. Returns: `{ collapseState: Record<CategoryType, boolean>, toggleSection(type: CategoryType), activeCategory, setActiveCategory }`. Persist to localStorage key `sidebarCollapse_{campaignId}`. Cross-tab sync via storage event listener.
 **Dependencies**: T002 (SidebarContext)
@@ -207,31 +207,31 @@
 
 ## Phase 3.4: Common Components
 
-### T026 [P]: Create LoadingSpinner component
+### T026 [P]: Create LoadingSpinner component ✅
 **File**: `frontend/src/components/common/LoadingSpinner.tsx`
 **Description**: Create loading spinner component. Props: `{ size?: 'sm' | 'md' | 'lg' }`. Renders animated spinning circle icon. Use CSS animation for smooth rotation. Default size 'md'.
 **Dependencies**: None
 **Success Criteria**: Component renders spinner, size prop changes dimensions, animation smooth 60fps
 
-### T027 [P]: Create SkeletonLoader component
+### T027 [P]: Create SkeletonLoader component ✅
 **File**: `frontend/src/components/common/SkeletonLoader.tsx`
 **Description**: Create skeleton placeholder component. Props: `{ type: 'widget' | 'table' | 'form' | 'detail' }`. Renders animated gray rectangles matching layout of specified type. Use CSS shimmer animation. Widget: 3 rectangles (title, content, footer). Table: header + 5 rows. Form: 6 fields. Detail: title + 8 field rows.
 **Dependencies**: None
 **Success Criteria**: Component renders skeleton matching type, shimmer animation smooth, accessible (aria-busy="true")
 
-### T028 [P]: Create EmptyState component
+### T028 [P]: Create EmptyState component ✅
 **File**: `frontend/src/components/common/EmptyState.tsx`
 **Description**: Create empty state component. Props: `{ icon?: ReactNode, message: string, actionLabel?: string, onAction?: () => void }`. Renders centered layout with optional icon, message text, and optional action button. Use semantic HTML for accessibility.
 **Dependencies**: None
 **Success Criteria**: Component renders centered message, action button calls onAction, icon displayed if provided
 
-### T029 [P]: Create ErrorBoundary component
+### T029 [P]: Create ErrorBoundary component ✅
 **File**: `frontend/src/components/common/ErrorBoundary.tsx`
 **Description**: Create React error boundary component. Props: `{ children: ReactNode, fallback?: ReactNode }`. Catches errors in child components. Displays fallback UI or default error message with "Refresh Page" button. Logs errors to console with componentDidCatch. Use class component (required for error boundaries).
 **Dependencies**: None
 **Success Criteria**: Component catches child errors, displays fallback UI, logs to console, refresh button reloads page
 
-### T030 [P]: Create ConfirmDialog component
+### T030 [P]: Create ConfirmDialog component ✅
 **File**: `frontend/src/components/common/ConfirmDialog.tsx`
 **Description**: Create confirmation dialog component using Radix UI Dialog. Props: `{ open: boolean, title: string, message: string, confirmLabel?: string, cancelLabel?: string, onConfirm: () => void, onCancel: () => void }`. Renders modal with title, message, and two buttons. Default labels: "Confirm" and "Cancel". Close on Escape key or cancel button. Used for bulk delete, single entity delete, unsaved changes warnings.
 **Dependencies**: @radix-ui/react-dialog (already in project from Features 004/005)
@@ -241,177 +241,178 @@
 
 ## Phase 3.5: Form Input Components
 
-### T031 [P]: Create TextInput component
-**File**: `frontend/src/components/categories/forms/TextInput.tsx`
+### T031 [P]: Create TextInput component ✅
+**File**: `frontend/src/components/form/TextInput.tsx`
 **Description**: Create text input field component. Props: `{ name: string, label: string, value: string, onChange: (value: string) => void, error?: string, required?: boolean }`. Renders label, input field, and error message (if present). Required indicator (*) if required. Accessible labels and error association.
 **Dependencies**: None
 **Success Criteria**: Component renders input, onChange fires on typing, error displays below input, required indicator visible
 
-### T032 [P]: Create TextAreaInput component
-**File**: `frontend/src/components/categories/forms/TextAreaInput.tsx`
-**Description**: Create textarea input component for long text. Props match TextInput. Renders label, textarea (rows=5), and error message. Auto-resize or fixed height with scrollbar.
+### T032 [P]: Create TextArea component ✅
+**File**: `frontend/src/components/form/TextArea.tsx`
+**Description**: Create textarea input component for long text with character counter. Props: `{ name, label, value, onChange, error, placeholder, rows, disabled, required, maxLength }`. Renders label, textarea (rows=5 default), character counter, and error message. Fixed height with scrollbar.
 **Dependencies**: None
-**Success Criteria**: Component renders textarea, onChange fires, error displays, accessible
+**Success Criteria**: Component renders textarea, onChange fires, error displays, character counter updates, accessible
 
-### T033 [P]: Create SelectInput component
-**File**: `frontend/src/components/categories/forms/SelectInput.tsx`
-**Description**: Create single-select dropdown component. Props: `{ name, label, value: string, options: {value: string, label: string}[], onChange, error, required }`. Renders label, native select element, and error. Empty option for nullable fields.
+### T033 [P]: Create Select component ✅
+**File**: `frontend/src/components/form/Select.tsx`
+**Description**: Create single-select dropdown component. Props: `{ name, label, value: string, options: {value: string, label: string}[], onChange, error, required }`. Renders label, native select element with custom arrow, and error. Empty option for nullable fields.
 **Dependencies**: None
 **Success Criteria**: Component renders select with options, onChange fires on selection, error displays
 
-### T034 [P]: Create MultiSelectInput component
-**File**: `frontend/src/components/categories/forms/MultiSelectInput.tsx`
-**Description**: Create multi-select dropdown component. Props: `{ name, label, values: string[], options: {value: string, label: string}[], onChange: (values: string[]) => void, error }`. Renders label, multi-select UI (checkboxes or Radix UI Dropdown with checkboxes), selected chips, and error. Allow adding/removing selections.
-**Dependencies**: @radix-ui/react-dropdown-menu (optional for better UX)
-**Success Criteria**: Component renders multi-select, onChange fires with array, selected values shown as chips, accessible
-
-### T035 [P]: Create NumberInput component
-**File**: `frontend/src/components/categories/forms/NumberInput.tsx`
-**Description**: Create number input component. Props: `{ name, label, value: number | null, onChange: (value: number | null) => void, error, min?: number, max?: number }`. Renders label, number input, and error. Validate min/max client-side. Allow null for optional fields.
+### T034 [P]: Create Checkbox component ✅
+**File**: `frontend/src/components/form/Checkbox.tsx`
+**Description**: Create checkbox component. Props: `{ name, label, checked: boolean, onChange: (checked: boolean) => void, error, disabled }`. Renders checkbox with label on right, custom checkmark SVG styling, and error message.
 **Dependencies**: None
-**Success Criteria**: Component renders number input, onChange fires with parsed number, min/max validation, error displays
+**Success Criteria**: Component renders checkbox, onChange fires with boolean, accessible, custom styling
 
-### T036 [P]: Create DateInput component
-**File**: `frontend/src/components/categories/forms/DateInput.tsx`
-**Description**: Create date picker component. Props: `{ name, label, value: string | null (ISO date), onChange: (value: string | null) => void, error }`. Renders label, date input (type="date" or custom picker), and error. Store as ISO date string.
-**Dependencies**: None (use native date input or lightweight picker library)
-**Success Criteria**: Component renders date picker, onChange fires with ISO string, error displays, accessible
+### T035 [P]: Create DatePicker component ✅
+**File**: `frontend/src/components/form/DatePicker.tsx`
+**Description**: Create date picker component using HTML5 date input. Props: `{ name, label, value: string | null (ISO date), onChange: (value: string | null) => void, error, disabled, minDate, maxDate }`. Renders label, native date input (type="date"), and error. Store as ISO date string (YYYY-MM-DD).
+**Dependencies**: None
+**Success Criteria**: Component renders date picker, onChange fires with ISO string, min/max validation, error displays, accessible
 
-### T037 [P]: Create RelationInput component
-**File**: `frontend/src/components/categories/forms/RelationInput.tsx`
-**Description**: Create foreign key relation dropdown with search. Props: `{ name, label, value: string | null, category: CategoryName, campaignId: string, onChange, error, required }`. Fetches entities from related category API. Searchable dropdown (filter by name). Display entity name in dropdown, store entity ID as value. Use appropriate service (T007-T019) based on category prop.
-**Dependencies**: T007-T019 (category services)
-**Success Criteria**: Component fetches related entities, searchable dropdown works, onChange fires with entity ID, error displays
+### T036 [P]: Create TagInput component ✅
+**File**: `frontend/src/components/form/TagInput.tsx`
+**Description**: Create tag input component. Props: `{ name, label, tags: string[], onChange: (tags: string[]) => void, error, placeholder, maxTags }`. Add tags by typing + Enter key. Display selected tags as removable chips. Remove last tag with backspace when input empty. Prevent duplicate tags.
+**Dependencies**: None
+**Success Criteria**: Component allows tag entry via Enter key, displays chips with X buttons, backspace removes last tag, maxTags enforced
 
-### T038 [P]: Create MultiRelationInput component
-**File**: `frontend/src/components/categories/forms/MultiRelationInput.tsx`
-**Description**: Create multi-relation input for JSON array relations. Props: `{ name, label, values: string[], category: CategoryName, campaignId: string, onChange: (values: string[]) => void, error }`. Fetches entities from related category. Multi-select searchable dropdown. Display selected entity names as chips. Allow adding/removing.
-**Dependencies**: T007-T019 (category services)
-**Success Criteria**: Component fetches related entities, multi-select works, onChange fires with array of IDs, selected shown as chips
+### T037 [P]: Create RichTextInput component (SKIPPED - using existing TipTap)
+**File**: N/A
+**Description**: SKIPPED - Feature 003 already has TipTap editor components. Will reuse existing TipTap integration from Feature 003 for rich text editing in forms.
+**Dependencies**: Feature 003 TipTap components
+**Success Criteria**: Note added to tasks.md, no new component created
 
-### T039 [P]: Create TagInput component
-**File**: `frontend/src/components/categories/forms/TagInput.tsx`
-**Description**: Create tag input with autocomplete. Props: `{ name, label, values: string[], campaignId: string, onChange: (values: string[]) => void, error }`. Text input with autocomplete suggestions (fetch existing tags from campaign via API). Display selected tags as removable chips. Allow creating new tags (free text entry).
-**Dependencies**: apiClient
-**Success Criteria**: Component autocompletes existing tags, allows free text, onChange fires with array, chips removable
+### T038 [P]: Create FileUpload component ✅
+**File**: `frontend/src/components/form/FileUpload.tsx`
+**Description**: Create drag-and-drop file upload component. Props: `{ name, label, onFileSelect: (file: File | null) => void, accept, maxSize (default 10MB), error, disabled }`. Drag-and-drop area, click to browse files, shows file name + size after selection, validation for file type and size.
+**Dependencies**: None
+**Success Criteria**: Component supports drag-and-drop and click-to-browse, validates file type/size, displays selected file info, accessible
 
-### T040 [P]: Create InformationLevelInput component
-**File**: `frontend/src/components/categories/forms/InformationLevelInput.tsx`
-**Description**: Create information level dropdown component. Props: `{ name, label, value: string | null, campaignId: string, onChange, error }`. Fetches information levels from /information-levels?campaign_id={id}. Dropdown with options: null (freely accessible), system levels (common_knowledge, player_knowledge, dm_only), custom levels. Display level name in dropdown, store level name (not ID) as value per Feature 004 pattern.
-**Dependencies**: apiClient (reuse InformationLevelContext from Feature 004 if available)
-**Success Criteria**: Component fetches levels, dropdown displays options, null option included, onChange fires with level name
+### T039 [P]: Create CustomFieldEditor component ✅
+**File**: `frontend/src/components/form/CustomFieldEditor.tsx`
+**Description**: Create dynamic custom fields editor. Props: `{ customFields: Record<string, any>, onChange, definitions: CustomFieldDefinition[], error }`. Dynamically renders form fields based on custom_field_definitions (text, textarea, number, date, select, checkbox). Uses T031-T036 input components.
+**Dependencies**: T031-T036 (input components)
+**Success Criteria**: Component renders dynamic fields from definitions, supports 6 field types, onChange updates fields object, empty state for no definitions
+
+### T040 [P]: Create RelationshipSelector component ✅
+**File**: `frontend/src/components/form/RelationshipSelector.tsx`
+**Description**: Create searchable relationship selector for foreign key and many-to-many relations. Props: `{ label, category: CategoryName, campaignId, selectedIds: string[], onChange: (ids: string[]) => void, multiple, error }`. Fetches entities via useCategory hook. Searchable dropdown with entity filtering. Multiple mode displays chips, single mode displays selected name with clear button.
+**Dependencies**: T020 (useCategory hook), T007-T019 (category services)
+**Success Criteria**: Component fetches related entities, searchable dropdown works, multiple mode shows chips, single mode shows selected with clear button, accessible
 
 ---
 
 ## Phase 3.6: Category Landing Components
 
-### T041: Create StatisticsPanel component
-**File**: `frontend/src/components/categories/landing/StatisticsPanel.tsx`
-**Description**: Create category statistics panel. Props: `{ totalCount: number, statusBreakdown: Record<CoreStatus, number>, lastUpdated: number | null }`. Renders total count badge, status breakdown chips (Active: X, Archived: Y, Draft: Z), and relative timestamp ("Updated 3 hours ago"). Use CSS grid for layout.
-**Dependencies**: None
-**Success Criteria**: Component renders stats, relative timestamp calculated correctly, status chips styled with colors
+### T041: Create NPCLandingCard component ✅
+**File**: `frontend/src/components/dashboard/NPCLandingCard.tsx`
+**Description**: Create NPC summary widget. Props: `{ campaignId, onViewAll? }`. Fetches NPC stats and recent NPCs (last 5). Renders total count, relationship breakdown, 5 recent NPCs, "View All NPCs" link. Uses useCategory hook and useThematicLabels.
+**Dependencies**: T007 (npcService), T020 (useCategory), T024 (useThematicLabels), T026 (LoadingSpinner), T028 (EmptyState)
+**Success Criteria**: Widget fetches data, renders stats and recent items, link navigates to NPCs landing page, loading spinner shown, responsive design
 
-### T042: Create RecentItemsList component
-**File**: `frontend/src/components/categories/landing/RecentItemsList.tsx`
-**Description**: Create recent items list component. Props: `{ items: any[], category: CategoryName, onItemClick: (id: string) => void }`. Renders list of 10 recent entities. Each item shows: name, core_status badge, updated_at (relative time). Clicking item calls onItemClick (navigate to detail page). Empty state if items.length === 0.
-**Dependencies**: T028 (EmptyState for zero items)
-**Success Criteria**: Component renders item list, onClick navigates, empty state shown if no items, relative time displayed
+### T042: Create LocationLandingCard component ✅
+**File**: `frontend/src/components/dashboard/LocationLandingCard.tsx`
+**Description**: Create location summary widget. Props: `{ campaignId, onViewAll? }`. Fetches location stats and recent locations (last 5). Renders total count, type breakdown (city/dungeon/wilderness/etc), 5 recent locations, "View All Locations" link.
+**Dependencies**: T008 (locationService), T020 (useCategory), T024 (useThematicLabels), T026 (LoadingSpinner), T028 (EmptyState)
+**Success Criteria**: Widget fetches data, renders stats and recent items, link navigates to locations landing page, loading states work
 
-### T043: Create SearchFilterBar component
-**File**: `frontend/src/components/categories/landing/SearchFilterBar.tsx`
-**Description**: Create search and filter bar. Props: `{ searchText, onSearchChange, filters, onFilterChange, onClearFilters, category }`. Renders search input (debounced via T023 hook), filter dropdowns (Core Status, Player Knowledge, Tags), active filter chips (removable), "Clear All" button. Category-specific filters rendered dynamically based on category schema (e.g., Race dropdown for NPCs).
-**Dependencies**: T023 (useSearchFilter hook)
-**Success Criteria**: Component renders search input, filter dropdowns, active chips, clearAll resets, category-specific filters display
+### T043: Create QuestLandingCard component ✅
+**File**: `frontend/src/components/dashboard/QuestLandingCard.tsx`
+**Description**: Create quest summary widget. Props: `{ campaignId, onViewAll? }`. Fetches quest stats and recent quests (last 5). Renders active count, completed count, status breakdown, 5 recent quests with status badges, "View All Quests" link.
+**Dependencies**: T011 (questService), T020 (useCategory), T024 (useThematicLabels), T026 (LoadingSpinner), T028 (EmptyState)
+**Success Criteria**: Widget fetches data, renders stats with active/completed counts, status badges styled correctly, link navigates
 
-### T044: Create CategoryLandingPage component
-**File**: `frontend/src/components/categories/landing/CategoryLandingPage.tsx`
-**Description**: Create category landing page container. Props: `{ campaignId, category }`. Renders page header with themed category label (from T024 hook), "Create New [Category]" button, StatisticsPanel (T041), SearchFilterBar (T043), RecentItemsList (T042), ViewModeButtons (placeholder, Gallery/Board disabled), and CategoryTable (T045). Fetches recent items and stats via API services (T007-T019). Handles loading and error states.
-**Dependencies**: T007-T019 (services), T024 (thematic labels), T041-T043, T026-T027 (loading/skeleton)
-**Success Criteria**: Page renders all child components, fetches data on mount, loading skeleton shown, error boundary catches errors, themed labels displayed
+### T044: Create SessionTimelineCard component ✅
+**File**: `frontend/src/components/dashboard/SessionTimelineCard.tsx`
+**Description**: Create session timeline widget. Props: `{ campaignId }`. Fetches last session recap and next session prep. Renders last recap (session number, title, date, excerpt), next prep (session number, title, status, date), current in-game date, "View Recaps" and "View Prep" links.
+**Dependencies**: T010 (sessionRecapService), T016 (sessionPrepService), T020 (useCategory), T024 (useThematicLabels), T026 (LoadingSpinner), T028 (EmptyState)
+**Success Criteria**: Widget fetches recaps and prep, renders timeline sections, dates formatted correctly, links navigate, empty states shown
 
 ---
 
 ## Phase 3.7: Table Components
 
-### T045: Create TableColumnHeader component
-**File**: `frontend/src/components/categories/table/TableColumnHeader.tsx`
-**Description**: Create sortable column header. Props: `{ column: ColumnDefinition, sorted: boolean, sortDirection: 'asc' | 'desc' | null, onSort: () => void }`. Renders column label, sort arrow icon (up/down/none), and click handler. Highlight sorted column. Accessible (aria-sort).
+### T045: Create SortableTableHeader component ✅
+**File**: `frontend/src/components/table/SortableTableHeader.tsx`
+**Description**: Create sortable column header. Props: `{ label, sortKey, currentSortColumn, currentSortDirection, onSort }`. Renders column label, sort arrow icon (up/down/none), and click handler. Cycles through: null → asc → desc → asc. Highlight sorted column. Accessible (aria-sort).
 **Dependencies**: None
 **Success Criteria**: Component renders label and arrow, onSort fires on click, sorted column highlighted, accessible
 
-### T046: Create TableRow component
-**File**: `frontend/src/components/categories/table/TableRow.tsx`
-**Description**: Create table row component. Props: `{ entity: any, columns: ColumnDefinition[], selected: boolean, onSelect, onClick }`. Renders checkbox cell, cells per column (use column.render if provided, else plain text), hover highlight. Clicking row (not checkbox) calls onClick.
+### T046: Create TableRow component ✅
+**File**: `frontend/src/components/table/TableRow.tsx`
+**Description**: Create table row component. Props: `{ entity, columns: ColumnDef[], onClick? }`. Renders cells per column (use column.cell/accessorFn if provided, else plain text), hover highlight. Clicking row calls onClick. Keyboard accessible (Enter/Space).
 **Dependencies**: None
-**Success Criteria**: Component renders row cells, checkbox selects, onClick fires, hover highlight works
+**Success Criteria**: Component renders row cells, onClick fires, hover highlight works, keyboard navigation
 
-### T047: Create PaginationControls component
-**File**: `frontend/src/components/categories/table/PaginationControls.tsx`
-**Description**: Create pagination controls. Props: `{ currentPage, totalPages, pageSize, onPageChange, onPageSizeChange }`. Renders "Page X of Y", Previous/Next buttons (disabled at bounds), jump to page input, page size dropdown (25/50/100). Accessible keyboard navigation.
+### T047: Create PaginationControls component ✅
+**File**: `frontend/src/components/table/PaginationControls.tsx`
+**Description**: Create pagination controls. Props: `{ currentPage, totalPages, pageSize, totalCount, onPageChange, onPageSizeChange }`. Renders "Showing X-Y of Z items", Previous/Next buttons (disabled at bounds), page numbers with ellipsis, page size dropdown (10/25/50/100). Accessible keyboard navigation.
 **Dependencies**: None
 **Success Criteria**: Component renders controls, buttons disabled at bounds, page size dropdown works, accessible
 
-### T048: Create BulkActionsBar component
-**File**: `frontend/src/components/categories/table/BulkActionsBar.tsx`
-**Description**: Create bulk actions bar. Props: `{ selectedCount, onDelete, onArchive, onChangeStatus }`. Renders when selectedCount > 0. Shows "X items selected", Delete button (opens ConfirmDialog from T030), Archive button, Change Status dropdown. Fixed position at top of table.
-**Dependencies**: T030 (ConfirmDialog)
-**Success Criteria**: Component appears when items selected, buttons call handlers, confirmation dialog for delete, status dropdown works
+### T048: Create CategoryTable component ✅
+**File**: `frontend/src/components/table/CategoryTable.tsx`
+**Description**: Create generic reusable table using TanStack Table v8. Props: `{ data, columns: ColumnDef[], loading?, error?, sortColumn?, sortDirection?, onSort?, onRowClick?, emptyMessage? }`. Renders table with SortableTableHeader (T045) for each column, TableRow (T046) for each entity. Uses TanStack Table useReactTable hook. Shows loading spinner, empty state, or error state appropriately.
+**Dependencies**: T026 (LoadingSpinner), T028 (EmptyState), T045-T046, @tanstack/react-table
+**Success Criteria**: Table renders with dynamic columns, sorting works, loading/empty/error states work, generic across all 13 categories
 
-### T049: Create ViewModeButtons component
-**File**: `frontend/src/components/categories/table/ViewModeButtons.tsx`
-**Description**: Create view mode toggle buttons. Props: `{ currentView, onViewChange }`. Renders 3 buttons: Table (icon: grid), Gallery (icon: image), Board (icon: columns). Gallery and Board disabled with tooltip "Coming Soon" (v1). Table always active.
-**Dependencies**: @radix-ui/react-tooltip (for "Coming Soon")
-**Success Criteria**: Component renders 3 buttons, Table active, Gallery/Board disabled with tooltip, onClick fires for Table only
-
-### T050: Create CategoryTable component
-**File**: `frontend/src/components/categories/table/CategoryTable.tsx`
-**Description**: Create generic reusable table using TanStack Table v8. Props: `{ campaignId, category, entities, columns, sortColumn, sortDirection, onSort, selectedRows, onSelectRow, onSelectAll, onRowClick }`. Renders table with TableColumnHeader (T045) for each column, TableRow (T046) for each entity, and PaginationControls (T047) at bottom. Use TanStack Table useReactTable hook. Empty state if no entities (T028). Virtualization for 50+ rows via useVirtualizer.
-**Dependencies**: T028 (EmptyState), T045-T047, @tanstack/react-table
-**Success Criteria**: Table renders with dynamic columns, sorting works, row selection works, pagination works, virtualization enabled for large tables, generic across all 13 categories
-
-### T051: Create column definitions utility
-**File**: `frontend/src/utils/columnDefinitions.ts`
-**Description**: Create column definition generator for all 13 categories. Export function `getColumnDefinitions(category: CategoryName): ColumnDefinition[]`. Returns TanStack Table column definitions with accessor, header, cell render functions. Universal columns (Name, Core Status, Player Knowledge, Tags, Updated At) + category-specific columns. DM-only columns (dm_secrets, dm_plot_relevance, etc.) conditionally included based on viewMode.
+### T049: Create SearchBar component ✅
+**File**: `frontend/src/components/table/SearchBar.tsx`
+**Description**: Create search input with debounced onChange (300ms). Props: `{ value, onChange, placeholder?, onClear? }`. Search icon on left, clear button (X) on right when has value. Uses internal debouncing (300ms delay).
 **Dependencies**: None
-**Success Criteria**: Function returns typed column definitions per category, universal + category-specific columns included, render functions format data correctly (dates, tags, relations)
+**Success Criteria**: Component renders search input, debouncing works (300ms), clear button appears with value, accessible
+
+### T050: Create FilterPanel component ✅
+**File**: `frontend/src/components/table/FilterPanel.tsx`
+**Description**: Create collapsible filter controls for core_status, player_knowledge, tags. Props: `{ filters: FilterState, onChange, availableTags? }`. Renders section header with active filter count badge, collapsible content with checkboxes for status/knowledge, tag chips for tags. "Clear Filters" button when any active. Expand/collapse animation.
+**Dependencies**: None
+**Success Criteria**: Component renders filters, collapse/expand works, checkboxes update state, tag chips toggle, clear filters resets all, active count badge shown
+
+### T051: Create TableToolbar component ✅
+**File**: `frontend/src/components/table/TableToolbar.tsx`
+**Description**: Create table toolbar combining SearchBar + FilterPanel + action buttons. Props: `{ searchValue, onSearchChange, filters, onFilterChange, availableTags?, actions?, showFilters? }`. Layout: SearchBar on left, FilterPanel next, action buttons on right. Sticky at top of table view. Responsive layout for mobile.
+**Dependencies**: T049 (SearchBar), T050 (FilterPanel)
+**Success Criteria**: Toolbar renders all components, sticky positioning works, responsive layout for mobile, action buttons slot works
 
 ---
 
 ## Phase 3.8: Form Components
 
-### T052: Create EntityCreateForm component
-**File**: `frontend/src/components/categories/forms/EntityCreateForm.tsx`
-**Description**: Create entity creation form using React Hook Form + Zod. Props: `{ campaignId, category, schema: FieldSchema[], onSubmit, onCancel }`. Dynamically generates form fields from schema (uses T031-T040 input components). Validates with Zod schema from T005. Displays inline errors. "Save" and "Cancel" buttons. Loading spinner during submission. Fetch custom field definitions via GET /custom-field-definitions?campaign_id={id}&category={category}.
+### T052: Create GenericEntityForm component ✅
+**File**: `frontend/src/components/forms/GenericEntityForm.tsx`
+**Description**: Create generic entity form (combined create/edit functionality). Props: `{ campaignId, category, entity?, onSubmit, onCancel }`. Dynamically generates form fields from category schema (uses T031-T040 input components). Validates with Zod schema from T005. Displays inline errors. "Save"/"Update" and "Cancel" buttons. Loading spinner during submission. Supports all 13 categories with universal fields + category-specific fields.
 **Dependencies**: T005 (validation schemas), T031-T040 (input components), react-hook-form, @hookform/resolvers, zod
-**Success Criteria**: Form renders dynamic fields, validation works, inline errors display, onSubmit fires with validated data, onCancel navigates away
+**Success Criteria**: Form renders dynamic fields, validation works, inline errors display, onSubmit fires with validated data, edit mode pre-fills data, onCancel navigates away
+**Implementation Note**: Combined create/edit into single generic component instead of two separate components (EntityCreateForm/EntityEditForm). Better code reuse and DRY principle.
 
-### T053: Create EntityEditForm component
-**File**: `frontend/src/components/categories/forms/EntityEditForm.tsx`
-**Description**: Create entity edit form. Props: `{ campaignId, category, entityId, initialData, schema, onSubmit, onCancel }`. Same as T052 but fields pre-filled with initialData. Dirty form detection: warns user if navigating away with unsaved changes (browser beforeunload event). "Save Changes" and "Cancel" buttons.
-**Dependencies**: T005, T031-T040, react-hook-form
-**Success Criteria**: Form renders with pre-filled data, validation works, dirty detection warns on navigation, onSubmit fires with updated data
+### T053: Create DeleteConfirmation component ✅
+**File**: `frontend/src/components/forms/DeleteConfirmation.tsx`
+**Description**: Delete confirmation modal using ConfirmDialog from T030. Props: `{ isOpen, onClose, onConfirm, entityName, entityType, loading? }`. Shows entity name and type in confirmation message. Confirm button shows loading spinner while deleting. Red danger variant for delete button.
+**Dependencies**: T030 (ConfirmDialog)
+**Success Criteria**: Modal renders with entity name, danger styling applied, loading state shows spinner, onConfirm fires delete action
 
 ---
 
 ## Phase 3.9: Detail Components
 
-### T054: Create FieldDisplay component
-**File**: `frontend/src/components/categories/detail/FieldDisplay.tsx`
-**Description**: Create read-only field display. Props: `{ label, value, type, category? }`. Renders label + formatted value based on type. Text: plain string. Number: formatted with commas. Date: formatted as locale date. Tags: chips. Relation: clickable link (uses category prop). Multi_relation: list of links. JSON: formatted code block with syntax highlighting.
+### T054: Create FieldDisplay component ✅
+**File**: `frontend/src/components/detail/FieldDisplay.tsx`
+**Description**: Create read-only field display. Props: `{ label, value, type, emptyText? }`. Renders label + formatted value based on type. Text: plain string (preserves line breaks). Number: formatted with commas. Date: unix timestamp to locale date. Array: bulleted list chips. JSON: formatted code block with syntax highlighting. Empty state with configurable text.
 **Dependencies**: None
-**Success Criteria**: Component renders label and value, formatting correct per type, relation links navigable
+**Success Criteria**: Component renders label and value, formatting correct per type (text/date/array/json/number), empty state shown, responsive grid layout
 
-### T055: Create RelationshipLinks component
-**File**: `frontend/src/components/categories/detail/RelationshipLinks.tsx`
-**Description**: Create relationship links section. Props: `{ relationships: { label, category, entityIds, entities? }[] }`. Renders section per relationship type. Fetches entity names via batch API call GET /{category}?ids={id1,id2,id3}. Displays clickable links to related entities. "None" if relationship array empty.
-**Dependencies**: T007-T019 (services for batch fetch), T004 (relationship helpers)
-**Success Criteria**: Component fetches related entity names, displays links, batch fetch efficient, "None" shown for empty, links navigate to detail pages
+### T055: Create RelationshipLinks component ✅
+**File**: `frontend/src/components/detail/RelationshipLinks.tsx`
+**Description**: Create relationship links section. Props: `{ relationships: Relationship[], campaignId }`. Uses extractRelationships + buildRelationshipLinks from relationshipHelpers. Fetches entity names via service imports (batch optimization deferred). Displays clickable chips navigating to related entities. Loading state with spinner. "None" if relationship array empty. Groups by relationship type with themed category badges.
+**Dependencies**: T007-T019 (services for fetch), T004 (relationship helpers), T024 (thematic labels)
+**Success Criteria**: Component fetches related entity names, displays chips, loading state shown, "None" shown for empty, links navigate to detail pages, themed category labels
 
-### T056: Create EntityDetailPage component
-**File**: `frontend/src/components/categories/detail/EntityDetailPage.tsx`
-**Description**: Create entity detail page. Props: `{ campaignId, category, entityId }`. Renders breadcrumb (Campaign > Category > Entity Name), entity name as title, "Edit" and "Delete" buttons, FieldDisplay (T054) for all fields (universal + category-specific + custom), RelationshipLinks (T055) for related entities. Fetches entity via GET /{category}/{entityId} with X-View-Mode header. DM fields hidden in Player View. Loading skeleton (T027) during fetch. Error boundary (T029) for errors.
-**Dependencies**: T007-T019 (services), T027 (skeleton), T029 (error boundary), T054-T055, InformationLevelContext (view mode)
-**Success Criteria**: Page fetches entity, renders all fields, DM fields hidden in Player View, edit button navigates to form, delete button confirms and deletes
+### T056: Create EntityDetailPage component ✅
+**File**: `frontend/src/components/detail/EntityDetailPage.tsx`
+**Description**: Create entity detail page with view/edit modes. Props: `{ campaignId, category, entityId }`. Renders back button, entity name title, Edit/Delete buttons, FieldDisplay (T054) for all fields (universal + category-specific + custom), RelationshipLinks (T055) for relationships. Fetches entity via useCategory getById with X-View-Mode from localStorage. DM fields section (collapsed, only in dm_view). Edit mode uses GenericEntityForm. Delete uses DeleteConfirmation modal. Loading spinner during fetch. ErrorBoundary wrapper.
+**Dependencies**: T007-T019 (services), T026 (LoadingSpinner), T029 (ErrorBoundary), T052-T053 (forms), T054-T055, useCategory, useThematicLabels
+**Success Criteria**: Page fetches entity, renders all fields dynamically, DM fields shown only in dm_view, edit mode toggles GenericEntityForm, delete confirms and navigates, loading/error states, responsive layout
 
 ---
 

@@ -42,7 +42,7 @@ export function ImageBlock({ card, campaignId }: ImageBlockProps) {
       const formData = new FormData();
       formData.append('image', file);
 
-      const response = await apiClient.post(`/api/cards/${card.id}/image`, formData, {
+      const response = await apiClient.post(`/cards/${card.id}/image`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },

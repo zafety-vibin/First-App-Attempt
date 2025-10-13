@@ -125,6 +125,7 @@ export function InlineSlashMenu({
   searchTerm = '',
 }: InlineSlashMenuProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [adjustedPosition, setAdjustedPosition] = useState(position);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Filter items by search term
@@ -140,6 +141,42 @@ export function InlineSlashMenu({
   useEffect(() => {
     setSelectedIndex(0);
   }, [searchTerm]);
+
+  // Adjust position to prevent clipping out of viewport
+  useEffect(() => {
+    if (menuRef.current) {
+      const menuRect = menuRef.current.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      const viewportWidth = window.innerWidth;
+
+      let adjustedTop = position.top;
+      let adjustedLeft = position.left;
+
+      // Check if menu would clip below viewport bottom
+      if (position.top + menuRect.height > viewportHeight) {
+        // Position above cursor instead (flip up)
+        adjustedTop = position.top - menuRect.height - 10; // 10px gap above cursor
+      }
+
+      // Check if menu would clip beyond right edge
+      if (position.left + menuRect.width > viewportWidth) {
+        // Align to right edge with padding
+        adjustedLeft = viewportWidth - menuRect.width - 10;
+      }
+
+      // Ensure menu doesn't go above viewport top
+      if (adjustedTop < 10) {
+        adjustedTop = 10;
+      }
+
+      // Ensure menu doesn't go beyond left edge
+      if (adjustedLeft < 10) {
+        adjustedLeft = 10;
+      }
+
+      setAdjustedPosition({ top: adjustedTop, left: adjustedLeft });
+    }
+  }, [position, filteredItems.length]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -175,8 +212,8 @@ export function InlineSlashMenu({
       className="inline-slash-menu"
       style={{
         position: 'fixed',
-        top: position.top,
-        left: position.left,
+        top: adjustedPosition.top,
+        left: adjustedPosition.left,
         zIndex: 1000,
       }}
     >
@@ -185,7 +222,10 @@ export function InlineSlashMenu({
           <div
             key={item.id}
             className={`menu-item ${index === selectedIndex ? 'selected' : ''}`}
-            onClick={() => onSelect(item)}
+            onClick={() => {
+              console.log('[InlineSlashMenu] Menu item clicked:', item);
+              onSelect(item);
+            }}
             onMouseEnter={() => setSelectedIndex(index)}
           >
             <span className="menu-icon">{item.icon}</span>

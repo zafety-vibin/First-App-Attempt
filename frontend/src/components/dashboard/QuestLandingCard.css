@@ -1,0 +1,68 @@
+/* QuestLandingCard Component Styles */
+/* Inherits base styles from NPCLandingCard.css */
+
+.quest-landing-card {
+  /* Additional quest-specific styles */
+}
+
+.quest-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.stat-active {
+  background: var(--stat-active-bg, #dbeafe);
+  padding: 0.75rem;
+  border-radius: 6px;
+}
+
+.stat-completed {
+  background: var(--stat-completed-bg, #dcfce7);
+  padding: 0.75rem;
+  border-radius: 6px;
+}
+
+.stat-active .stat-value {
+  color: var(--stat-active-text, #1e40af);
+}
+
+.stat-completed .stat-value {
+  color: var(--stat-completed-text, #166534);
+}
+
+/* Quest status badge colors */
+.item-badge-not-started {
+  background: var(--badge-not-started-bg, #e5e7eb);
+  color: var(--badge-not-started-text, #374151);
+}
+
+.item-badge-in-progress {
+  background: var(--badge-in-progress-bg, #dbeafe);
+  color: var(--badge-in-progress-text, #1e40af);
+}
+
+.item-badge-completed {
+  background: var(--badge-completed-bg, #dcfce7);
+  color: var(--badge-completed-text, #166534);
+}
+
+.item-badge-failed {
+  background: var(--badge-failed-bg, #fee2e2);
+  color: var(--badge-failed-text, #991b1b);
+}
+
+.item-badge-default {
+  background: var(--badge-bg, #e5e7eb);
+  color: var(--badge-text, #374151);
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .quest-stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* All other styles inherited from base landing-card styles in NPCLandingCard.css */

@@ -30,9 +30,18 @@ export function ViewModeProvider({ children }: { children: ReactNode }) {
   // Update apiClient interceptor when view mode changes
   useEffect(() => {
     // Add request interceptor to inject X-View-Mode header
+    // ONLY for System 1 (Wiki/Cards) endpoints: /cards, /settings, /information-levels
     const interceptorId = apiClient.interceptors.request.use(
       (config) => {
-        config.headers['X-View-Mode'] = viewMode;
+        // Only apply to card-related endpoints (System 1)
+        // System 2 (Categories/Database) uses campaign_id-based interceptor in apiClient
+        if (config.url && (
+          config.url.includes('/cards') ||
+          config.url.includes('/settings') ||
+          config.url.includes('/information-levels')
+        )) {
+          config.headers['X-View-Mode'] = viewMode;
+        }
         return config;
       },
       (error) => Promise.reject(error)

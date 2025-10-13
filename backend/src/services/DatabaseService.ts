@@ -126,6 +126,17 @@ export function runMigrations(): void {
     }
   });
 
+  // Migration 14: Feature 014 - Structured Category Database Foundation
+  runMigration(14, () => {
+    const migrationsDir = path.join(__dirname, '../db/migrations');
+    const filePath = path.join(migrationsDir, '014-category-tables.sql');
+    if (fs.existsSync(filePath)) {
+      const sql = fs.readFileSync(filePath, 'utf-8');
+      db.exec(sql);
+      console.log(`  ✓ Applied 014-category-tables.sql`);
+    }
+  });
+
   console.log('✓ Database initialized');
   logDatabaseInfo();
 }

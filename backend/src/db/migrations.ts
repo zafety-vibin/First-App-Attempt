@@ -1,4 +1,6 @@
 import Database from 'better-sqlite3';
+import * as fs from 'fs';
+import * as path from 'path';
 
 /**
  * Migration definition
@@ -24,18 +26,16 @@ export const migrations: Migration[] = [
       console.log('Migration 1: Initial schema applied via schema.sql');
     },
   },
-  // Future migrations will be added here
-  // {
-  //   version: 2,
-  //   description: 'Add byollm_config column to users',
-  //   up: (db) => {
-  //     db.exec(`ALTER TABLE users ADD COLUMN byollm_config TEXT`);
-  //   },
-  //   down: (db) => {
-  //     // SQLite doesn't support DROP COLUMN easily
-  //     // Would need to recreate table
-  //   },
-  // },
+  {
+    version: 14,
+    description: 'Feature 014 - Category tables (factions, npcs, locations, session_recaps, quests, player_characters, lore_entries, world_rules, planar_forces, session_prep, custom_mechanics, items, creatures, custom_field_definitions)',
+    up: (db) => {
+      const migrationPath = path.join(__dirname, 'migrations', '014-category-tables.sql');
+      const sql = fs.readFileSync(migrationPath, 'utf8');
+      db.exec(sql);
+      console.log('Migration 14: Category tables created');
+    },
+  },
 ];
 
 /**

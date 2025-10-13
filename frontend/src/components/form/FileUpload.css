@@ -1,0 +1,150 @@
+.file-upload-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.file-upload-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.file-upload-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  border: 2px dashed #d1d5db;
+  border-radius: 0.5rem;
+  background-color: #f9fafb;
+  cursor: pointer;
+  transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s;
+}
+
+.file-upload-area:hover:not(.file-upload-disabled) {
+  border-color: #3b82f6;
+  background-color: #eff6ff;
+}
+
+.file-upload-area:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.file-upload-dragging {
+  border-color: #3b82f6;
+  background-color: #dbeafe;
+}
+
+.file-upload-error {
+  border-color: #dc2626;
+}
+
+.file-upload-error:hover:not(.file-upload-disabled) {
+  border-color: #dc2626;
+  background-color: #fee2e2;
+}
+
+.file-upload-disabled {
+  background-color: #f3f4f6;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.file-upload-input {
+  display: none;
+}
+
+.file-upload-icon {
+  width: 3rem;
+  height: 3rem;
+  color: #9ca3af;
+  margin-bottom: 0.75rem;
+}
+
+.file-upload-text {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-bottom: 0.25rem;
+}
+
+.file-upload-text-primary {
+  color: #3b82f6;
+  font-weight: 500;
+}
+
+.file-upload-hint {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  margin-top: 0.25rem;
+}
+
+.file-upload-selected {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.file-upload-file-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  color: #3b82f6;
+  flex-shrink: 0;
+}
+
+.file-upload-file-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.file-upload-file-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-upload-file-size {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+}
+
+.file-upload-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: none;
+  background-color: #fee2e2;
+  color: #dc2626;
+  font-size: 1.5rem;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.2s;
+}
+
+.file-upload-remove:hover {
+  background-color: #fecaca;
+}
+
+.file-upload-remove:focus {
+  outline: 2px solid #dc2626;
+  outline-offset: 2px;
+}
+
+.file-upload-error-message {
+  font-size: 0.75rem;
+  color: #dc2626;
+  display: block;
+}

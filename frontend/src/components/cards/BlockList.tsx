@@ -147,9 +147,10 @@ function SortableBlockItem({
             onUpdate={(content) => onUpdate(child.id, content)}
             onEnter={() => onEnter(child.id)}
             onBackspaceEmpty={() => onBackspaceEmpty(child.id)}
-            onTransform={(blockType, headingLevel, listType) =>
-              onTransform(child.id, blockType, headingLevel, listType)
-            }
+            onTransform={(blockType, headingLevel, listType) => {
+              console.log('[SortableBlockItem] onTransform arrow function called with:', { childId: child.id, blockType, headingLevel, listType });
+              onTransform(child.id, blockType, headingLevel, listType);
+            }}
             autoFocus={autoFocus}
           />
         )}
@@ -209,24 +210,45 @@ export function BlockList({ parentCard, campaignId }: BlockListProps) {
   }, [parentCard.id]);
 
   const loadChildren = async () => {
+    console.log('[BlockList.loadChildren] CALLED - parentCard.id:', parentCard.id, 'campaignId:', campaignId);
     try {
       setLoading(true);
+      console.log('[BlockList.loadChildren] setLoading(true) called');
 
       // If parentCard.id is null, load root cards for the campaign
-      const childCards = parentCard.id === null
-        ? await cardService.getRootCards(campaignId)
-        : await cardService.getChildren(parentCard.id);
+      if (parentCard.id === null) {
+        console.log('[BlockList.loadChildren] parentCard.id is null, calling getRootCards');
+        const childCards = await cardService.getRootCards(campaignId);
+        console.log('[BlockList.loadChildren] getRootCards returned:', childCards.length, 'cards');
+        const sorted = childCards.sort((a, b) => a.position - b.position);
+        console.log('[BlockList.loadChildren] Calling setChildren with', sorted.length, 'cards');
+        setChildren(sorted);
+        console.log('[BlockList.loadChildren] setChildren called');
 
-      const sorted = childCards.sort((a, b) => a.position - b.position);
-      setChildren(sorted);
+        // Auto-create first paragraph block if empty
+        if (sorted.length === 0) {
+          console.log('[BlockList.loadChildren] No cards, creating empty paragraph');
+          await createEmptyParagraph(0);
+        }
+      } else {
+        console.log('[BlockList.loadChildren] parentCard.id is NOT null, calling getChildren');
+        const childCards = await cardService.getChildren(parentCard.id);
+        console.log('[BlockList.loadChildren] getChildren returned:', childCards.length, 'cards');
+        const sorted = childCards.sort((a, b) => a.position - b.position);
+        console.log('[BlockList.loadChildren] Calling setChildren with', sorted.length, 'cards');
+        setChildren(sorted);
+        console.log('[BlockList.loadChildren] setChildren called');
 
-      // Auto-create first paragraph block if empty
-      if (sorted.length === 0) {
-        await createEmptyParagraph(0);
+        // Auto-create first paragraph block if empty
+        if (sorted.length === 0) {
+          console.log('[BlockList.loadChildren] No cards, creating empty paragraph');
+          await createEmptyParagraph(0);
+        }
       }
     } catch (error) {
-      console.error('Failed to load children:', error);
+      console.error('[BlockList.loadChildren] ERROR:', error);
     } finally {
+      console.log('[BlockList.loadChildren] setLoading(false) - COMPLETE');
       setLoading(false);
     }
   };
@@ -333,48 +355,67 @@ export function BlockList({ parentCard, campaignId }: BlockListProps) {
   };
 
   const handleTransform = async (blockId: string, newType: string, headingLevel?: number, listType?: string) => {
+    console.log('[BlockList] handleTransform called with:', { blockId, newType, headingLevel, listType });
     try {
       const block = children.find(c => c.id === blockId);
-      if (!block) return;
+      if (!block) {
+        console.log('[BlockList] Block not found:', blockId);
+        return;
+      }
+      console.log('[BlockList] Found block:', block);
 
       // Update block type in backend
       const updates: any = { type: newType };
 
       // TEXT → PAGE: Wrap content into new page
       if (block.type === 'text' && newType === 'page') {
-        const fullText = block.content?.content?.[0]?.content?.[0]?.text || '';
-        const words = fullText.split(' ').filter(w => w.length > 0);
-        const firstWord = words[0] || 'Untitled';
-        const remainingText = words.slice(1).join(' ');
+        console.log('[BlockList] TEXT → PAGE transformation starting');
+        try {
+          const fullText = block.content?.content?.[0]?.content?.[0]?.text || '';
+          console.log(`[BlockList] fullText: "${fullText}"`);
+          const words = fullText.split(' ').filter(w => w.length > 0);
+          const firstWord = words[0] || 'Untitled';
+          const remainingText = words.slice(1).join(' ');
+          console.log(`[BlockList] firstWord: "${firstWord}", remainingText: "${remainingText}"`);
 
-        // Set page title to first word
-        updates.title = firstWord;
-        updates.content = null;
+          // Set page title to first word
+          updates.title = firstWord;
+          updates.content = null;
+          console.log(`[BlockList] About to call updateCard with type: page, title: ${firstWord}`);
 
-        // Transform to page first
-        await updateCard(blockId, updates);
+          // Transform to page first
+          await updateCard(blockId, updates);
+          console.log('[BlockList] updateCard completed');
 
-        // Create child block with remaining text (if any)
-        if (remainingText || words.length === 1) {
-          const childContent = {
-            type: 'doc',
-            content: remainingText ? [{
-              type: 'paragraph',
-              content: [{ type: 'text', text: words.length === 1 ? fullText : remainingText }]
-            }] : []
-          };
-          await createCard({
-            type: 'text',
-            campaignId,
-            parentId: blockId, // Child of the new page
-            position: 0,
-            content: childContent,
-            informationLevelId: block.informationLevelId, // Inherit level
-          });
+          // Create child block with remaining text (if any)
+          if (remainingText || words.length === 1) {
+            console.log('[BlockList] Creating child block');
+            const childContent = {
+              type: 'doc',
+              content: remainingText ? [{
+                type: 'paragraph',
+                content: [{ type: 'text', text: words.length === 1 ? fullText : remainingText }]
+              }] : []
+            };
+            await createCard({
+              type: 'text',
+              campaignId,
+              parentId: blockId, // Child of the new page
+              position: 0,
+              content: childContent,
+              informationLevelId: block.informationLevelId, // Inherit level
+            });
+            console.log('[BlockList] Child block created');
+          }
+
+          console.log('[BlockList] About to call loadChildren');
+          await loadChildren();
+          console.log('[BlockList] loadChildren completed - TEXT → PAGE transformation complete!');
+          return;
+        } catch (err: any) {
+          console.error('[BlockList] TEXT → PAGE error:', err);
+          throw err;
         }
-
-        await loadChildren();
-        return;
       }
 
       // PAGE → TEXT: Unwrap and promote children up
@@ -427,6 +468,10 @@ export function BlockList({ parentCard, campaignId }: BlockListProps) {
           views: [],
           defaultViewId: '',
         };
+
+        await updateCard(blockId, updates);
+        await loadChildren(); // Structural change - reload to show database component
+        return;
       }
 
       // DATABASE → TEXT: Use database title as text
@@ -440,16 +485,18 @@ export function BlockList({ parentCard, campaignId }: BlockListProps) {
             content: [{ type: 'text', text: dbTitle }]
           }] : []
         };
+
+        await updateCard(blockId, updates);
+        await loadChildren(); // Structural change - reload to show text editor
+        return;
       }
 
-      // For text blocks with special formatting (headings, lists, quotes),
-      // content is already updated by TipTap, so we just save it
-      // No need to manually construct content JSON
-
-      await updateCard(blockId, updates);
-
-      // Reload children to get fresh data and ensure proper component rendering
-      await loadChildren();
+      // For text formatting transformations (headings, lists, quotes),
+      // the content is already updated by TipTap in the editor.
+      // Don't call updateCard or loadChildren - let the debounced save handle it naturally.
+      // Calling loadChildren() here would fetch stale data and overwrite the TipTap changes.
+      console.log('[BlockList] Text formatting transformation - skipping updateCard and loadChildren');
+      // No-op: Let TipTap debounced save handle it
     } catch (error) {
       console.error('Failed to transform block:', error);
     }

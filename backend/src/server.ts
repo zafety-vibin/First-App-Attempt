@@ -15,6 +15,20 @@ import informationLevelRoutes from './routes/information-levels';
 import { imageServeRouter, imageUploadRouter } from './routes/images';
 import byollmRoutes from './routes/byollm';
 import healthRoutes from './routes/health';
+// Feature 014 category routes
+import npcRoutes from './routes/npcs';
+import locationRoutes from './routes/locations';
+import factionRoutes from './routes/factions';
+import sessionRecapRoutes from './routes/sessionRecaps';
+import questRoutes from './routes/quests';
+import playerCharacterRoutes from './routes/playerCharacters';
+import loreEntryRoutes from './routes/loreEntries';
+import worldRuleRoutes from './routes/worldRules';
+import planarForceRoutes from './routes/planarForces';
+import sessionPrepRoutes from './routes/sessionPrep';
+import customMechanicRoutes from './routes/customMechanics';
+import itemRoutes from './routes/items';
+import creatureRoutes from './routes/creatures';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -36,6 +50,21 @@ app.use('/api/cards', imageUploadRouter);  // POST /api/cards/:id/image (protect
 // Database card routes MUST come before general card routes (more specific routes first)
 app.use('/api/cards', databaseCardRoutes);
 app.use('/api/cards', cardRoutes);
+
+// Feature 014: Category routes
+app.use('/api/npcs', npcRoutes);
+app.use('/api/locations', locationRoutes);
+app.use('/api/factions', factionRoutes);
+app.use('/api/session-recaps', sessionRecapRoutes);
+app.use('/api/quests', questRoutes);
+app.use('/api/player-characters', playerCharacterRoutes);
+app.use('/api/lore-entries', loreEntryRoutes);
+app.use('/api/world-rules', worldRuleRoutes);
+app.use('/api/planar-forces', planarForceRoutes);
+app.use('/api/session-prep', sessionPrepRoutes);
+app.use('/api/custom-mechanics', customMechanicRoutes);
+app.use('/api/items', itemRoutes);
+app.use('/api/creatures', creatureRoutes);
 
 // Error handler (must be last)
 app.use(errorHandler);

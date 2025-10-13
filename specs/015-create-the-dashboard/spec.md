@@ -409,6 +409,86 @@ All 7 clarification questions have been RESOLVED by user input:
 
 ---
 
+## Integration with Existing Features
+
+This feature significantly changes the campaign access flow and integrates with multiple existing features. These integration points must be implemented during Feature 015.
+
+### Settings Access (Feature 004 Integration)
+
+**Current State**: Settings page exists at `/campaigns/:id/settings` from Feature 004 (Information Level system)
+
+**Required Changes**:
+- **FR-123**: Dashboard MUST include settings button/icon in header or sidebar
+- **FR-124**: Settings button MUST navigate to `/campaigns/:id/settings` (existing route)
+- **FR-125**: Settings button MUST be visible from dashboard and all category pages
+- Settings page already includes information level management, no changes needed to settings page itself
+
+### Post-Login Campaign Access Flow (Feature 002 Integration)
+
+**OLD Flow** (pre-Feature 015):
+1. User logs in → Campaign list page
+2. User clicks campaign → Opens campaign root card in wiki/card editor
+
+**NEW Flow** (Feature 015 architectural shift):
+1. User logs in → Campaign list page
+2. User clicks campaign → **Navigates to `/campaigns/:id/dashboard`** (this feature)
+3. Dashboard displays with sidebar, widgets, and category navigation
+
+**Required Changes**:
+- **FR-126**: Campaign list "Open Campaign" action MUST navigate to `/campaigns/:id/dashboard` instead of card editor
+- **FR-127**: Dashboard becomes the new campaign homepage and primary entry point
+- **FR-128**: Wiki/card system (Features 003-004) becomes accessed via optional sidebar button (deferred to Feature 018)
+
+### Create Campaign Flow (Feature 002 Integration)
+
+**OLD Flow** (pre-Feature 015):
+1. User clicks "Create Campaign"
+2. Campaign created in database
+3. System immediately opens card editor for new campaign root page
+4. User begins editing wiki content
+
+**NEW Flow** (Feature 015 architectural shift):
+1. User clicks "Create Campaign"
+2. Campaign created in database
+3. System navigates to `/campaigns/:id/dashboard` for new campaign
+4. User sees empty dashboard with "Get started" messaging
+5. User begins by adding structured entities (NPCs, Locations, etc.) via sidebar
+
+**Required Changes**:
+- **FR-129**: "Create Campaign" success action MUST navigate to `/campaigns/:id/dashboard`
+- **FR-130**: Empty dashboard MUST display onboarding messaging: "Welcome to your new campaign! Get started by adding your first [category]."
+- **FR-131**: Empty dashboard MUST highlight primary categories to help new users (NPCs, Locations, Session Recaps)
+
+### Campaign Navigation Architecture
+
+**Routing Structure**:
+```
+/campaigns                          → Campaign list (Feature 002, unchanged)
+/campaigns/:id/dashboard            → Dashboard (Feature 015, NEW default)
+/campaigns/:id/settings             → Settings (Feature 004, existing)
+/campaigns/:id/npcs                 → NPCs category landing (Feature 015)
+/campaigns/:id/npcs/:npcId          → NPC detail page (Feature 015)
+/campaigns/:id/locations            → Locations category (Feature 015)
+... (all 13 categories follow same pattern)
+/campaigns/:id/wiki                 → Wiki portal (Feature 018, deferred)
+```
+
+**Breadcrumb Examples** (FR-051 implementation reference):
+- Dashboard: `Campaign Name > Dashboard`
+- Category Landing: `Campaign Name > NPCs`
+- Entity Detail: `Campaign Name > NPCs > Gandalf the Grey`
+- Entity Edit: `Campaign Name > NPCs > Gandalf the Grey > Edit`
+
+### User Education Requirements
+
+**FR-132**: Dashboard MUST clearly communicate that structured categories (this feature) are the **canon context** for AI tools, while wiki system (Feature 018) is optional organizational content
+
+**FR-133**: Empty dashboard MUST guide users toward structured content first: "Add your campaign's NPCs, Locations, and Factions to get started. These become the source of truth for AI-assisted planning."
+
+**FR-134**: Settings button tooltip or help text MUST indicate: "Configure campaign theme, information levels, and category settings"
+
+---
+
 ## Notes for Planning Phase
 
 **UI/UX Considerations:**

@@ -1,6 +1,6 @@
 # Wrldbldr MCP Manager Development Guidelines
 
-Auto-generated from feature plans. Last updated: 2025-10-03
+Auto-generated from feature plans. Last updated: 2025-10-12
 
 ## Mission
 
@@ -114,6 +114,18 @@ Wrldbldr MCP Manager is a TTRPG campaign management webapp that solves the "plan
 - Reuses existing services: CardService, KnowledgeGraphService, InformationLevelService (no duplication)
 - 29 tools: 6 card operations, 5 hierarchy navigation, 4 knowledge graph operations, 2 session recap queries, 2 information level discovery, 3 database card operations, 2 map card operations, 3 resources, 2 prompts
 
+**Backend** (014-create-the-database):
+- Better-SQLite3 with 14 new tables: 13 category tables (factions, npcs, locations, session_recaps, quests, player_characters, lore_entries, world_rules, planar_forces, session_prep, custom_mechanics, items, creatures) + custom_field_definitions support table
+- Universal fields pattern: 10 common fields across all categories (id, campaign_id, name, description, core_status, player_knowledge, tags, created_at, updated_at, custom_fields)
+- Information filtering middleware: extractViewMode (X-View-Mode header), stripDmFields (player_view response filtering), getPlayerKnowledgeFilter (SQL WHERE clause generation)
+- Foreign key relationships: explicit FK columns with CASCADE (campaign_id) and SET NULL (faction_id, superior_npc_id, parent_location_id, quest_giver_id, etc.)
+- Self-referential FKs with circular reference detection: superior_npc_id, parent_location_id, related_rules
+- JSON arrays for many-to-many: locations[], key_members[], allied_factions[], npcs_to_prep[], etc. (no junction tables in v1)
+- Session prep one-way linking: npcs_to_prep/locations_to_prep reference canonical entities without reverse lookups
+- Canonical enforcement: SessionRecap always is_canon=1/canonical_status='canon', SessionPrep always is_canon=0/canonical_status='hypothetical'/player_knowledge='dm_only'
+- 14 service classes: NPCService, LocationService, FactionService, SessionRecapService, QuestService, PlayerCharacterService, LoreEntryService, WorldRuleService, PlanarForceService, SessionPrepService, CustomMechanicService, ItemService, CreatureService, CustomFieldDefinitionService
+- Performance targets: <100ms single entity read, <500ms list queries (100 results)
+
 **Testing** (002-create-the-authentication):
 - Vitest + React Testing Library (frontend unit tests)
 - Playwright (frontend E2E tests)
@@ -149,6 +161,13 @@ Wrldbldr MCP Manager is a TTRPG campaign management webapp that solves the "plan
 - 10 test files created, cannot run until MCP SDK API corrections applied
 - See specs/011-create-model-context/IMPLEMENTATION_NOTES.md for refactoring guide
 
+**Testing** (014-create-the-database):
+- Backend: Vitest + Supertest (14 contract tests for category CRUD operations with information filtering, pagination, foreign key validation, circular reference detection)
+- Unit tests: information filter middleware (extractViewMode, stripDmFields, stripDmFieldsFromArray, getPlayerKnowledgeFilter, buildWhereClause)
+- Integration tests: informationFiltering (X-View-Mode header filtering, dm_* field stripping), foreignKeyConnections (NPC→Faction, NPC→NPC, Location→Location, Quest→NPC/SessionRecap, Campaign CASCADE), sessionPrepOneWay (one-way references, stale IDs acceptable, hypothetical marker enforcement), performance (100 entities per category, <100ms single read, <500ms list)
+- Performance validation: All 13 categories tested for single entity read (<100ms) and list queries (<500ms for 100 results)
+- No E2E tests (backend-only feature, UI integration deferred to future features)
+
 ## Project Structure
 
 ```
@@ -162,10 +181,10 @@ wrldbldr-mcp-manager/
 ├── backend/
 │   ├── Dockerfile
 │   ├── src/
-│   │   ├── models/             # User, Campaign, Session, Setting, Card, InformationLevel, ImportSession, PlanningSession, KnowledgeGraph, GraphNode, GraphEdge, ImportBatch
-│   │   ├── services/           # AuthService, CampaignService, DatabaseService, CardService, SettingService, InformationLevelService, ViewModeService, ImportService, PlanningService, KnowledgeGraphService, LLMService (OpenAI/Anthropic), EntityExtractionService, FileParserService
-│   │   ├── middleware/         # keycloak.ts, cors.ts, errorHandler.ts, viewModeFilter.ts, multer.ts
-│   │   ├── routes/             # auth.ts, campaigns.ts, sessions.ts, cards.ts, settings.ts, database-cards.ts, information-levels.ts, view-mode.ts, import.ts, planning.ts, graphs.ts, health.ts
+│   │   ├── models/             # User, Campaign, Session, Setting, Card, InformationLevel, ImportSession, PlanningSession, KnowledgeGraph, GraphNode, GraphEdge, ImportBatch, NPC, Location, Faction, SessionRecap, Quest, PlayerCharacter, LoreEntry, WorldRule, PlanarForce, SessionPrep, CustomMechanic, Item, Creature, CustomFieldDefinition
+│   │   ├── services/           # AuthService, CampaignService, DatabaseService, CardService, SettingService, InformationLevelService, ViewModeService, ImportService, PlanningService, KnowledgeGraphService, LLMService (OpenAI/Anthropic), EntityExtractionService, FileParserService, NPCService, LocationService, FactionService, SessionRecapService, QuestService, PlayerCharacterService, LoreEntryService, WorldRuleService, PlanarForceService, SessionPrepService, CustomMechanicService, ItemService, CreatureService, CustomFieldDefinitionService
+│   │   ├── middleware/         # keycloak.ts, cors.ts, errorHandler.ts, viewModeFilter.ts, multer.ts, informationFilter.ts
+│   │   ├── routes/             # auth.ts, campaigns.ts, sessions.ts, cards.ts, settings.ts, database-cards.ts, information-levels.ts, view-mode.ts, import.ts, planning.ts, graphs.ts, health.ts, npcs.ts, locations.ts, factions.ts, sessionRecaps.ts, quests.ts, playerCharacters.ts, loreEntries.ts, worldRules.ts, planarForces.ts, sessionPrep.ts, customMechanics.ts, items.ts, creatures.ts, customFieldDefinitions.ts
 │   │   ├── mcp/                # Model Context Protocol server (Feature 011 - ⚠️ needs API refactoring)
 │   │   │   ├── server.ts       # MCP server entry point (stdio transport, JSON-RPC)
 │   │   │   ├── schemas/        # Zod schemas for 29 tools (card, hierarchy, graph, recap, info-level, database, map)
@@ -174,14 +193,15 @@ wrldbldr-mcp-manager/
 │   │   │   ├── prompts/        # 2 AI prompt templates (import_workflow, planning_workflow)
 │   │   │   └── middleware/     # permissions.ts, transactions.ts (10s timeout), logging.ts (mcp_tool_logs audit)
 │   │   └── db/
-│   │       ├── schema.sql      # CREATE TABLE statements (users, campaigns, sessions, settings, cards, information_levels, import_sessions, planning_sessions, knowledge_graphs, graph_nodes, graph_edges, import_batches, mcp_tool_logs)
+│   │       ├── schema.sql      # CREATE TABLE statements (users, campaigns, sessions, settings, cards, information_levels, import_sessions, planning_sessions, knowledge_graphs, graph_nodes, graph_edges, import_batches, mcp_tool_logs, factions, npcs, locations, session_recaps, quests, player_characters, lore_entries, world_rules, planar_forces, session_prep, custom_mechanics, items, creatures, custom_field_definitions)
 │   │       └── migrations/
 │   │           ├── migrations.ts   # Version tracking
-│   │           └── 011-mcp-tool-logs.sql  # Tool call audit logging table
+│   │           ├── 011-mcp-tool-logs.sql  # Tool call audit logging table
+│   │           └── 014-category-tables.sql  # 13 category tables + custom_field_definitions table
 │   └── tests/
-│       ├── contract/           # API contract tests (auth, campaigns, cards, settings, database-cards, information-levels, view-mode, import, planning, graphs, mcp tools)
-│       ├── integration/        # Auth flow, card hierarchy validation, view mode filtering, import approval workflow, batch revert, planning immediate updates, active filtering, mcp atomic operations/permissions/concurrency
-│       └── unit/               # Service tests, circular reference detection, partial visibility logic, entity deduplication (Levenshtein), timeline conflict detection
+│       ├── contract/           # API contract tests (auth, campaigns, cards, settings, database-cards, information-levels, view-mode, import, planning, graphs, mcp tools, npcs, locations, factions, sessionRecaps, quests, playerCharacters, loreEntries, worldRules, planarForces, sessionPrep, customMechanics, items, creatures, customFieldDefinitions)
+│       ├── integration/        # Auth flow, card hierarchy validation, view mode filtering, import approval workflow, batch revert, planning immediate updates, active filtering, mcp atomic operations/permissions/concurrency, informationFiltering, foreignKeyConnections, sessionPrepOneWay, performance
+│       └── unit/               # Service tests, circular reference detection, partial visibility logic, entity deduplication (Levenshtein), timeline conflict detection, informationFilter middleware
 └── frontend/
     ├── Dockerfile
     ├── src/
@@ -286,6 +306,8 @@ npm test:e2e                # E2E tests (Playwright)
 
 ## Recent Changes
 
+- **014-create-the-database** (2025-10-12): Structured Category Database Foundation. Backend-only feature creating 13 specialized category tables + custom_field_definitions support table. Universal fields pattern with 10 common fields (id, campaign_id, name, description, core_status, player_knowledge, tags, created_at, updated_at, custom_fields) across all categories. 13 categories: Factions (political organizations, alliances, agendas), NPCs (non-player characters with race/class/faction), Locations (places with types and hierarchies), SessionRecaps (canonical session summaries with timelines), Quests (objectives with status tracking), PlayerCharacters (PC roster with backgrounds), LoreEntries (world knowledge organized by category), WorldRules (custom mechanics and homebrew rules), PlanarForces (gods, cosmic entities, otherworldly powers), SessionPrep (hypothetical planning always dm_only), CustomMechanics (homebrew game mechanics), Items (equipment with ownership tracking), Creatures (bestiary with stat blocks). Information filtering middleware with X-View-Mode header (dm_view vs player_view) for automatic dm_* field stripping in responses. Foreign key relationships: explicit FK columns with CASCADE (campaign_id → campaigns) and SET NULL (faction_id → factions, superior_npc_id → npcs, parent_location_id → locations, quest_giver_id → npcs, started_session_id/completed_session_id → session_recaps). Self-referential FKs with circular reference detection (superior_npc_id, parent_location_id, related_rules). JSON arrays for many-to-many relationships without junction tables (locations[], key_members[], allied_factions[], npcs_to_prep[], locations_to_prep[]). Session prep one-way linking: references to canonical entities (NPCs, locations, quests) without reverse lookup fields, stale IDs acceptable after deletion. Canonical enforcement: SessionRecap hardcoded to is_canon=1/canonical_status='canon' (always canonical), SessionPrep hardcoded to is_canon=0/canonical_status='hypothetical'/player_knowledge='dm_only' (always hypothetical and DM-only). 14 TypeScript model interfaces, 14 service classes with CRUD operations, 14 REST route files (GET list, POST create, GET by ID, PUT update, DELETE), informationFilter middleware (extractViewMode, stripDmFields, getPlayerKnowledgeFilter, applyInformationFilter, buildWhereClause). Testing: 14 contract tests (category CRUD, pagination, filtering, FK validation, circular detection), 4 integration tests (informationFiltering, foreignKeyConnections, sessionPrepOneWay, performance), 1 unit test file (informationFilter middleware). Performance targets: <100ms single entity read, <500ms list queries (100 results). No frontend components (backend-only, UI integration deferred to future features). Database migration: 014-category-tables.sql with all 14 tables and indexes. Technologies: Better-SQLite3, Express 4.x middleware pattern, prepared statements for SQL injection prevention, JSON1 extension for JSONB fields (tags, custom_fields, class, locations arrays).
+
 - **011-create-model-context** (2025-10-03): Model Context Protocol (MCP) integration for structured AI tool calls. Implements Anthropic's MCP SDK to provide 29 tools across 8 categories for Feature 005's AI workflows: card operations (read, create, update, delete, search, move), hierarchy navigation (path, subtree, children, siblings, ancestor), knowledge graphs (query, list nodes, relationships, atomic updates), session recaps (get recaps, timeline events), information level discovery (list levels, get by name), database card operations (query, create entry, update entry), map card operations (list pins, create pin), plus 3 browsable resources (campaign://cards, recaps, graphs) and 2 AI prompt templates (import_workflow, planning_workflow). Middleware provides permissions (campaign ownership + information level filtering), atomic transactions (10s timeout, automatic rollback), and logging (mcp_tool_logs audit trail). All operations reuse existing services. Performance targets: <100ms single card read, <500ms search (100 results), 5 concurrent calls. **Status**: Spec complete (60 FRs), 41 files created (~6,400 lines), needs MCP SDK v0.5.0 API corrections - see specs/011-create-model-context/IMPLEMENTATION_NOTES.md for refactoring guide. Technologies: @modelcontextprotocol/sdk, zod, stdio transport, Better-SQLite3 WAL mode.
 
 - 010-create-public-campaign: Added Backend: Node.js 20 LTS + TypeScript 5.0+, Frontend: React 18 + TypeScript 5.0+ + Backend: Express 4.x, Better-SQLite3, crypto (Node.js built-in for random IDs), Frontend: React Router v6, TipTap 2.x (reuse from Feature 003), existing card components
@@ -337,6 +359,22 @@ All API endpoints documented in OpenAPI 3.0 format:
 - `/specs/011-create-model-context/contracts/*.json` - 8 JSON Schema files defining 29 MCP tools + resources + prompts
 - See IMPLEMENTATION_NOTES.md for API refactoring requirements
 
+**Feature 014 (Structured Category Database Foundation)**:
+- `/specs/014-create-the-database/contracts/factions.yaml` - Faction CRUD operations
+- `/specs/014-create-the-database/contracts/npcs.yaml` - NPC CRUD operations with faction/superior linking
+- `/specs/014-create-the-database/contracts/locations.yaml` - Location CRUD with hierarchy
+- `/specs/014-create-the-database/contracts/session-recaps.yaml` - Session recap CRUD (canonical enforcement)
+- `/specs/014-create-the-database/contracts/quests.yaml` - Quest CRUD with quest giver and session linking
+- `/specs/014-create-the-database/contracts/player-characters.yaml` - Player character CRUD
+- `/specs/014-create-the-database/contracts/lore-entries.yaml` - Lore entry CRUD
+- `/specs/014-create-the-database/contracts/world-rules.yaml` - World rule CRUD with related rules
+- `/specs/014-create-the-database/contracts/planar-forces.yaml` - Planar force CRUD
+- `/specs/014-create-the-database/contracts/session-prep.yaml` - Session prep CRUD (hypothetical enforcement, one-way linking)
+- `/specs/014-create-the-database/contracts/custom-mechanics.yaml` - Custom mechanic CRUD
+- `/specs/014-create-the-database/contracts/items.yaml` - Item CRUD with ownership tracking
+- `/specs/014-create-the-database/contracts/creatures.yaml` - Creature CRUD
+- `/specs/014-create-the-database/contracts/custom-field-definitions.yaml` - Custom field definition CRUD
+
 Run contract tests to validate implementation:
 ```bash
 cd backend && npm test:contract
@@ -349,6 +387,7 @@ cd backend && npm test:contract
 **Feature 004 Setup**: See `/specs/004-create-a-tagging/quickstart.md`
 **Feature 005 Setup**: See `/specs/005-create-the-ai/quickstart.md`
 **Feature 011 Setup**: See `/specs/011-create-model-context/quickstart.md` (⚠️ requires API refactoring first)
+**Feature 014 Setup**: See `/specs/014-create-the-database/quickstart.md`
 
 **TL;DR**:
 1. `docker-compose up --build`

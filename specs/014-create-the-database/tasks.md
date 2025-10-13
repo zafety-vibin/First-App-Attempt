@@ -43,11 +43,12 @@
 
 ## Phase 3.1: Setup & Database Migration
 
-### T001: Create database migration file
+### T001: [X] Create database migration file
 **File**: `backend/src/db/migrations/014-category-tables.sql`
 **Description**: Create migration with all 13 category tables + custom_field_definitions table (14 tables total) plus indexes. Tables: npcs, locations, factions, session_recaps, quests, player_characters, lore_entries, world_rules, planar_forces, session_prep, custom_mechanics, items, creatures, custom_field_definitions. Include universal fields (id, campaign_id, name, description, core_status, player_knowledge, tags, created_at, updated_at, custom_fields) and category-specific fields per data-model.md. Create indexes for campaign_id, core_status, player_knowledge, and foreign keys.
 **Dependencies**: None
 **Success Criteria**: Migration runs without errors, all 14 tables created with proper foreign key constraints
+**Status**: ✅ COMPLETED - All 14 tables created with foreign keys and indexes
 
 ### T002 [P]: Create NPC TypeScript model
 **File**: `backend/src/models/npc.ts`

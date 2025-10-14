@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CategoryName } from '../../contexts/SidebarContext';
 import { useCategory } from '../../hooks/useCategory';
@@ -6,7 +6,7 @@ import { usePagination } from '../../hooks/usePagination';
 import { useSorting } from '../../hooks/useSorting';
 import { useSearchFilter } from '../../hooks/useSearchFilter';
 import { useThematicLabels } from '../../hooks/useThematicLabels';
-import { useViewMode } from '../../contexts/ViewModeContext';
+import { getViewMode, setViewMode as setViewModeStorage } from '../../services/apiClient';
 import { useCategoryStats, CategoryStatsConfig } from '../../hooks/useCategoryStats';
 import { CategoryTable } from '../table/CategoryTable';
 import { TableToolbar } from '../table/TableToolbar';
@@ -42,7 +42,18 @@ export const GenericCategoryListView: React.FC<GenericCategoryListViewProps> = (
   const { page, limit, setPage, setLimit } = usePagination();
   const { sortField, sortDirection, handleSort } = useSorting();
   const { searchText, setSearchText, debouncedSearchText, filters, setFilters } = useSearchFilter();
-  const { viewMode, toggleViewMode } = useViewMode();
+
+  // Database view mode system (Feature 015) - separate from wiki's ViewModeContext
+  const [viewMode, setViewMode] = useState<'dm_view' | 'player_view'>(() => getViewMode(campaignId));
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  const toggleViewMode = () => {
+    const newMode = viewMode === 'dm_view' ? 'player_view' : 'dm_view';
+    setViewMode(newMode);
+    setViewModeStorage(campaignId, newMode);
+    // Trigger re-fetch to get filtered data from backend
+    setRefreshTrigger(prev => prev + 1);
+  };
 
   // Fetch stats if config provided
   const categoryStats = useCategoryStats(category, campaignId, statsConfig || {});
@@ -60,15 +71,32 @@ export const GenericCategoryListView: React.FC<GenericCategoryListViewProps> = (
   }), [debouncedSearchText, additionalFilters]);
 
   // Fetch entities with pagination, sorting, and filters
+  // Add refreshTrigger as dependency to re-fetch when view mode changes
   const {
     entities,
     totalCount,
     loading,
     error,
+    refresh,
   } = useCategory(category, campaignId, {
     pagination: paginationOptions,
     filters: filterOptions,
   });
+
+  // Re-fetch data when view mode changes
+  useEffect(() => {
+    if (refreshTrigger > 0) {
+      refresh();
+    }
+  }, [refreshTrigger, refresh]);
+
+  // Filter columns based on view mode - hide dm_* columns in player_view
+  const filteredColumns = useMemo(() => {
+    if (viewMode === 'player_view') {
+      return columns.filter(col => !col.accessorKey?.startsWith('dm_'));
+    }
+    return columns;
+  }, [columns, viewMode]);
 
   const categoryLabel = getCategoryLabel(category);
   const totalPages = Math.ceil(totalCount / limit);
@@ -110,7 +138,7 @@ export const GenericCategoryListView: React.FC<GenericCategoryListViewProps> = (
             onClick={toggleViewMode}
             aria-label="Toggle View Mode"
           >
-            View Mode: {viewMode === 'dm' ? 'DM View' : 'Player View'}
+            {viewMode === 'dm_view' ? 'DM View' : 'Player View'}
           </button>
           <button
             type="button"
@@ -140,7 +168,7 @@ export const GenericCategoryListView: React.FC<GenericCategoryListViewProps> = (
 
       <CategoryTable
         data={entities}
-        columns={columns}
+        columns={filteredColumns}
         onRowClick={handleRowClick}
         onSort={handleSort}
         sortField={sortField}

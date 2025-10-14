@@ -2,9 +2,9 @@
 
 ## Information Filtering Systems
 
-**Status**: INCOMPLETE - Needs architecture review
+**Status**: ✅ RESOLVED (2025-10-13)
 
-**Issue**: Two potentially conflicting view mode systems:
+**Architecture**: Two independent view mode systems working as intended:
 
 ### System 1: Database Categories (Feature 014/015)
 - Uses: `dm_view` / `player_view` (with `_view` suffix)
@@ -19,28 +19,35 @@
 - Purpose: Filter hierarchical cards based on information_level_id
 - Affects: Wiki pages, databases, images (card-based content)
 
-**Important Note from User**:
+**Important Design Principle**:
 > "they were intentionally setup like that because they were different systems. we shouldn't attempt to unify the information filtering between the databases and the cards."
 
-**Current Bug**: Information filtering not working (toggling view mode has no effect)
+## Resolution
 
-**Potential Solution** (user suggestion):
-> "If anything we should simplify the wiki to only have visible vs hidden content because the wiki isn't being referenced by any AI to inform their context so the only view concern would be DM content vs. player content which a GM who's making the wiki could manage easily."
+**Root Cause**: GenericCategoryListView was incorrectly using wiki's `ViewModeContext` instead of database view mode system.
 
-- Wiki doesn't need complex information levels (System, Common, Player, DM Secret)
-- Simplify to binary: Visible to players vs. Hidden (DM-only)
-- No AI context usage for wiki, unlike database categories
+**Fix Applied** (commit 5198d3e):
+1. Replaced `ViewModeContext` import with local state using `getViewMode`/`setViewMode` from apiClient.ts
+2. Added column filtering to hide all `dm_*` columns in `player_view`
+3. Added refresh trigger to re-fetch data when view mode toggles
+4. Fixed button text to correctly display current mode
 
-**Action Items** (for later):
-1. Investigate why information filtering toggle isn't working
-2. Decide: Keep two separate systems OR unify with clear boundaries
-3. Consider simplifying wiki to visible/hidden binary
-4. Document the intended architecture clearly
+**Testing**:
+- ✅ Tested on NPCs category page
+- ✅ dm_* columns (dm_secrets, dm_plot_relevance) correctly hide in Player View
+- ✅ Button text updates: "DM View" → "Player View"
+- ✅ Backend X-View-Mode header sent correctly
 
-**Files to Review**:
-- `frontend/src/services/apiClient.ts` (X-View-Mode header logic)
-- `frontend/src/contexts/ViewModeContext.tsx` (Feature 004 wiki filtering)
-- `frontend/src/contexts/InformationLevelContext.tsx` (Feature 004 information levels)
-- Backend viewMode middleware (validates dm/player, not dm_view/player_view)
+**Files Modified**:
+- `frontend/src/components/pages/GenericCategoryListView.tsx` - Fixed view mode system
+
+**Future Consideration** (user suggestion):
+> "If anything we should simplify the wiki to only have visible vs hidden content because the wiki isn't being referenced by any AI to inform their context"
+
+- Wiki may not need 4-level information system (System, Common, Player, DM Secret)
+- Consider simplifying to binary: Visible vs. Hidden
+- No AI context usage for wiki (unlike database categories used by Planning/Import AI)
+- Defer to future feature/refactor
 
 **Created**: 2025-10-13 (during Feature 015 bug fixing session)
+**Resolved**: 2025-10-13 (same session)

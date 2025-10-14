@@ -27,19 +27,21 @@
 
 **Objective**: Transition from static dashboard to interactive canvas with drag-drop widgets using react-grid-layout.
 
-**Remaining Work**:
-1. **Backend Canvas Support** (5 tasks): Migration, services, routes for configuration persistence
-2. **Canvas Infrastructure** (4 tasks): Core canvas system components
-3. **Canvas Services & Hooks** (3 tasks): Frontend API services and state management
-4. **Dashboard Canvas Integration** (8 tasks): Update/create dashboard widgets and page
-5. **Category Landing Canvas** (2 tasks): Add canvas to category landing pages
-6. **Sidebar & Navigation** (4 tasks): Navigation components (unchanged from original plan)
-7. **Top-Level Pages** (6 tasks): Route pages (unchanged from original plan)
-8. **Route Configuration** (1 task): Update AppRoutes
-9. **Testing** (12 tasks): Component tests + E2E tests (canvas scenarios added)
-10. **Polish** (4 tasks): Validation, performance, accessibility, documentation
+**Completed Work** (25 tasks):
+1. ✅ **Backend Canvas Support** (5 tasks): Migration, services, routes for configuration persistence
+2. ✅ **Canvas Infrastructure** (4 tasks): Core canvas system components
+3. ✅ **Canvas Services & Hooks** (3 tasks): Frontend API services and state management
+4. ✅ **Dashboard Canvas Integration** (8 tasks): Update/create dashboard widgets and page
+5. ✅ **Category Landing Canvas** (2 tasks): Add canvas to category landing pages
+6. ✅ **Top-Level Pages** (3 tasks): Dashboard page route, category landing pages, App.tsx routing
 
-**Estimated Total**: ~49 tasks (from static dashboard to full canvas system)
+**Remaining Work** (24 tasks):
+7. **Sidebar & Navigation** (4 tasks): Navigation components (T023-T026, may already exist from foundation)
+8. **Top-Level Pages** (3 tasks): Table/Detail/Create/Edit route pages (T028-T031, may use existing components)
+9. **Testing** (12 tasks): Component tests + E2E tests (T034-T045)
+10. **Polish** (4 tasks): Validation, performance, accessibility, documentation (T046-T049)
+
+**Progress**: 25/49 tasks complete (51%)
 
 ---
 
@@ -62,31 +64,31 @@
 
 ## Phase 1: Backend Canvas Support
 
-### T001 [P]: Create dashboard canvas migration
+### T001 [P]: ✅ Create dashboard canvas migration
 **File**: `backend/src/db/migrations/015-dashboard-canvas.sql`
 **Description**: Create SQL migration for canvas configuration persistence. Create tables: `dashboard_configs` (id, campaign_id, user_id, layout JSON, created_at, updated_at, UNIQUE(campaign_id, user_id)) and `category_landing_configs` (id, campaign_id, user_id, category, layout JSON, title TEXT, description TEXT, created_at, updated_at, UNIQUE(campaign_id, user_id, category)). Foreign keys with CASCADE on campaign_id and user_id. Layout JSON stores react-grid-layout configuration (array of GridLayoutItem objects).
 **Dependencies**: None
 **Success Criteria**: Migration file created, tables defined with correct schema, foreign keys with CASCADE, unique constraints enforce one config per user+campaign(+category)
 
-### T002 [P]: Create DashboardConfigService
+### T002 [P]: ✅ Create DashboardConfigService
 **File**: `backend/src/services/DashboardConfigService.ts`
 **Description**: Create service for dashboard_configs CRUD operations. Export functions: `getDashboardConfig(campaignId, userId)`, `createDashboardConfig(campaignId, userId, layout)`, `updateDashboardConfig(id, layout)`, `deleteDashboardConfig(id)`. Uses Better-SQLite3 prepared statements. Layout stored as JSON string. Returns typed DashboardConfig interface. Handle not found cases with null returns.
 **Dependencies**: T001 (migration creates table)
 **Success Criteria**: Service exports 4 functions, prepared statements prevent SQL injection, layout JSON serialized/deserialized correctly, UNIQUE constraint prevents duplicates
 
-### T003 [P]: Create CategoryLandingConfigService
+### T003 [P]: ✅ Create CategoryLandingConfigService
 **File**: `backend/src/services/CategoryLandingConfigService.ts`
 **Description**: Create service for category_landing_configs CRUD operations. Export functions: `getCategoryLandingConfig(campaignId, userId, category)`, `createCategoryLandingConfig(campaignId, userId, category, layout, title, description)`, `updateCategoryLandingConfig(id, layout, title, description)`, `deleteCategoryLandingConfig(id)`. Layout, title, description all updatable. Returns typed CategoryLandingConfig interface. Title max 200 chars, description is TipTap JSON.
 **Dependencies**: T001 (migration creates table)
 **Success Criteria**: Service exports 4 functions, prepared statements used, layout JSON + TipTap JSON stored correctly, UNIQUE constraint on (campaign_id, user_id, category)
 
-### T004 [P]: Create dashboardConfigs routes
+### T004 [P]: ✅ Create dashboardConfigs routes
 **File**: `backend/src/routes/dashboardConfigs.ts`
 **Description**: Create REST API routes for dashboard configs. Routes: `GET /api/dashboard-configs?campaign_id={id}` (get by campaign+user, returns 404 if not found), `POST /api/dashboard-configs` (create with {campaign_id, layout}), `PUT /api/dashboard-configs/:id` (update layout only), `DELETE /api/dashboard-configs/:id`. Extract user_id from Keycloak auth token middleware (Feature 002). Validate layout JSON schema with Zod (array of GridLayoutItem: {i, x, y, w, h, minW?, minH?, widgetId}).
 **Dependencies**: T002 (DashboardConfigService)
 **Success Criteria**: 4 routes created, authentication required, layout validated with Zod, user_id extracted from token, 404 handling, CRUD operations work
 
-### T005 [P]: Create categoryLandingConfigs routes
+### T005 [P]: ✅ Create categoryLandingConfigs routes
 **File**: `backend/src/routes/categoryLandingConfigs.ts`
 **Description**: Create REST API routes for category landing configs. Routes: `GET /api/category-landing-configs?campaign_id={id}&category={category}`, `POST /api/category-landing-configs` (create), `PUT /api/category-landing-configs/:id` (update layout/title/description), `DELETE /api/category-landing-configs/:id`. Validate category enum (13 valid categories from Feature 014), layout JSON (GridLayoutItem array), title max length 200, description is TipTap JSON object.
 **Dependencies**: T003 (CategoryLandingConfigService)
@@ -96,25 +98,25 @@
 
 ## Phase 2: Canvas Infrastructure
 
-### T006: Install react-grid-layout dependency
+### T006: ✅ Install react-grid-layout dependency
 **File**: `frontend/package.json`
 **Description**: Install react-grid-layout and @types/react-grid-layout via npm. Version: latest stable (~1.4.x). Verify no conflicts with existing dependencies (React 18, @dnd-kit). Add to package.json dependencies. Import CSS in main app file: `import 'react-grid-layout/css/styles.css'` and `import 'react-resizable/css/styles.css'`.
 **Dependencies**: None
 **Success Criteria**: Package installed, TypeScript types available, CSS imported, no build errors, react-grid-layout imported successfully in test file
 
-### T007: Create WidgetRegistry
+### T007: ✅ Create WidgetRegistry
 **File**: `frontend/src/components/dashboard/WidgetRegistry.ts`
 **Description**: Create centralized widget registry for extensibility. Export class WidgetRegistry with static methods: `register(widget: WidgetDefinition)`, `get(id: string): WidgetDefinition | undefined`, `getAll(): WidgetDefinition[]`, `getAllByCategory(category?: CategoryName): WidgetDefinition[]`. WidgetDefinition interface: `{id, type, name, description, component, supportedSizes, defaultSize, minSize, categories?}`. Register 7 initial widgets in registry initialization block at bottom of file.
 **Dependencies**: None (types from data-model.md)
 **Success Criteria**: Registry exports static class, register/get/getAll methods work, 7 widgets registered (NPCSummary, LocationExplorer, FactionPower, QuestTracker, SessionTimeline, PlayerCharacters, RecentActivity), category filtering works
 
-### T008: Create BaseWidget wrapper
+### T008: ✅ Create BaseWidget wrapper
 **File**: `frontend/src/components/dashboard/BaseWidget.tsx`
 **Description**: Create wrapper component for all dashboard widgets. Props: `{widgetId, instanceId, size, viewMode, campaignId, onRemove, onConfigure?}`. Renders widget header (title, remove button, optional configure button), widget content (from WidgetRegistry.get(widgetId).component), error boundary wrapper. Header has drag handle class for react-grid-layout. Size prop passed to child widget component. Apply size-adaptive CSS classes (widget-2x2, widget-3x3, etc).
 **Dependencies**: T007 (WidgetRegistry), ErrorBoundary from completed tasks
 **Success Criteria**: BaseWidget renders widget with header, drag handle works with react-grid-layout, onRemove callback fires, error boundary catches widget errors, size CSS classes applied
 
-### T009: Create WidgetPicker modal
+### T009: ✅ Create WidgetPicker modal
 **File**: `frontend/src/components/dashboard/WidgetPicker.tsx`
 **Description**: Create modal for selecting widgets to add. Props: `{open, onClose, onSelect: (widgetId: string) => void, existingWidgets: string[], categoryFilter?: CategoryName}`. Uses Radix UI Dialog. Fetches available widgets from WidgetRegistry.getAll() or getAll ByCategory(). Displays grid of widget cards (icon, name, description, "Add" button). Disables widgets already on canvas (check existingWidgets array). Close on Escape or Cancel button. onSelect fires with widgetId when "Add" clicked.
 **Dependencies**: T007 (WidgetRegistry), @radix-ui/react-dialog (already installed)
@@ -124,19 +126,19 @@
 
 ## Phase 3: Canvas Services & Hooks
 
-### T010 [P]: Create dashboardConfigService (frontend)
+### T010 [P]: ✅ Create dashboardConfigService (frontend)
 **File**: `frontend/src/services/dashboardConfigService.ts`
 **Description**: Create frontend API service wrapping backend dashboard config endpoints (T004). Export functions: `getDashboardConfig(campaignId)`, `createDashboardConfig(campaignId, layout)`, `updateDashboardConfig(id, layout)`, `deleteDashboardConfig(id)`. Use apiClient from completed tasks (includes auth + view mode headers). Handle 404 responses (return null for getDashboardConfig). Return typed promises with DashboardConfig interface from data-model.md.
 **Dependencies**: T004 (backend routes), apiClient from completed tasks
 **Success Criteria**: 4 functions exported, API calls use correct endpoints, auth headers included, 404 handled gracefully, typed returns
 
-### T011 [P]: Create categoryLandingConfigService (frontend)
+### T011 [P]: ✅ Create categoryLandingConfigService (frontend)
 **File**: `frontend/src/services/categoryLandingConfigService.ts`
 **Description**: Create frontend API service wrapping backend category landing config endpoints (T005). Export functions: `getCategoryLandingConfig(campaignId, category)`, `createCategoryLandingConfig(campaignId, category, layout, title, description)`, `updateCategoryLandingConfig(id, layout, title, description)`, `deleteCategoryLandingConfig(id)`. Match pattern from T010.
 **Dependencies**: T005 (backend routes), apiClient from completed tasks
 **Success Criteria**: 4 functions exported, API calls correct, category parameter validated, typed returns
 
-### T012: Create useDashboardCanvas hook
+### T012: ✅ Create useDashboardCanvas hook
 **File**: `frontend/src/hooks/useDashboardCanvas.ts`
 **Description**: Create dashboard canvas state management hook. Hook signature: `useDashboardCanvas(campaignId: string)`. Manages: layout state (GridLayoutItem[]), widgets (WidgetInstance[]), loading, saving, error. Fetches config via dashboardConfigService.getDashboardConfig() on mount. Debounces layout changes (500ms) before calling updateDashboardConfig(). Returns: `{layout, widgets, addWidget(widgetId), removeWidget(instanceId), onLayoutChange(newLayout), pickerOpen, setPickerOpen, loading, saving, error, refresh}`. Creates default empty config if none exists.
 **Dependencies**: T010 (dashboardConfigService), T007 (WidgetRegistry)
@@ -146,49 +148,49 @@
 
 ## Phase 4: Dashboard Canvas Integration
 
-### T013: Rewrite DashboardPage with canvas
+### T013: ✅ Rewrite DashboardPage with canvas
 **File**: `frontend/src/components/dashboard/DashboardPage.tsx`
 **Description**: **COMPLETE REWRITE** of dashboard page for canvas system. Props: `{campaignId}`. Uses useDashboardCanvas hook (T012). Renders: page header with "Add Widget" button (opens WidgetPicker), react-grid-layout GridLayout component (12 columns, 10px row height, draggable, resizable), BaseWidget (T008) for each widget in layout. ViewModeToggle in header (reuse from Feature 004). Loading state shows skeleton loaders. Empty state shows "Add Widget" prompt. Error boundary wrapper. Pass viewMode from localStorage to each BaseWidget. Responsive: 1 column mobile, 2-3 columns desktop.
 **Dependencies**: T008 (BaseWidget), T009 (WidgetPicker), T012 (useDashboardCanvas hook), react-grid-layout, DashboardContext from completed tasks, ViewModeToggle from Feature 004
 **Success Criteria**: Page renders canvas with react-grid-layout, widgets draggable/resizable, "Add Widget" button opens picker, widgets added/removed dynamically, layout auto-saves (debounced), view mode toggle works, responsive layout, loading/empty/error states
 
-### T014 [P]: Update NPCSummaryWidget for size-adaptive rendering
+### T014 [P]: ✅ Update NPCSummaryWidget for size-adaptive rendering
 **File**: `frontend/src/components/dashboard/NPCSummaryWidget.tsx`
 **Description**: Update existing NPCSummaryWidget (completed task) to support size-adaptive rendering. Add `size: WidgetSize` prop to component signature. Conditional rendering: `size === '2x2'` shows compact view (total count, "View All" link), `size === '3x3'` or larger shows detailed view (count, relationship breakdown chart, 5 recent NPCs, link). Use React.memo for performance. Remove campaignId from props (gets from context or BaseWidget).
 **Dependencies**: Existing NPCSummaryWidget from completed tasks, BaseWidgetProps interface from data-model.md
 **Success Criteria**: Widget accepts size prop, renders compact view for 2x2, renders detailed view for 3x3+, memoized, no prop drilling of campaignId
 
-### T015 [P]: Update LocationExplorerWidget for size-adaptive rendering
+### T015 [P]: ✅ Update LocationExplorerWidget for size-adaptive rendering
 **File**: `frontend/src/components/dashboard/LocationExplorerWidget.tsx`
 **Description**: Update existing LocationExplorerWidget for size-adaptive rendering. Same pattern as T014: add size prop, compact view (2x2) shows count + link, detailed view (3x3+) shows count + type breakdown chart + 5 recent + link. React.memo.
 **Dependencies**: Existing LocationExplorerWidget from completed tasks
 **Success Criteria**: Size-adaptive rendering works, memoized
 
-### T016 [P]: Update FactionPowerWidget for size-adaptive rendering
+### T016 [P]: ✅ Update FactionPowerWidget for size-adaptive rendering
 **File**: `frontend/src/components/dashboard/FactionPowerWidget.tsx`
 **Description**: Update existing FactionPowerWidget for size-adaptive rendering. Same pattern: add size prop, compact (2x2) shows count + link, detailed (3x3+) shows count + power level distribution + 5 recent + link. React.memo.
 **Dependencies**: Existing FactionPowerWidget from completed tasks
 **Success Criteria**: Size-adaptive rendering works, memoized
 
-### T017 [P]: Update QuestTrackerWidget for size-adaptive rendering
+### T017 [P]: ✅ Update QuestTrackerWidget for size-adaptive rendering
 **File**: `frontend/src/components/dashboard/QuestTrackerWidget.tsx`
 **Description**: Update existing QuestTrackerWidget for size-adaptive rendering. Compact (2x2): active count + "View All" link. Detailed (3x3+): active/completed counts + progress bar + 5 active quests + link. React.memo.
 **Dependencies**: Existing QuestTrackerWidget from completed tasks
 **Success Criteria**: Size-adaptive rendering works, memoized
 
-### T018 [P]: Update SessionTimelineWidget for size-adaptive rendering
+### T018 [P]: ✅ Update SessionTimelineWidget for size-adaptive rendering
 **File**: `frontend/src/components/dashboard/SessionTimelineWidget.tsx`
 **Description**: Update existing SessionTimelineWidget for size-adaptive rendering. Compact (2x2): last recap title + date + link. Detailed (3x3+): last recap (excerpt) + next prep + in-game date + 2 links. React.memo.
 **Dependencies**: Existing SessionTimelineWidget from completed tasks
 **Success Criteria**: Size-adaptive rendering works, memoized
 
-### T019 [P]: Update PlayerCharactersWidget for size-adaptive rendering
+### T019 [P]: ✅ Update PlayerCharactersWidget for size-adaptive rendering
 **File**: `frontend/src/components/dashboard/PlayerCharactersWidget.tsx`
 **Description**: Update existing PlayerCharactersWidget for size-adaptive rendering. Compact (2x2): active PC count + level range + link. Detailed (3x3+): count + level range + 5 PCs (name, player, class, level) + link. React.memo.
 **Dependencies**: Existing PlayerCharactersWidget from completed tasks
 **Success Criteria**: Size-adaptive rendering works, memoized
 
-### T020 [P]: Update RecentActivityWidget for size-adaptive rendering
+### T020 [P]: ✅ Update RecentActivityWidget for size-adaptive rendering
 **File**: `frontend/src/components/dashboard/RecentActivityWidget.tsx`
 **Description**: Update existing RecentActivityWidget for size-adaptive rendering. Compact (2x2): 3 most recent items + "View All" link. Detailed (3x3+): 10 most recent items with category icons + relative time. React.memo.
 **Dependencies**: Existing RecentActivityWidget from completed tasks
@@ -198,13 +200,13 @@
 
 ## Phase 5: Category Landing Canvas
 
-### T021: Create CategoryLandingCanvas component
+### T021: ✅ Create CategoryLandingCanvas component
 **File**: `frontend/src/components/categories/landing/CategoryLandingCanvas.tsx`
 **Description**: Create constrained canvas for category landing pages (reuses dashboard canvas patterns). Props: `{campaignId, category}`. Uses useCategoryLandingCanvas hook (similar to useDashboardCanvas but for category configs). Renders react-grid-layout constrained to max-height: 50vh. BaseWidget wrapper for each widget. "Add Widget" button. WidgetPicker filters by category (WidgetRegistry.getAllByCategory(category)). Same drag/resize functionality as dashboard. Auto-saves layout via categoryLandingConfigService.
 **Dependencies**: T008 (BaseWidget), T009 (WidgetPicker with category filter), T011 (categoryLandingConfigService), react-grid-layout
 **Success Criteria**: Canvas renders with 50vh max height, widgets draggable/resizable, "Add Widget" opens picker filtered by category, layout auto-saves, empty state shows "Add Widget" prompt
 
-### T022: Create CategoryLandingTextEditor component
+### T022: ✅ Create CategoryLandingTextEditor component
 **File**: `frontend/src/components/categories/landing/CategoryLandingTextEditor.tsx`
 **Description**: Create editable title + description section for category landing pages (below canvas). Props: `{campaignId, category, initialTitle, initialDescription, onSave}`. Renders: editable title (input field, max 200 chars), TipTap editor for description (reuse from Feature 003), "Save" button (debounced 1s). Calls onSave(title, description) with TipTap JSON. Displays save indicator ("Saving...", "Saved", error message). Empty state: "Add a title and description for this category."
 **Dependencies**: TipTap components from Feature 003, T011 (categoryLandingConfigService for saves)
@@ -246,7 +248,7 @@
 
 **6 tasks from original plan** - Minor updates for canvas integration:
 
-### T027: Update CategoryLandingPageRoute component
+### T027: ✅ Update CategoryLandingPageRoute component (13 category landing pages created)
 **File**: `frontend/src/pages/CategoryLandingPageRoute.tsx`
 **Description**: Create route page wrapper for category landing with canvas. Extracts campaignId and category from URL params (useParams). Renders: CategoryLandingCanvas (T021) at top, CategoryLandingTextEditor (T022) below canvas, SearchFilterBar + "View Table" button at bottom. Wraps in ErrorBoundary. Fetches category landing config for initial title/description.
 **Dependencies**: T021 (CategoryLandingCanvas), T022 (CategoryLandingTextEditor), SearchFilterBar from completed tasks, ErrorBoundary from completed tasks, react-router-dom
@@ -276,7 +278,7 @@
 **Dependencies**: Category services from completed tasks, GenericEntityForm from completed tasks, ErrorBoundary from completed tasks, react-router-dom
 **Success Criteria**: Page fetches entity, renders edit form, onSubmit updates and navigates, onCancel navigates back, error boundary catches errors
 
-### T032: Create DashboardPageRoute component
+### T032: ✅ Create DashboardPageRoute component
 **File**: `frontend/src/pages/DashboardPageRoute.tsx`
 **Description**: Create route page for dashboard. Extracts campaignId from URL. Renders DashboardPage component (T013 with canvas). Wraps in ErrorBoundary.
 **Dependencies**: T013 (DashboardPage with canvas), ErrorBoundary from completed tasks, react-router-dom
@@ -286,7 +288,7 @@
 
 ## Phase 8: Route Configuration
 
-### T033: Update AppRoutes.tsx with new routes
+### T033: ✅ Update AppRoutes.tsx with new routes (via App.tsx)
 **File**: `frontend/src/routes/AppRoutes.tsx`
 **Description**: Add routes for Feature 015 to existing router config. Routes: `/campaigns/:campaignId/dashboard` → DashboardPageRoute (T032), `/campaigns/:campaignId/:category` → CategoryLandingPageRoute (T027), `/campaigns/:campaignId/:category/table` → CategoryTablePageRoute (T028), `/campaigns/:campaignId/:category/create` → CategoryCreatePageRoute (T030), `/campaigns/:campaignId/:category/:entityId` → CategoryDetailPageRoute (T029), `/campaigns/:campaignId/:category/:entityId/edit` → CategoryEditPageRoute (T031). All routes protected (require auth from Feature 002). Use React.lazy + Suspense for code splitting.
 **Dependencies**: T027-T032 (page routes), existing AppRoutes.tsx from Feature 002

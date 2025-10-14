@@ -37,6 +37,8 @@ import { GenericCategoryDetailView } from './components/pages/GenericCategoryDet
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { FloatingEasel } from './components/FloatingEasel';
 import { Sidebar } from './components/navigation/Sidebar';
+import { CategoryCreatePageRoute } from './pages/CategoryCreatePageRoute';
+import { CategoryEditPageRoute } from './pages/CategoryEditPageRoute';
 import { NPCsLandingPage } from './pages/category-landing/NPCsLandingPage';
 import { LocationsLandingPage } from './pages/category-landing/LocationsLandingPage';
 import { FactionsLandingPage } from './pages/category-landing/FactionsLandingPage';
@@ -419,7 +421,31 @@ function AppContent() {
           }
         />
 
-        {/* Feature 015: Category Detail Pages (generic catch-all route, must be LAST) */}
+        {/* Feature 015: Category Create Pages - T030 (must come BEFORE detail route) */}
+        <Route
+          path="/campaigns/:campaignId/:category/create"
+          element={
+            <ProtectedRoute>
+              <CampaignLayoutWrapper>
+                <CategoryCreatePageRoute />
+              </CampaignLayoutWrapper>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Feature 015: Category Edit Pages - T031 (must come BEFORE detail route) */}
+        <Route
+          path="/campaigns/:campaignId/:category/:entityId/edit"
+          element={
+            <ProtectedRoute>
+              <CampaignLayoutWrapper>
+                <CategoryEditPageRoute />
+              </CampaignLayoutWrapper>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Feature 015: Category Detail Pages - T029 (generic catch-all route, must be LAST) */}
         <Route
           path="/campaigns/:campaignId/:category/:entityId"
           element={

@@ -29,6 +29,9 @@ import sessionPrepRoutes from './routes/sessionPrep';
 import customMechanicRoutes from './routes/customMechanics';
 import itemRoutes from './routes/items';
 import creatureRoutes from './routes/creatures';
+// Feature 015 canvas routes
+import dashboardConfigRoutes from './routes/dashboardConfigs';
+import categoryLandingConfigRoutes from './routes/categoryLandingConfigs';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -65,6 +68,10 @@ app.use('/api/session-prep', sessionPrepRoutes);
 app.use('/api/custom-mechanics', customMechanicRoutes);
 app.use('/api/items', itemRoutes);
 app.use('/api/creatures', creatureRoutes);
+
+// Feature 015: Canvas configuration routes
+app.use('/api/dashboard-configs', dashboardConfigRoutes);
+app.use('/api/category-landing-configs', categoryLandingConfigRoutes);
 
 // Error handler (must be last)
 app.use(errorHandler);

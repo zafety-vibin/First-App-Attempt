@@ -137,6 +137,17 @@ export function runMigrations(): void {
     }
   });
 
+  // Migration 15: Feature 015 - Dashboard Canvas System
+  runMigration(15, () => {
+    const migrationsDir = path.join(__dirname, '../db/migrations');
+    const filePath = path.join(migrationsDir, '015-dashboard-canvas.sql');
+    if (fs.existsSync(filePath)) {
+      const sql = fs.readFileSync(filePath, 'utf-8');
+      db.exec(sql);
+      console.log(`  ✓ Applied 015-dashboard-canvas.sql`);
+    }
+  });
+
   console.log('✓ Database initialized');
   logDatabaseInfo();
 }

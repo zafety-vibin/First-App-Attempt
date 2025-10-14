@@ -1,0 +1,344 @@
+/**
+ * Widget Styles - Shared styles for all dashboard widgets
+ * Feature: 015-create-the-dashboard (T014-T020)
+ *
+ * Provides consistent styling for:
+ * - Loading states
+ * - Error states
+ * - Empty states
+ * - Compact view (1x1, 2x2)
+ * - Detailed view (3x3+)
+ */
+
+/* ============================================================================
+   Loading State
+   ============================================================================ */
+
+.widget-loading {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+/* ============================================================================
+   Error State
+   ============================================================================ */
+
+.widget-error {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  text-align: center;
+}
+
+.widget-error-icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.widget-error-text {
+  font-size: 0.875rem;
+  color: #c00;
+  line-height: 1.4;
+}
+
+/* ============================================================================
+   Empty State
+   ============================================================================ */
+
+.widget-empty {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  text-align: center;
+}
+
+.widget-empty-icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  opacity: 0.5;
+}
+
+.widget-empty-text {
+  font-size: 0.875rem;
+  color: #666;
+}
+
+/* ============================================================================
+   Compact View (1x1, 2x2)
+   ============================================================================ */
+
+.widget-compact {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  text-align: center;
+}
+
+.widget-compact-number {
+  font-size: 3rem;
+  font-weight: bold;
+  color: #4a90e2;
+  line-height: 1;
+  margin-bottom: 0.5rem;
+}
+
+.widget-compact-label {
+  font-size: 0.875rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.widget-compact-icon {
+  font-size: 3rem;
+  margin-bottom: 0.5rem;
+  opacity: 0.6;
+}
+
+/* ============================================================================
+   Detailed View (3x3+)
+   ============================================================================ */
+
+.widget-detailed {
+  width: 100%;
+  height: 100%;
+  padding: 1rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Primary stat (large number at top) */
+.widget-stat-primary {
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.widget-stat-number {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #333;
+  line-height: 1;
+  margin-bottom: 0.25rem;
+}
+
+.widget-stat-label {
+  font-size: 0.875rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.widget-stat-sublabel {
+  font-size: 0.75rem;
+  color: #999;
+  font-weight: normal;
+}
+
+/* Stat row (side-by-side stats) */
+.widget-stat-row {
+  display: flex;
+  gap: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.widget-stat-half {
+  flex: 1;
+  text-align: center;
+}
+
+.widget-stat-half .widget-stat-number {
+  font-size: 1.75rem;
+}
+
+.widget-stat-half .widget-stat-label {
+  font-size: 0.75rem;
+}
+
+/* Section (breakdown, list, etc.) */
+.widget-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.widget-section-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+}
+
+/* Breakdown (horizontal stats) */
+.widget-breakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+  color: #666;
+}
+
+.widget-breakdown-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.widget-breakdown-icon {
+  font-size: 1rem;
+}
+
+.widget-breakdown-empty {
+  color: #999;
+  font-style: italic;
+}
+
+/* List (vertical items) */
+.widget-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 0.875rem;
+  color: #333;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.widget-list-item {
+  padding: 0.25rem 0;
+  line-height: 1.4;
+}
+
+.widget-list-empty {
+  color: #999;
+  font-style: italic;
+}
+
+/* Timeline items (for SessionTimelineWidget) */
+.widget-timeline-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.widget-timeline-name {
+  font-weight: 500;
+  color: #333;
+}
+
+.widget-timeline-meta {
+  font-size: 0.75rem;
+  color: #666;
+}
+
+.widget-timeline-date {
+  color: #4a90e2;
+}
+
+/* Player character items */
+.widget-pc-name {
+  font-weight: 500;
+  color: #333;
+}
+
+.widget-pc-meta {
+  font-size: 0.75rem;
+  color: #666;
+}
+
+/* Activity list (for RecentActivityWidget) */
+.widget-activity-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.widget-activity-item {
+  padding: 0.5rem;
+  background: #f9f9f9;
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.widget-activity-item:hover {
+  background: #f0f0f0;
+}
+
+.widget-activity-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.25rem;
+  font-size: 0.75rem;
+}
+
+.widget-activity-category {
+  color: #4a90e2;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.widget-activity-time {
+  color: #999;
+}
+
+.widget-activity-name {
+  font-size: 0.875rem;
+  color: #333;
+  font-weight: 500;
+}
+
+/* ============================================================================
+   Responsive Adjustments
+   ============================================================================ */
+
+/* For very small widgets (1x1) */
+@media (max-width: 150px) {
+  .widget-compact-number {
+    font-size: 2rem;
+  }
+
+  .widget-compact-label {
+    font-size: 0.75rem;
+  }
+}
+
+/* Scrollbar styling for detailed view */
+.widget-detailed::-webkit-scrollbar {
+  width: 6px;
+}
+
+.widget-detailed::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.widget-detailed::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 3px;
+}
+
+.widget-detailed::-webkit-scrollbar-thumb:hover {
+  background: #999;
+}

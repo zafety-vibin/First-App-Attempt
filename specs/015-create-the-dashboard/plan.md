@@ -31,12 +31,12 @@
 - Phase 3-4: Implementation execution (manual or via tools)
 
 ## Summary
-Create comprehensive dashboard and navigation UI for campaign management system. Implements dashboard homepage with 7 widgets pulling from 13 structured category tables. Sidebar navigation organized by 4-type hierarchy (SETTING, LIVING WORLD, CAMPAIGN, EXTENDED) with collapsible sections. Category landing pages with statistics, recent items, and search/filter controls. Full CRUD functionality via table views, entity detail pages, and creation/edit forms. Supports thematic naming, information level filtering, and relationship display. Depends on Feature 014 REST APIs. Desktop-only for v1. Table view architecture prepares for future Gallery/Board toggles (disabled in v1).
+Create comprehensive dashboard and navigation UI for campaign management system with interactive canvas system. Implements dashboard homepage with drag-and-drop widget canvas using react-grid-layout, supporting multiple widget sizes (2x2, 3x3, 2x4) with size-adaptive content. Users choose which widgets to display via widget picker. 7 initial widgets pull from 13 structured category tables. Per-user per-campaign configuration stored in SQLite. Category landing pages feature constrained canvas (top 50vh) with editable title/description below. Sidebar navigation organized by 4-type hierarchy (SETTING, LIVING WORLD, CAMPAIGN, EXTENDED) with collapsible sections. Full CRUD functionality via table views, entity detail pages, and creation/edit forms. Supports thematic naming, information level filtering, and relationship display. All widgets respect dm_view/player_view filtering. Depends on Feature 014 REST APIs. Desktop-only for v1. Table view architecture prepares for future Gallery/Board toggles (disabled in v1).
 
 ## Technical Context
 **Language/Version**: TypeScript 5.0+ (React 18)
-**Primary Dependencies**: React 18, React Router v6, TanStack Table v8, React Hook Form, Zod (validation), Radix UI (components), Axios (API client)
-**Storage**: Browser localStorage (UI state: sidebar collapse, view preferences, filter persistence), Session storage (view mode, pagination state)
+**Primary Dependencies**: React 18, React Router v6, TanStack Table v8, React Hook Form, Zod (validation), Radix UI (components), Axios (API client), react-grid-layout (dashboard canvas)
+**Storage**: Browser localStorage (UI state: sidebar collapse, view preferences, filter persistence), Session storage (view mode, pagination state), SQLite backend (dashboard_configs, category_landing_configs tables for canvas layouts)
 **Testing**: Vitest + React Testing Library (component tests), Playwright (E2E tests)
 **Target Platform**: Docker container, localhost:3000 (desktop browsers only for v1)
 **Project Type**: web (frontend-only for this feature, backend exists in Feature 014)
@@ -111,13 +111,17 @@ frontend/
 │   ├── components/
 │   │   ├── dashboard/                          # NEW: Dashboard components
 │   │   │   ├── DashboardPage.tsx               # Main dashboard page container
-│   │   │   ├── NPCSummaryWidget.tsx            # NPC category summary widget
-│   │   │   ├── LocationExplorerWidget.tsx      # Location hierarchy explorer widget
-│   │   │   ├── FactionPowerWidget.tsx          # Faction influence display widget
-│   │   │   ├── QuestTrackerWidget.tsx          # Active quests summary widget
-│   │   │   ├── SessionTimelineWidget.tsx       # Recent sessions chronology widget
-│   │   │   ├── PlayerCharactersWidget.tsx      # Party roster widget
-│   │   │   └── RecentActivityWidget.tsx        # Cross-category recent changes widget
+│   │   │   ├── DashboardCanvas.tsx             # NEW: react-grid-layout canvas container
+│   │   │   ├── WidgetRegistry.tsx              # NEW: Centralized widget registry (extensibility)
+│   │   │   ├── WidgetPicker.tsx                # NEW: Modal for selecting widgets to add
+│   │   │   ├── BaseWidget.tsx                  # NEW: Wrapper component with remove/configure actions
+│   │   │   ├── NPCSummaryWidget.tsx            # NPC category summary widget (size-adaptive)
+│   │   │   ├── LocationExplorerWidget.tsx      # Location hierarchy explorer widget (size-adaptive)
+│   │   │   ├── FactionPowerWidget.tsx          # Faction influence display widget (size-adaptive)
+│   │   │   ├── QuestTrackerWidget.tsx          # Active quests summary widget (size-adaptive)
+│   │   │   ├── SessionTimelineWidget.tsx       # Recent sessions chronology widget (size-adaptive)
+│   │   │   ├── PlayerCharactersWidget.tsx      # Party roster widget (size-adaptive)
+│   │   │   └── RecentActivityWidget.tsx        # Cross-category recent changes widget (size-adaptive)
 │   │   ├── sidebar/                            # NEW: Navigation components
 │   │   │   ├── SidebarNavigation.tsx           # Main sidebar container with 4-type hierarchy
 │   │   │   ├── TypeSection.tsx                 # Collapsible section (SETTING/LIVING WORLD/CAMPAIGN/EXTENDED)
@@ -126,8 +130,10 @@ frontend/
 │   │   ├── categories/                         # NEW: Category-specific components (13 categories)
 │   │   │   ├── landing/                        # Category landing page components
 │   │   │   │   ├── CategoryLandingPage.tsx     # Generic landing page template
-│   │   │   │   ├── StatisticsPanel.tsx         # Entity count, last modified stats
-│   │   │   │   ├── RecentItemsList.tsx         # Recently modified entities list
+│   │   │   │   ├── CategoryLandingCanvas.tsx   # NEW: Constrained canvas (50vh) for category widgets
+│   │   │   │   ├── CategoryLandingTextEditor.tsx # NEW: TipTap editor for title/description below canvas
+│   │   │   │   ├── StatisticsPanel.tsx         # Entity count, last modified stats (can be widget)
+│   │   │   │   ├── RecentItemsList.tsx         # Recently modified entities list (can be widget)
 │   │   │   │   └── SearchFilterBar.tsx         # Search input, filter dropdowns
 │   │   │   ├── table/                          # Table view components
 │   │   │   │   ├── CategoryTable.tsx           # Generic table view with TanStack Table v8
@@ -196,6 +202,19 @@ frontend/
 │   └── routes/                                 # MODIFIED: Add new routes to existing router config
 │       └── AppRoutes.tsx                       # Add dashboard + 13 category routes
 └── tests/
+
+backend/
+├── src/
+│   ├── db/
+│   │   └── migrations/
+│   │       └── 015-dashboard-canvas.sql        # NEW: dashboard_configs and category_landing_configs tables
+│   ├── services/
+│   │   ├── DashboardConfigService.ts           # NEW: CRUD for dashboard_configs
+│   │   └── CategoryLandingConfigService.ts     # NEW: CRUD for category_landing_configs
+│   └── routes/
+│       ├── dashboardConfigs.ts                 # NEW: GET/PUT/POST /api/dashboard-configs endpoints
+│       └── categoryLandingConfigs.ts           # NEW: GET/PUT/POST /api/category-landing-configs endpoints
+└── tests/
     ├── components/                             # NEW: Component unit tests
     │   ├── dashboard/                          # Dashboard widget tests
     │   │   ├── DashboardPage.test.tsx
@@ -220,14 +239,20 @@ frontend/
         └── relationship-display.spec.ts        # Foreign key relationship test
 ```
 
-**Structure Decision**: Web application structure (frontend-only for this feature). Backend exists from Feature 014 and is not modified. All new files in `frontend/` directory. This feature adds:
+**Structure Decision**: Web application structure (frontend + limited backend for canvas configuration). Backend from Feature 014 extended with 2 new tables and 2 services for dashboard canvas persistence. This feature adds:
 
-- **40+ React components** across 5 architectural layers (dashboard, sidebar, categories, pages, common)
+**Frontend** (`frontend/` directory):
+- **45+ React components** across 5 architectural layers (dashboard with canvas, sidebar, categories with canvas, pages, common)
 - **13 API service modules** (one per category, wrapping Feature 014 REST endpoints)
 - **6 custom React hooks** for state management (pagination, sorting, search, thematic labels, sidebar)
 - **2 React Context providers** for global state (dashboard, sidebar)
 - **13 Zod validation schemas** reusing Feature 014 database schemas
-- **15+ test files** (component unit tests + E2E tests)
+- **18+ test files** (component unit tests + E2E tests)
+
+**Backend** (`backend/` directory):
+- **1 migration** (015-dashboard-canvas.sql: dashboard_configs, category_landing_configs tables)
+- **2 service classes** (DashboardConfigService, CategoryLandingConfigService)
+- **2 route files** (dashboardConfigs.ts, categoryLandingConfigs.ts)
 
 Frontend integration with Feature 014's backend via Axios API client with auth and view mode interceptors
 
@@ -297,39 +322,52 @@ Frontend integration with Feature 014's backend via Axios API client with auth a
 - Group tasks by architectural layer (foundation → UI)
 
 **Task Categories** (from data-model.md and contracts):
-1. **Foundation Layer** [P]: Contexts (2), Utilities (3), Validation Schemas (1 file with 13 schemas)
-2. **API Services Layer** [P]: 13 category service modules wrapping Feature 014 REST endpoints
-3. **Custom Hooks Layer**: 6 hooks (depend on contexts and services, some [P])
-4. **Common Components** [P]: 5 shared UI components (LoadingSpinner, SkeletonLoader, EmptyState, ErrorBoundary, ConfirmDialog)
-5. **Form Input Components** [P]: 10 input field components (TextInput, TextAreaInput, SelectInput, NumberInput, DateInput, RelationshipInput, CustomFieldsInput, InformationLevelInput, etc.)
-6. **Category Components**: Landing (4), Table (7), Forms (2), Detail (3) - depend on common components and hooks
-7. **Dashboard Widgets** [P]: 7 widget components pulling from API services
-8. **Sidebar Components**: 4 navigation components (depend on SidebarContext)
-9. **Top-Level Pages**: 6 route pages (depend on all lower layers)
-10. **Route Configuration**: Update AppRoutes.tsx with dashboard + 13 category routes
-11. **Component Tests** [P]: Test files for each component (~25 test files)
-12. **E2E Tests**: 11 scenarios from quickstart.md (7 E2E test files)
+1. **Backend Configuration Support** [P]: Migration (1), Services (2), Routes (2) for dashboard_configs and category_landing_configs
+2. **Foundation Layer** [P]: Contexts (2), Utilities (3), Validation Schemas (1 file with 13 schemas)
+3. **API Services Layer** [P]: 13 category service modules wrapping Feature 014 REST endpoints, plus 2 canvas config services
+4. **Custom Hooks Layer**: 6 hooks (depend on contexts and services, some [P]), plus 2 canvas hooks (useDashboardCanvas, useCategoryLandingCanvas)
+5. **Common Components** [P]: 5 shared UI components (LoadingSpinner, SkeletonLoader, EmptyState, ErrorBoundary, ConfirmDialog)
+6. **Form Input Components** [P]: 10 input field components (TextInput, TextAreaInput, SelectInput, NumberInput, DateInput, RelationshipInput, CustomFieldsInput, InformationLevelInput, etc.)
+7. **Dashboard Canvas Infrastructure**: DashboardCanvas (1), WidgetRegistry (1), WidgetPicker (1), BaseWidget (1) - depend on react-grid-layout and canvas config services
+8. **Dashboard Widgets** [P]: 7 widget components pulling from API services (modified to be size-adaptive)
+9. **Category Landing Canvas**: CategoryLandingCanvas (1), CategoryLandingTextEditor (1) - depend on canvas infrastructure
+10. **Category Components**: Landing (4 modified for canvas), Table (7), Forms (2), Detail (3) - depend on common components and hooks
+11. **Sidebar Components**: 4 navigation components (depend on SidebarContext)
+12. **Top-Level Pages**: 6 route pages (depend on all lower layers)
+13. **Route Configuration**: Update AppRoutes.tsx with dashboard + 13 category routes
+14. **Component Tests** [P]: Test files for each component (~30 test files including canvas)
+15. **E2E Tests**: 11 scenarios from quickstart.md plus 3 canvas scenarios (10 E2E test files)
 
 **Ordering Strategy**:
-- **Dependency-First Order**: Foundation → Services → Hooks → Common → Inputs → Category → Dashboard → Sidebar → Pages → Routes → Tests
+- **Dependency-First Order**: Backend Canvas Support → Foundation → Services → Hooks → Common → Inputs → Canvas Infrastructure → Dashboard Widgets → Category Landing Canvas → Category Components → Sidebar → Pages → Routes → Tests
 - **Within Each Layer**: Mark independent components/hooks as [P] for parallel execution
+- **Canvas Dependencies**: Backend must complete first, then canvas infrastructure before widgets/landing
 - **Testing Strategy**: Component tests after implementation, E2E tests after all implementations complete
 - **No TDD for UI components**: Frontend component implementation comes before tests (different from backend API TDD pattern)
 
 **Dependency Examples**:
+- Backend migration must run before any canvas components (creates dashboard_configs tables)
+- `DashboardCanvas` depends on `DashboardConfigService` and `WidgetRegistry` → backend + registry first
+- `BaseWidget` wraps all widgets → must be implemented before widget modifications
+- `CategoryLandingCanvas` depends on `DashboardCanvas` infrastructure → reuses canvas patterns
+- `useDashboardCanvas` hook depends on `DashboardConfigService` → service must be implemented first
 - `useCategory` hook depends on `apiClient` and category services → services must be implemented first
 - `CategoryTable` depends on `useCategory`, `usePagination`, `useSorting` → hooks must be implemented first
 - `CategoryCreateForm` depends on `TextInput`, `SelectInput`, etc. → input components must be implemented first
-- Dashboard widgets depend on API services and hooks → services/hooks must be implemented first
+- Dashboard widgets depend on API services, hooks, and `BaseWidget` wrapper → services/hooks/wrapper must be implemented first
 - E2E tests depend on complete implementation → run last
 
-**Estimated Output**: 55-65 numbered, ordered tasks in tasks.md
+**Estimated Output**: ~116 numbered, ordered tasks in tasks.md
+- ~5 backend canvas support tasks (1 migration + 2 services + 2 routes)
 - ~6 foundation tasks (contexts, utilities, schemas)
-- ~13 API service tasks
-- ~6 hook tasks
-- ~40 component implementation tasks (5 common + 10 inputs + 16 category + 7 dashboard + 4 sidebar + 6 pages + route config)
-- ~25 component test tasks
-- ~7 E2E test tasks
+- ~15 API service tasks (13 category + 2 canvas config)
+- ~8 hook tasks (6 original + 2 canvas hooks)
+- ~8 canvas infrastructure tasks (4 core components: DashboardCanvas, WidgetRegistry, WidgetPicker, BaseWidget + 4 integration tasks)
+- ~7 dashboard widget tasks (modified for size-adaptive rendering)
+- ~6 category landing canvas tasks (CategoryLandingCanvas, CategoryLandingTextEditor + 4 integration tasks)
+- ~40 component implementation tasks (5 common + 10 inputs + 16 category + 4 sidebar + 6 pages + route config)
+- ~30 component test tasks (includes canvas component tests)
+- ~10 E2E test tasks (7 original + 3 canvas scenarios)
 
 **IMPORTANT**: This phase is executed by the /tasks command, NOT by /plan
 

@@ -1,796 +1,449 @@
-# Tasks: Dashboard & Navigation UI
+# Tasks: Dashboard & Navigation UI (Canvas Transition)
 
 **Feature**: 015-create-the-dashboard
 **Input**: Design documents from `/specs/015-create-the-dashboard/`
-**Prerequisites**: Feature 014 (Database Foundation) complete, plan.md, research.md, data-model.md, contracts/component-contracts.md
+**Prerequisites**: Feature 014 (Database Foundation) complete, plan.md, research.md, data-model.md
 
-## Execution Flow (main)
-```
-1. Load plan.md from feature directory
-   → Extract: React 18, TypeScript 5.0+, TanStack Table v8, React Hook Form + Zod, Radix UI, React Router v6
-   → Structure: Frontend-only feature (frontend/src/)
-2. Load design documents:
-   → data-model.md: 8 UI state models, 40+ component interfaces, 13 validation schemas
-   → contracts/component-contracts.md: 40+ component contracts with props, renders, API calls
-   → quickstart.md: 11 test scenarios (7 E2E test files)
-3. Generate tasks by layer:
-   → Foundation: Contexts (2), Utilities (3), Schemas (13 in 1 file)
-   → API Services: 13 category service modules
-   → Hooks: 6 custom hooks
-   → Common Components: 5 shared UI components
-   → Form Inputs: 10 field components
-   → Category Components: 16 components (landing, table, forms, detail)
-   → Dashboard Widgets: 7 widget components
-   → Sidebar: 4 navigation components
-   → Pages: 6 route pages + route config
-   → Tests: Component tests + E2E tests
-4. Apply task rules:
-   → Different files = mark [P] for parallel
-   → Same file = sequential (no [P])
-   → Implementation before tests (UI pattern, not TDD)
-5. Number tasks sequentially (T001, T002...)
-6. Estimated: 60 tasks total
-```
+---
+
+## Archive Note
+
+**Previous Work**: 51 foundation tasks (T006-T056) completed before canvas transition.
+- Foundation: Contexts, utilities, validation schemas ✅
+- API Services: 13 category services + apiClient ✅
+- Custom Hooks: 6 hooks (useCategory, usePagination, useSorting, useSearchFilter, useThematicLabels, useSidebarState) ✅
+- Common Components: 5 components (LoadingSpinner, SkeletonLoader, EmptyState, ErrorBoundary, ConfirmDialog) ✅
+- Form Inputs: 10 components (TextInput, TextArea, Select, Checkbox, DatePicker, TagInput, FileUpload, CustomFieldEditor, RelationshipSelector) ✅
+- Category Landing: 4 components (NPCLandingCard, LocationLandingCard, QuestLandingCard, SessionTimelineCard) ✅
+- Table Components: 7 components (SortableTableHeader, TableRow, PaginationControls, CategoryTable, SearchBar, FilterPanel, TableToolbar) ✅
+- Form Components: 2 components (GenericEntityForm, DeleteConfirmation) ✅
+- Detail Components: 3 components (FieldDisplay, RelationshipLinks, EntityDetailPage) ✅
+
+**Details**: See `tasks-before-canvas.md` for completed task history.
+
+---
+
+## Current Scope: Canvas System Implementation
+
+**Objective**: Transition from static dashboard to interactive canvas with drag-drop widgets using react-grid-layout.
+
+**Remaining Work**:
+1. **Backend Canvas Support** (5 tasks): Migration, services, routes for configuration persistence
+2. **Canvas Infrastructure** (4 tasks): Core canvas system components
+3. **Canvas Services & Hooks** (3 tasks): Frontend API services and state management
+4. **Dashboard Canvas Integration** (8 tasks): Update/create dashboard widgets and page
+5. **Category Landing Canvas** (2 tasks): Add canvas to category landing pages
+6. **Sidebar & Navigation** (4 tasks): Navigation components (unchanged from original plan)
+7. **Top-Level Pages** (6 tasks): Route pages (unchanged from original plan)
+8. **Route Configuration** (1 task): Update AppRoutes
+9. **Testing** (12 tasks): Component tests + E2E tests (canvas scenarios added)
+10. **Polish** (4 tasks): Validation, performance, accessibility, documentation
+
+**Estimated Total**: ~49 tasks (from static dashboard to full canvas system)
+
+---
 
 ## Path Conventions
-- All paths relative to `frontend/` directory
+
+**Frontend**:
 - Components: `frontend/src/components/`
 - Services: `frontend/src/services/`
 - Hooks: `frontend/src/hooks/`
-- Contexts: `frontend/src/contexts/`
-- Utils: `frontend/src/utils/`
+- Pages: `frontend/src/pages/`
 - Tests: `frontend/tests/`
 
----
-
-## Phase 3.1: Foundation Layer (Contexts, Utilities, Schemas)
-
-### T001 [P]: Create DashboardContext
-**File**: `frontend/src/contexts/DashboardContext.tsx`
-**Description**: Create React Context for dashboard state management. Provides widget data state (7 widgets), loading state, error state. Export DashboardProvider component and useDashboard hook. Context wraps dashboard page and all widget components.
-**Dependencies**: None
-**Success Criteria**: Context created with TypeScript interface DashboardState from data-model.md, provider component renders children, hook returns context value
-
-### T002 [P]: Create SidebarContext
-**File**: `frontend/src/contexts/SidebarContext.tsx`
-**Description**: Create React Context for sidebar navigation state. Manages collapse state per type section (SETTING, LIVING WORLD, CAMPAIGN, EXTENDED), active category, enabled categories from campaign settings, thematic labels. Persist collapse state to localStorage with key `sidebarCollapse_{campaignId}`. Export SidebarProvider and useSidebar hook.
-**Dependencies**: None
-**Success Criteria**: Context created with SidebarState interface, localStorage persistence working, cross-tab sync via storage event listener
-
-### T003 [P]: Create thematicNames.ts utility
-**File**: `frontend/src/utils/thematicNames.ts`
-**Description**: Create thematic naming utility with getCategoryLabel() function. Maps 13 categories × 4 themes = 52 labels (High Fantasy, Cyberpunk, Sci-Fi, Modern). Export theme type, category name type, and lookup function. Default to category name if theme not provided.
-**Dependencies**: None
-**Success Criteria**: Function returns themed label (e.g., 'factions' + 'cyberpunk' → 'Corporations'), defaults correctly, TypeScript types exported
-
-### T004 [P]: Create relationshipHelpers.ts utility
-**File**: `frontend/src/utils/relationshipHelpers.ts`
-**Description**: Create helper functions for foreign key relationship traversal. Functions: extractRelationships(entity, category) returns array of relationship objects with label, category, entityIds; buildRelationshipLinks(relationships, entities) merges fetched entity data. Used by RelationshipLinks component.
-**Dependencies**: None
-**Success Criteria**: Functions extract foreign keys and JSON array relations, return typed relationship objects
-
-### T005 [P]: Create validationSchemas.ts
-**File**: `frontend/src/utils/validationSchemas.ts`
-**Description**: Create Zod validation schemas for all 13 categories. Export UniversalFieldsSchema (name, description, core_status, player_knowledge, tags, custom_fields), plus 13 category-specific schemas extending universal: NPCSchema, LocationSchema, FactionSchema, SessionRecapSchema, QuestSchema, PlayerCharacterSchema, LoreEntrySchema, WorldRuleSchema, PlanarForceSchema, SessionPrepSchema, CustomMechanicSchema, ItemSchema, CreatureSchema. Match Feature 014 database schemas from data-model.md lines 678-898.
-**Dependencies**: None
-**Success Criteria**: 14 Zod schemas exported, each validates required/optional fields, min/max constraints enforced, TypeScript types inferred
+**Backend** (canvas configuration only):
+- Migrations: `backend/src/db/migrations/`
+- Services: `backend/src/services/`
+- Routes: `backend/src/routes/`
+- Tests: `backend/tests/`
 
 ---
 
-## Phase 3.2: API Services Layer (13 Category Services)
+## Phase 1: Backend Canvas Support
 
-### T006 [P]: Extend apiClient.ts with view mode interceptor ✅
-**File**: `frontend/src/services/apiClient.ts`
-**Description**: Extend existing Axios apiClient from Feature 002 with X-View-Mode header interceptor. Read viewMode from localStorage key `viewMode_{campaignId}` (default dm_view). Add header to all requests: `config.headers['X-View-Mode'] = viewMode`. Preserve existing auth token interceptor from Feature 002.
-**Dependencies**: Feature 002 apiClient exists
-**Success Criteria**: X-View-Mode header added to all API requests, viewMode persisted in localStorage, interceptor doesn't break existing auth
+### T001 [P]: Create dashboard canvas migration
+**File**: `backend/src/db/migrations/015-dashboard-canvas.sql`
+**Description**: Create SQL migration for canvas configuration persistence. Create tables: `dashboard_configs` (id, campaign_id, user_id, layout JSON, created_at, updated_at, UNIQUE(campaign_id, user_id)) and `category_landing_configs` (id, campaign_id, user_id, category, layout JSON, title TEXT, description TEXT, created_at, updated_at, UNIQUE(campaign_id, user_id, category)). Foreign keys with CASCADE on campaign_id and user_id. Layout JSON stores react-grid-layout configuration (array of GridLayoutItem objects).
+**Dependencies**: None
+**Success Criteria**: Migration file created, tables defined with correct schema, foreign keys with CASCADE, unique constraints enforce one config per user+campaign(+category)
 
-### T007 [P]: Create npcService.ts
-**File**: `frontend/src/services/npcService.ts`
-**Description**: Create API service wrapping Feature 014 NPC endpoints. Export functions: listNPCs(campaignId, filters, pagination), getNPCById(id), createNPC(data), updateNPC(id, data), deleteNPC(id), getNPCStats(campaignId). Use apiClient from T006. Return typed promises with NPC interface from data-model.md.
-**Dependencies**: T006 (apiClient with view mode)
-**Success Criteria**: 6 functions exported, API calls use correct endpoints (GET/POST/PUT/DELETE /npcs), filters and pagination params serialized correctly
+### T002 [P]: Create DashboardConfigService
+**File**: `backend/src/services/DashboardConfigService.ts`
+**Description**: Create service for dashboard_configs CRUD operations. Export functions: `getDashboardConfig(campaignId, userId)`, `createDashboardConfig(campaignId, userId, layout)`, `updateDashboardConfig(id, layout)`, `deleteDashboardConfig(id)`. Uses Better-SQLite3 prepared statements. Layout stored as JSON string. Returns typed DashboardConfig interface. Handle not found cases with null returns.
+**Dependencies**: T001 (migration creates table)
+**Success Criteria**: Service exports 4 functions, prepared statements prevent SQL injection, layout JSON serialized/deserialized correctly, UNIQUE constraint prevents duplicates
 
-### T008 [P]: Create locationService.ts
-**File**: `frontend/src/services/locationService.ts`
-**Description**: Create API service for Location endpoints. Functions: listLocations, getLocationById, createLocation, updateLocation, deleteLocation, getLocationStats. Match pattern from T007.
-**Dependencies**: T006
-**Success Criteria**: Service exports 6 functions, calls correct /locations endpoints
+### T003 [P]: Create CategoryLandingConfigService
+**File**: `backend/src/services/CategoryLandingConfigService.ts`
+**Description**: Create service for category_landing_configs CRUD operations. Export functions: `getCategoryLandingConfig(campaignId, userId, category)`, `createCategoryLandingConfig(campaignId, userId, category, layout, title, description)`, `updateCategoryLandingConfig(id, layout, title, description)`, `deleteCategoryLandingConfig(id)`. Layout, title, description all updatable. Returns typed CategoryLandingConfig interface. Title max 200 chars, description is TipTap JSON.
+**Dependencies**: T001 (migration creates table)
+**Success Criteria**: Service exports 4 functions, prepared statements used, layout JSON + TipTap JSON stored correctly, UNIQUE constraint on (campaign_id, user_id, category)
 
-### T009 [P]: Create factionService.ts
-**File**: `frontend/src/services/factionService.ts`
-**Description**: Create API service for Faction endpoints. Functions: listFactions, getFactionById, createFaction, updateFaction, deleteFaction, getFactionStats.
-**Dependencies**: T006
-**Success Criteria**: Service exports 6 functions, calls correct /factions endpoints
+### T004 [P]: Create dashboardConfigs routes
+**File**: `backend/src/routes/dashboardConfigs.ts`
+**Description**: Create REST API routes for dashboard configs. Routes: `GET /api/dashboard-configs?campaign_id={id}` (get by campaign+user, returns 404 if not found), `POST /api/dashboard-configs` (create with {campaign_id, layout}), `PUT /api/dashboard-configs/:id` (update layout only), `DELETE /api/dashboard-configs/:id`. Extract user_id from Keycloak auth token middleware (Feature 002). Validate layout JSON schema with Zod (array of GridLayoutItem: {i, x, y, w, h, minW?, minH?, widgetId}).
+**Dependencies**: T002 (DashboardConfigService)
+**Success Criteria**: 4 routes created, authentication required, layout validated with Zod, user_id extracted from token, 404 handling, CRUD operations work
 
-### T010 [P]: Create sessionRecapService.ts
-**File**: `frontend/src/services/sessionRecapService.ts`
-**Description**: Create API service for Session Recap endpoints. Functions: listSessionRecaps, getSessionRecapById, createSessionRecap, updateSessionRecap, deleteSessionRecap, getSessionRecapStats.
-**Dependencies**: T006
-**Success Criteria**: Service exports 6 functions, calls correct /session-recaps endpoints
-
-### T011 [P]: Create questService.ts
-**File**: `frontend/src/services/questService.ts`
-**Description**: Create API service for Quest endpoints. Functions: listQuests, getQuestById, createQuest, updateQuest, deleteQuest, getQuestStats.
-**Dependencies**: T006
-**Success Criteria**: Service exports 6 functions, calls correct /quests endpoints
-
-### T012 [P]: Create playerCharacterService.ts
-**File**: `frontend/src/services/playerCharacterService.ts`
-**Description**: Create API service for Player Character endpoints. Functions: listPlayerCharacters, getPlayerCharacterById, createPlayerCharacter, updatePlayerCharacter, deletePlayerCharacter, getPlayerCharacterStats.
-**Dependencies**: T006
-**Success Criteria**: Service exports 6 functions, calls correct /player-characters endpoints
-
-### T013 [P]: Create loreEntryService.ts
-**File**: `frontend/src/services/loreEntryService.ts`
-**Description**: Create API service for Lore Entry endpoints. Functions: listLoreEntries, getLoreEntryById, createLoreEntry, updateLoreEntry, deleteLoreEntry, getLoreEntryStats.
-**Dependencies**: T006
-**Success Criteria**: Service exports 6 functions, calls correct /lore-entries endpoints
-
-### T014 [P]: Create worldRuleService.ts
-**File**: `frontend/src/services/worldRuleService.ts`
-**Description**: Create API service for World Rule endpoints. Functions: listWorldRules, getWorldRuleById, createWorldRule, updateWorldRule, deleteWorldRule, getWorldRuleStats.
-**Dependencies**: T006
-**Success Criteria**: Service exports 6 functions, calls correct /world-rules endpoints
-
-### T015 [P]: Create planarForceService.ts
-**File**: `frontend/src/services/planarForceService.ts`
-**Description**: Create API service for Planar Force endpoints. Functions: listPlanarForces, getPlanarForceById, createPlanarForce, updatePlanarForce, deletePlanarForce, getPlanarForceStats.
-**Dependencies**: T006
-**Success Criteria**: Service exports 6 functions, calls correct /planar-forces endpoints
-
-### T016 [P]: Create sessionPrepService.ts
-**File**: `frontend/src/services/sessionPrepService.ts`
-**Description**: Create API service for Session Prep endpoints. Functions: listSessionPreps, getSessionPrepById, createSessionPrep, updateSessionPrep, deleteSessionPrep, getSessionPrepStats.
-**Dependencies**: T006
-**Success Criteria**: Service exports 6 functions, calls correct /session-prep endpoints
-
-### T017 [P]: Create customMechanicService.ts
-**File**: `frontend/src/services/customMechanicService.ts`
-**Description**: Create API service for Custom Mechanic endpoints. Functions: listCustomMechanics, getCustomMechanicById, createCustomMechanic, updateCustomMechanic, deleteCustomMechanic, getCustomMechanicStats.
-**Dependencies**: T006
-**Success Criteria**: Service exports 6 functions, calls correct /custom-mechanics endpoints
-
-### T018 [P]: Create itemService.ts
-**File**: `frontend/src/services/itemService.ts`
-**Description**: Create API service for Item endpoints. Functions: listItems, getItemById, createItem, updateItem, deleteItem, getItemStats.
-**Dependencies**: T006
-**Success Criteria**: Service exports 6 functions, calls correct /items endpoints
-
-### T019 [P]: Create creatureService.ts
-**File**: `frontend/src/services/creatureService.ts`
-**Description**: Create API service for Creature endpoints. Functions: listCreatures, getCreatureById, createCreature, updateCreature, deleteCreature, getCreatureStats.
-**Dependencies**: T006
-**Success Criteria**: Service exports 6 functions, calls correct /creatures endpoints
+### T005 [P]: Create categoryLandingConfigs routes
+**File**: `backend/src/routes/categoryLandingConfigs.ts`
+**Description**: Create REST API routes for category landing configs. Routes: `GET /api/category-landing-configs?campaign_id={id}&category={category}`, `POST /api/category-landing-configs` (create), `PUT /api/category-landing-configs/:id` (update layout/title/description), `DELETE /api/category-landing-configs/:id`. Validate category enum (13 valid categories from Feature 014), layout JSON (GridLayoutItem array), title max length 200, description is TipTap JSON object.
+**Dependencies**: T003 (CategoryLandingConfigService)
+**Success Criteria**: 4 routes created, authentication required, all fields validated, category enum enforced (reject invalid categories), CRUD operations work
 
 ---
 
-## Phase 3.3: Custom Hooks Layer
+## Phase 2: Canvas Infrastructure
 
-### T020 [P]: Create useCategory hook ✅
-**File**: `frontend/src/hooks/useCategory.ts`
-**Description**: Create generic hook for category CRUD operations. Hook signature: `useCategory<T>(category: CategoryName, campaignId: string)`. Returns: `{ entities, loading, error, create, update, delete, refresh }`. Uses appropriate service from T007-T019 based on category parameter. Wraps React Query or manual state management.
-**Dependencies**: T007-T019 (all category services)
-**Success Criteria**: Generic hook works with any category, returns typed data, CRUD operations trigger API calls and re-fetch
-
-### T021 [P]: Create usePagination hook ✅
-**File**: `frontend/src/hooks/usePagination.ts`
-**Description**: Create pagination state management hook. Hook signature: `usePagination(initialPageSize: number)`. Returns: `{ currentPage, pageSize, totalPages, totalCount, setPage, setPageSize, setTotalCount }`. Persist pageSize to sessionStorage key `tablePageSize`. Reset to page 1 when pageSize changes.
+### T006: Install react-grid-layout dependency
+**File**: `frontend/package.json`
+**Description**: Install react-grid-layout and @types/react-grid-layout via npm. Version: latest stable (~1.4.x). Verify no conflicts with existing dependencies (React 18, @dnd-kit). Add to package.json dependencies. Import CSS in main app file: `import 'react-grid-layout/css/styles.css'` and `import 'react-resizable/css/styles.css'`.
 **Dependencies**: None
-**Success Criteria**: Hook manages pagination state, pageSize persisted, totalPages calculated correctly
+**Success Criteria**: Package installed, TypeScript types available, CSS imported, no build errors, react-grid-layout imported successfully in test file
 
-### T022 [P]: Create useSorting hook ✅
-**File**: `frontend/src/hooks/useSorting.ts`
-**Description**: Create table sorting state hook. Hook signature: `useSorting(defaultColumn: string, defaultDirection: 'asc' | 'desc')`. Returns: `{ sortColumn, sortDirection, setSorting, toggleSort(column: string) }`. Toggle cycles: null → asc → desc → asc.
-**Dependencies**: None
-**Success Criteria**: Hook manages sort state, toggleSort cycles correctly, state can be serialized to URL params
+### T007: Create WidgetRegistry
+**File**: `frontend/src/components/dashboard/WidgetRegistry.ts`
+**Description**: Create centralized widget registry for extensibility. Export class WidgetRegistry with static methods: `register(widget: WidgetDefinition)`, `get(id: string): WidgetDefinition | undefined`, `getAll(): WidgetDefinition[]`, `getAllByCategory(category?: CategoryName): WidgetDefinition[]`. WidgetDefinition interface: `{id, type, name, description, component, supportedSizes, defaultSize, minSize, categories?}`. Register 7 initial widgets in registry initialization block at bottom of file.
+**Dependencies**: None (types from data-model.md)
+**Success Criteria**: Registry exports static class, register/get/getAll methods work, 7 widgets registered (NPCSummary, LocationExplorer, FactionPower, QuestTracker, SessionTimeline, PlayerCharacters, RecentActivity), category filtering works
 
-### T023 [P]: Create useSearchFilter hook ✅
-**File**: `frontend/src/hooks/useSearchFilter.ts`
-**Description**: Create search and filter state hook with debouncing. Hook signature: `useSearchFilter()`. Returns: `{ searchText, setSearchText (debounced 300ms), filters, setFilters, clearFilters, activeFilterCount }`. Filters include: coreStatus[], playerKnowledge[], tags[], customFilters{}. Debounce search input to reduce API calls.
-**Dependencies**: None
-**Success Criteria**: Hook debounces search input 300ms, filters state managed, clearFilters resets to defaults
+### T008: Create BaseWidget wrapper
+**File**: `frontend/src/components/dashboard/BaseWidget.tsx`
+**Description**: Create wrapper component for all dashboard widgets. Props: `{widgetId, instanceId, size, viewMode, campaignId, onRemove, onConfigure?}`. Renders widget header (title, remove button, optional configure button), widget content (from WidgetRegistry.get(widgetId).component), error boundary wrapper. Header has drag handle class for react-grid-layout. Size prop passed to child widget component. Apply size-adaptive CSS classes (widget-2x2, widget-3x3, etc).
+**Dependencies**: T007 (WidgetRegistry), ErrorBoundary from completed tasks
+**Success Criteria**: BaseWidget renders widget with header, drag handle works with react-grid-layout, onRemove callback fires, error boundary catches widget errors, size CSS classes applied
 
-### T024: Create useThematicLabels hook ✅
-**File**: `frontend/src/hooks/useThematicLabels.ts`
-**Description**: Create thematic naming lookup hook. Hook signature: `useThematicLabels(campaignId: string)`. Fetches campaign settings (theme, category_labels) via GET /campaigns/{campaignId}/settings. Returns: `{ theme, categoryLabels: Record<CategoryName, string>, getCategoryLabel(category): string, loading, error }`. Cache response in React Query or state.
-**Dependencies**: T003 (thematicNames utility), apiClient
-**Success Criteria**: Hook fetches campaign theme, returns themed labels, getCategoryLabel function works, data cached
-
-### T025: Create useSidebarState hook ✅
-**File**: `frontend/src/hooks/useSidebarState.ts`
-**Description**: Create sidebar collapse state management hook with localStorage persistence. Hook signature: `useSidebarState(campaignId: string)`. Returns: `{ collapseState: Record<CategoryType, boolean>, toggleSection(type: CategoryType), activeCategory, setActiveCategory }`. Persist to localStorage key `sidebarCollapse_{campaignId}`. Cross-tab sync via storage event listener.
-**Dependencies**: T002 (SidebarContext)
-**Success Criteria**: Hook manages collapse state per type, persists to localStorage, cross-tab sync works, activeCategory tracks current route
+### T009: Create WidgetPicker modal
+**File**: `frontend/src/components/dashboard/WidgetPicker.tsx`
+**Description**: Create modal for selecting widgets to add. Props: `{open, onClose, onSelect: (widgetId: string) => void, existingWidgets: string[], categoryFilter?: CategoryName}`. Uses Radix UI Dialog. Fetches available widgets from WidgetRegistry.getAll() or getAll ByCategory(). Displays grid of widget cards (icon, name, description, "Add" button). Disables widgets already on canvas (check existingWidgets array). Close on Escape or Cancel button. onSelect fires with widgetId when "Add" clicked.
+**Dependencies**: T007 (WidgetRegistry), @radix-ui/react-dialog (already installed)
+**Success Criteria**: Modal renders widget grid, "Add" button fires onSelect with widgetId, existing widgets disabled, Escape/Cancel closes modal, accessible (focus trap, aria labels), category filter works if provided
 
 ---
 
-## Phase 3.4: Common Components
+## Phase 3: Canvas Services & Hooks
 
-### T026 [P]: Create LoadingSpinner component ✅
-**File**: `frontend/src/components/common/LoadingSpinner.tsx`
-**Description**: Create loading spinner component. Props: `{ size?: 'sm' | 'md' | 'lg' }`. Renders animated spinning circle icon. Use CSS animation for smooth rotation. Default size 'md'.
-**Dependencies**: None
-**Success Criteria**: Component renders spinner, size prop changes dimensions, animation smooth 60fps
+### T010 [P]: Create dashboardConfigService (frontend)
+**File**: `frontend/src/services/dashboardConfigService.ts`
+**Description**: Create frontend API service wrapping backend dashboard config endpoints (T004). Export functions: `getDashboardConfig(campaignId)`, `createDashboardConfig(campaignId, layout)`, `updateDashboardConfig(id, layout)`, `deleteDashboardConfig(id)`. Use apiClient from completed tasks (includes auth + view mode headers). Handle 404 responses (return null for getDashboardConfig). Return typed promises with DashboardConfig interface from data-model.md.
+**Dependencies**: T004 (backend routes), apiClient from completed tasks
+**Success Criteria**: 4 functions exported, API calls use correct endpoints, auth headers included, 404 handled gracefully, typed returns
 
-### T027 [P]: Create SkeletonLoader component ✅
-**File**: `frontend/src/components/common/SkeletonLoader.tsx`
-**Description**: Create skeleton placeholder component. Props: `{ type: 'widget' | 'table' | 'form' | 'detail' }`. Renders animated gray rectangles matching layout of specified type. Use CSS shimmer animation. Widget: 3 rectangles (title, content, footer). Table: header + 5 rows. Form: 6 fields. Detail: title + 8 field rows.
-**Dependencies**: None
-**Success Criteria**: Component renders skeleton matching type, shimmer animation smooth, accessible (aria-busy="true")
+### T011 [P]: Create categoryLandingConfigService (frontend)
+**File**: `frontend/src/services/categoryLandingConfigService.ts`
+**Description**: Create frontend API service wrapping backend category landing config endpoints (T005). Export functions: `getCategoryLandingConfig(campaignId, category)`, `createCategoryLandingConfig(campaignId, category, layout, title, description)`, `updateCategoryLandingConfig(id, layout, title, description)`, `deleteCategoryLandingConfig(id)`. Match pattern from T010.
+**Dependencies**: T005 (backend routes), apiClient from completed tasks
+**Success Criteria**: 4 functions exported, API calls correct, category parameter validated, typed returns
 
-### T028 [P]: Create EmptyState component ✅
-**File**: `frontend/src/components/common/EmptyState.tsx`
-**Description**: Create empty state component. Props: `{ icon?: ReactNode, message: string, actionLabel?: string, onAction?: () => void }`. Renders centered layout with optional icon, message text, and optional action button. Use semantic HTML for accessibility.
-**Dependencies**: None
-**Success Criteria**: Component renders centered message, action button calls onAction, icon displayed if provided
-
-### T029 [P]: Create ErrorBoundary component ✅
-**File**: `frontend/src/components/common/ErrorBoundary.tsx`
-**Description**: Create React error boundary component. Props: `{ children: ReactNode, fallback?: ReactNode }`. Catches errors in child components. Displays fallback UI or default error message with "Refresh Page" button. Logs errors to console with componentDidCatch. Use class component (required for error boundaries).
-**Dependencies**: None
-**Success Criteria**: Component catches child errors, displays fallback UI, logs to console, refresh button reloads page
-
-### T030 [P]: Create ConfirmDialog component ✅
-**File**: `frontend/src/components/common/ConfirmDialog.tsx`
-**Description**: Create confirmation dialog component using Radix UI Dialog. Props: `{ open: boolean, title: string, message: string, confirmLabel?: string, cancelLabel?: string, onConfirm: () => void, onCancel: () => void }`. Renders modal with title, message, and two buttons. Default labels: "Confirm" and "Cancel". Close on Escape key or cancel button. Used for bulk delete, single entity delete, unsaved changes warnings.
-**Dependencies**: @radix-ui/react-dialog (already in project from Features 004/005)
-**Success Criteria**: Dialog renders as modal, buttons call handlers, Escape key closes, accessible (focus trap, aria labels)
+### T012: Create useDashboardCanvas hook
+**File**: `frontend/src/hooks/useDashboardCanvas.ts`
+**Description**: Create dashboard canvas state management hook. Hook signature: `useDashboardCanvas(campaignId: string)`. Manages: layout state (GridLayoutItem[]), widgets (WidgetInstance[]), loading, saving, error. Fetches config via dashboardConfigService.getDashboardConfig() on mount. Debounces layout changes (500ms) before calling updateDashboardConfig(). Returns: `{layout, widgets, addWidget(widgetId), removeWidget(instanceId), onLayoutChange(newLayout), pickerOpen, setPickerOpen, loading, saving, error, refresh}`. Creates default empty config if none exists.
+**Dependencies**: T010 (dashboardConfigService), T007 (WidgetRegistry)
+**Success Criteria**: Hook fetches config, manages layout state, debounces saves (500ms), addWidget generates unique instanceId, removeWidget updates layout, onLayoutChange triggers debounced save, default empty config created if needed
 
 ---
 
-## Phase 3.5: Form Input Components
+## Phase 4: Dashboard Canvas Integration
 
-### T031 [P]: Create TextInput component ✅
-**File**: `frontend/src/components/form/TextInput.tsx`
-**Description**: Create text input field component. Props: `{ name: string, label: string, value: string, onChange: (value: string) => void, error?: string, required?: boolean }`. Renders label, input field, and error message (if present). Required indicator (*) if required. Accessible labels and error association.
-**Dependencies**: None
-**Success Criteria**: Component renders input, onChange fires on typing, error displays below input, required indicator visible
-
-### T032 [P]: Create TextArea component ✅
-**File**: `frontend/src/components/form/TextArea.tsx`
-**Description**: Create textarea input component for long text with character counter. Props: `{ name, label, value, onChange, error, placeholder, rows, disabled, required, maxLength }`. Renders label, textarea (rows=5 default), character counter, and error message. Fixed height with scrollbar.
-**Dependencies**: None
-**Success Criteria**: Component renders textarea, onChange fires, error displays, character counter updates, accessible
-
-### T033 [P]: Create Select component ✅
-**File**: `frontend/src/components/form/Select.tsx`
-**Description**: Create single-select dropdown component. Props: `{ name, label, value: string, options: {value: string, label: string}[], onChange, error, required }`. Renders label, native select element with custom arrow, and error. Empty option for nullable fields.
-**Dependencies**: None
-**Success Criteria**: Component renders select with options, onChange fires on selection, error displays
-
-### T034 [P]: Create Checkbox component ✅
-**File**: `frontend/src/components/form/Checkbox.tsx`
-**Description**: Create checkbox component. Props: `{ name, label, checked: boolean, onChange: (checked: boolean) => void, error, disabled }`. Renders checkbox with label on right, custom checkmark SVG styling, and error message.
-**Dependencies**: None
-**Success Criteria**: Component renders checkbox, onChange fires with boolean, accessible, custom styling
-
-### T035 [P]: Create DatePicker component ✅
-**File**: `frontend/src/components/form/DatePicker.tsx`
-**Description**: Create date picker component using HTML5 date input. Props: `{ name, label, value: string | null (ISO date), onChange: (value: string | null) => void, error, disabled, minDate, maxDate }`. Renders label, native date input (type="date"), and error. Store as ISO date string (YYYY-MM-DD).
-**Dependencies**: None
-**Success Criteria**: Component renders date picker, onChange fires with ISO string, min/max validation, error displays, accessible
-
-### T036 [P]: Create TagInput component ✅
-**File**: `frontend/src/components/form/TagInput.tsx`
-**Description**: Create tag input component. Props: `{ name, label, tags: string[], onChange: (tags: string[]) => void, error, placeholder, maxTags }`. Add tags by typing + Enter key. Display selected tags as removable chips. Remove last tag with backspace when input empty. Prevent duplicate tags.
-**Dependencies**: None
-**Success Criteria**: Component allows tag entry via Enter key, displays chips with X buttons, backspace removes last tag, maxTags enforced
-
-### T037 [P]: Create RichTextInput component (SKIPPED - using existing TipTap)
-**File**: N/A
-**Description**: SKIPPED - Feature 003 already has TipTap editor components. Will reuse existing TipTap integration from Feature 003 for rich text editing in forms.
-**Dependencies**: Feature 003 TipTap components
-**Success Criteria**: Note added to tasks.md, no new component created
-
-### T038 [P]: Create FileUpload component ✅
-**File**: `frontend/src/components/form/FileUpload.tsx`
-**Description**: Create drag-and-drop file upload component. Props: `{ name, label, onFileSelect: (file: File | null) => void, accept, maxSize (default 10MB), error, disabled }`. Drag-and-drop area, click to browse files, shows file name + size after selection, validation for file type and size.
-**Dependencies**: None
-**Success Criteria**: Component supports drag-and-drop and click-to-browse, validates file type/size, displays selected file info, accessible
-
-### T039 [P]: Create CustomFieldEditor component ✅
-**File**: `frontend/src/components/form/CustomFieldEditor.tsx`
-**Description**: Create dynamic custom fields editor. Props: `{ customFields: Record<string, any>, onChange, definitions: CustomFieldDefinition[], error }`. Dynamically renders form fields based on custom_field_definitions (text, textarea, number, date, select, checkbox). Uses T031-T036 input components.
-**Dependencies**: T031-T036 (input components)
-**Success Criteria**: Component renders dynamic fields from definitions, supports 6 field types, onChange updates fields object, empty state for no definitions
-
-### T040 [P]: Create RelationshipSelector component ✅
-**File**: `frontend/src/components/form/RelationshipSelector.tsx`
-**Description**: Create searchable relationship selector for foreign key and many-to-many relations. Props: `{ label, category: CategoryName, campaignId, selectedIds: string[], onChange: (ids: string[]) => void, multiple, error }`. Fetches entities via useCategory hook. Searchable dropdown with entity filtering. Multiple mode displays chips, single mode displays selected name with clear button.
-**Dependencies**: T020 (useCategory hook), T007-T019 (category services)
-**Success Criteria**: Component fetches related entities, searchable dropdown works, multiple mode shows chips, single mode shows selected with clear button, accessible
-
----
-
-## Phase 3.6: Category Landing Components
-
-### T041: Create NPCLandingCard component ✅
-**File**: `frontend/src/components/dashboard/NPCLandingCard.tsx`
-**Description**: Create NPC summary widget. Props: `{ campaignId, onViewAll? }`. Fetches NPC stats and recent NPCs (last 5). Renders total count, relationship breakdown, 5 recent NPCs, "View All NPCs" link. Uses useCategory hook and useThematicLabels.
-**Dependencies**: T007 (npcService), T020 (useCategory), T024 (useThematicLabels), T026 (LoadingSpinner), T028 (EmptyState)
-**Success Criteria**: Widget fetches data, renders stats and recent items, link navigates to NPCs landing page, loading spinner shown, responsive design
-
-### T042: Create LocationLandingCard component ✅
-**File**: `frontend/src/components/dashboard/LocationLandingCard.tsx`
-**Description**: Create location summary widget. Props: `{ campaignId, onViewAll? }`. Fetches location stats and recent locations (last 5). Renders total count, type breakdown (city/dungeon/wilderness/etc), 5 recent locations, "View All Locations" link.
-**Dependencies**: T008 (locationService), T020 (useCategory), T024 (useThematicLabels), T026 (LoadingSpinner), T028 (EmptyState)
-**Success Criteria**: Widget fetches data, renders stats and recent items, link navigates to locations landing page, loading states work
-
-### T043: Create QuestLandingCard component ✅
-**File**: `frontend/src/components/dashboard/QuestLandingCard.tsx`
-**Description**: Create quest summary widget. Props: `{ campaignId, onViewAll? }`. Fetches quest stats and recent quests (last 5). Renders active count, completed count, status breakdown, 5 recent quests with status badges, "View All Quests" link.
-**Dependencies**: T011 (questService), T020 (useCategory), T024 (useThematicLabels), T026 (LoadingSpinner), T028 (EmptyState)
-**Success Criteria**: Widget fetches data, renders stats with active/completed counts, status badges styled correctly, link navigates
-
-### T044: Create SessionTimelineCard component ✅
-**File**: `frontend/src/components/dashboard/SessionTimelineCard.tsx`
-**Description**: Create session timeline widget. Props: `{ campaignId }`. Fetches last session recap and next session prep. Renders last recap (session number, title, date, excerpt), next prep (session number, title, status, date), current in-game date, "View Recaps" and "View Prep" links.
-**Dependencies**: T010 (sessionRecapService), T016 (sessionPrepService), T020 (useCategory), T024 (useThematicLabels), T026 (LoadingSpinner), T028 (EmptyState)
-**Success Criteria**: Widget fetches recaps and prep, renders timeline sections, dates formatted correctly, links navigate, empty states shown
-
----
-
-## Phase 3.7: Table Components
-
-### T045: Create SortableTableHeader component ✅
-**File**: `frontend/src/components/table/SortableTableHeader.tsx`
-**Description**: Create sortable column header. Props: `{ label, sortKey, currentSortColumn, currentSortDirection, onSort }`. Renders column label, sort arrow icon (up/down/none), and click handler. Cycles through: null → asc → desc → asc. Highlight sorted column. Accessible (aria-sort).
-**Dependencies**: None
-**Success Criteria**: Component renders label and arrow, onSort fires on click, sorted column highlighted, accessible
-
-### T046: Create TableRow component ✅
-**File**: `frontend/src/components/table/TableRow.tsx`
-**Description**: Create table row component. Props: `{ entity, columns: ColumnDef[], onClick? }`. Renders cells per column (use column.cell/accessorFn if provided, else plain text), hover highlight. Clicking row calls onClick. Keyboard accessible (Enter/Space).
-**Dependencies**: None
-**Success Criteria**: Component renders row cells, onClick fires, hover highlight works, keyboard navigation
-
-### T047: Create PaginationControls component ✅
-**File**: `frontend/src/components/table/PaginationControls.tsx`
-**Description**: Create pagination controls. Props: `{ currentPage, totalPages, pageSize, totalCount, onPageChange, onPageSizeChange }`. Renders "Showing X-Y of Z items", Previous/Next buttons (disabled at bounds), page numbers with ellipsis, page size dropdown (10/25/50/100). Accessible keyboard navigation.
-**Dependencies**: None
-**Success Criteria**: Component renders controls, buttons disabled at bounds, page size dropdown works, accessible
-
-### T048: Create CategoryTable component ✅
-**File**: `frontend/src/components/table/CategoryTable.tsx`
-**Description**: Create generic reusable table using TanStack Table v8. Props: `{ data, columns: ColumnDef[], loading?, error?, sortColumn?, sortDirection?, onSort?, onRowClick?, emptyMessage? }`. Renders table with SortableTableHeader (T045) for each column, TableRow (T046) for each entity. Uses TanStack Table useReactTable hook. Shows loading spinner, empty state, or error state appropriately.
-**Dependencies**: T026 (LoadingSpinner), T028 (EmptyState), T045-T046, @tanstack/react-table
-**Success Criteria**: Table renders with dynamic columns, sorting works, loading/empty/error states work, generic across all 13 categories
-
-### T049: Create SearchBar component ✅
-**File**: `frontend/src/components/table/SearchBar.tsx`
-**Description**: Create search input with debounced onChange (300ms). Props: `{ value, onChange, placeholder?, onClear? }`. Search icon on left, clear button (X) on right when has value. Uses internal debouncing (300ms delay).
-**Dependencies**: None
-**Success Criteria**: Component renders search input, debouncing works (300ms), clear button appears with value, accessible
-
-### T050: Create FilterPanel component ✅
-**File**: `frontend/src/components/table/FilterPanel.tsx`
-**Description**: Create collapsible filter controls for core_status, player_knowledge, tags. Props: `{ filters: FilterState, onChange, availableTags? }`. Renders section header with active filter count badge, collapsible content with checkboxes for status/knowledge, tag chips for tags. "Clear Filters" button when any active. Expand/collapse animation.
-**Dependencies**: None
-**Success Criteria**: Component renders filters, collapse/expand works, checkboxes update state, tag chips toggle, clear filters resets all, active count badge shown
-
-### T051: Create TableToolbar component ✅
-**File**: `frontend/src/components/table/TableToolbar.tsx`
-**Description**: Create table toolbar combining SearchBar + FilterPanel + action buttons. Props: `{ searchValue, onSearchChange, filters, onFilterChange, availableTags?, actions?, showFilters? }`. Layout: SearchBar on left, FilterPanel next, action buttons on right. Sticky at top of table view. Responsive layout for mobile.
-**Dependencies**: T049 (SearchBar), T050 (FilterPanel)
-**Success Criteria**: Toolbar renders all components, sticky positioning works, responsive layout for mobile, action buttons slot works
-
----
-
-## Phase 3.8: Form Components
-
-### T052: Create GenericEntityForm component ✅
-**File**: `frontend/src/components/forms/GenericEntityForm.tsx`
-**Description**: Create generic entity form (combined create/edit functionality). Props: `{ campaignId, category, entity?, onSubmit, onCancel }`. Dynamically generates form fields from category schema (uses T031-T040 input components). Validates with Zod schema from T005. Displays inline errors. "Save"/"Update" and "Cancel" buttons. Loading spinner during submission. Supports all 13 categories with universal fields + category-specific fields.
-**Dependencies**: T005 (validation schemas), T031-T040 (input components), react-hook-form, @hookform/resolvers, zod
-**Success Criteria**: Form renders dynamic fields, validation works, inline errors display, onSubmit fires with validated data, edit mode pre-fills data, onCancel navigates away
-**Implementation Note**: Combined create/edit into single generic component instead of two separate components (EntityCreateForm/EntityEditForm). Better code reuse and DRY principle.
-
-### T053: Create DeleteConfirmation component ✅
-**File**: `frontend/src/components/forms/DeleteConfirmation.tsx`
-**Description**: Delete confirmation modal using ConfirmDialog from T030. Props: `{ isOpen, onClose, onConfirm, entityName, entityType, loading? }`. Shows entity name and type in confirmation message. Confirm button shows loading spinner while deleting. Red danger variant for delete button.
-**Dependencies**: T030 (ConfirmDialog)
-**Success Criteria**: Modal renders with entity name, danger styling applied, loading state shows spinner, onConfirm fires delete action
-
----
-
-## Phase 3.9: Detail Components
-
-### T054: Create FieldDisplay component ✅
-**File**: `frontend/src/components/detail/FieldDisplay.tsx`
-**Description**: Create read-only field display. Props: `{ label, value, type, emptyText? }`. Renders label + formatted value based on type. Text: plain string (preserves line breaks). Number: formatted with commas. Date: unix timestamp to locale date. Array: bulleted list chips. JSON: formatted code block with syntax highlighting. Empty state with configurable text.
-**Dependencies**: None
-**Success Criteria**: Component renders label and value, formatting correct per type (text/date/array/json/number), empty state shown, responsive grid layout
-
-### T055: Create RelationshipLinks component ✅
-**File**: `frontend/src/components/detail/RelationshipLinks.tsx`
-**Description**: Create relationship links section. Props: `{ relationships: Relationship[], campaignId }`. Uses extractRelationships + buildRelationshipLinks from relationshipHelpers. Fetches entity names via service imports (batch optimization deferred). Displays clickable chips navigating to related entities. Loading state with spinner. "None" if relationship array empty. Groups by relationship type with themed category badges.
-**Dependencies**: T007-T019 (services for fetch), T004 (relationship helpers), T024 (thematic labels)
-**Success Criteria**: Component fetches related entity names, displays chips, loading state shown, "None" shown for empty, links navigate to detail pages, themed category labels
-
-### T056: Create EntityDetailPage component ✅
-**File**: `frontend/src/components/detail/EntityDetailPage.tsx`
-**Description**: Create entity detail page with view/edit modes. Props: `{ campaignId, category, entityId }`. Renders back button, entity name title, Edit/Delete buttons, FieldDisplay (T054) for all fields (universal + category-specific + custom), RelationshipLinks (T055) for relationships. Fetches entity via useCategory getById with X-View-Mode from localStorage. DM fields section (collapsed, only in dm_view). Edit mode uses GenericEntityForm. Delete uses DeleteConfirmation modal. Loading spinner during fetch. ErrorBoundary wrapper.
-**Dependencies**: T007-T019 (services), T026 (LoadingSpinner), T029 (ErrorBoundary), T052-T053 (forms), T054-T055, useCategory, useThematicLabels
-**Success Criteria**: Page fetches entity, renders all fields dynamically, DM fields shown only in dm_view, edit mode toggles GenericEntityForm, delete confirms and navigates, loading/error states, responsive layout
-
----
-
-## Phase 3.10: Dashboard Widgets
-
-### T057 [P]: Create NPCSummaryWidget component
-**File**: `frontend/src/components/dashboard/NPCSummaryWidget.tsx`
-**Description**: Create NPC summary widget. Props: `{ campaignId }`. Fetches NPC stats via GET /npcs/stats and recent NPCs via GET /npcs?limit=5. Renders total count, relationship breakdown pie chart (ally/hostile/neutral), 5 recent NPCs (name, race, class, updated_at), "View All NPCs" link. Use React.memo for performance.
-**Dependencies**: T007 (npcService), T026 (loading spinner)
-**Success Criteria**: Widget fetches data, renders stats and recent items, link navigates to NPCs landing page, loading spinner shown, memoized
-
-### T058 [P]: Create LocationExplorerWidget component
-**File**: `frontend/src/components/dashboard/LocationExplorerWidget.tsx`
-**Description**: Create location explorer widget. Props: `{ campaignId }`. Fetches location stats and recent locations. Renders total count, type breakdown bar chart (city/dungeon/region), 5 recent locations, "View All Locations" link. Use React.memo.
-**Dependencies**: T008 (locationService), T026
-**Success Criteria**: Widget fetches data, renders stats and recent items, link navigates, memoized
-
-### T059 [P]: Create FactionPowerWidget component
-**File**: `frontend/src/components/dashboard/FactionPowerWidget.tsx`
-**Description**: Create faction power widget. Props: `{ campaignId }`. Fetches faction stats and recent factions. Renders total count, power level distribution (local/regional/global), 5 recent factions, "View All Factions" link. Use React.memo.
-**Dependencies**: T009 (factionService), T026
-**Success Criteria**: Widget fetches data, renders stats and recent items, link navigates, memoized
-
-### T060 [P]: Create QuestTrackerWidget component
-**File**: `frontend/src/components/dashboard/QuestTrackerWidget.tsx`
-**Description**: Create quest tracker widget. Props: `{ campaignId }`. Fetches quest stats (counts by status) and active quests. Renders active count, completed count, progress bar (completed / total), 5 active quests, "View All Quests" link. Use React.memo.
-**Dependencies**: T011 (questService), T026
-**Success Criteria**: Widget fetches data, renders stats and active quests, progress bar correct, link navigates, memoized
-
-### T061 [P]: Create SessionTimelineWidget component
-**File**: `frontend/src/components/dashboard/SessionTimelineWidget.tsx`
-**Description**: Create session timeline widget. Props: `{ campaignId }`. Fetches last session recap (GET /session-recaps?limit=1&sort=session_date:desc) and next session prep (GET /session-prep?status=ready&limit=1&sort=planned_date:asc). Renders last recap summary (name, date, excerpt), next prep (name, date, status), current in-game date (from last recap in_game_date_end), "View Recaps" and "View Prep" links. Use React.memo.
-**Dependencies**: T010 (sessionRecapService), T016 (sessionPrepService), T026
-**Success Criteria**: Widget fetches recaps and prep, renders summary, dates formatted, links navigate, memoized
-
-### T062 [P]: Create PlayerCharactersWidget component
-**File**: `frontend/src/components/dashboard/PlayerCharactersWidget.tsx`
-**Description**: Create player characters widget. Props: `{ campaignId }`. Fetches PC stats (active count, level range) and 5 active PCs. Renders active count, level range ("Level 3-7"), 5 PCs (name, player_name, class, level), "View All PCs" link. Use React.memo.
-**Dependencies**: T012 (playerCharacterService), T026
-**Success Criteria**: Widget fetches data, renders stats and PCs, level range calculated, link navigates, memoized
-
-### T063 [P]: Create RecentActivityWidget component
-**File**: `frontend/src/components/dashboard/RecentActivityWidget.tsx`
-**Description**: Create recent activity widget. Props: `{ campaignId }`. Fetches 10 most recently updated entities across ALL categories via GET /activity/recent?campaign_id={id}&limit=10. Renders list with entity name, category icon, relative time ("2 hours ago"). Clicking item navigates to entity detail page. Use React.memo.
-**Dependencies**: apiClient (cross-category endpoint), T026
-**Success Criteria**: Widget fetches cross-category recent activity, renders list, relative time calculated, links navigate, memoized
-
-### T064: Create DashboardPage component
+### T013: Rewrite DashboardPage with canvas
 **File**: `frontend/src/components/dashboard/DashboardPage.tsx`
-**Description**: Create dashboard page container. Props: `{ campaignId }`. Renders 7 widgets (T057-T063) in responsive grid layout (2-3 columns desktop, 1 column mobile). Provides DashboardContext (T001) to child widgets. ViewModeToggle in page header. Loading state shows skeleton loaders (T027) for all widgets. Error boundary (T029) catches widget errors.
-**Dependencies**: T001 (DashboardContext), T027 (skeleton), T029 (error boundary), T057-T063 (widgets), ViewModeToggle (reuse from Feature 004 or create)
-**Success Criteria**: Page renders 7 widgets in grid, context provides campaign data, view mode toggle works, loading skeletons shown, error boundary catches errors
+**Description**: **COMPLETE REWRITE** of dashboard page for canvas system. Props: `{campaignId}`. Uses useDashboardCanvas hook (T012). Renders: page header with "Add Widget" button (opens WidgetPicker), react-grid-layout GridLayout component (12 columns, 10px row height, draggable, resizable), BaseWidget (T008) for each widget in layout. ViewModeToggle in header (reuse from Feature 004). Loading state shows skeleton loaders. Empty state shows "Add Widget" prompt. Error boundary wrapper. Pass viewMode from localStorage to each BaseWidget. Responsive: 1 column mobile, 2-3 columns desktop.
+**Dependencies**: T008 (BaseWidget), T009 (WidgetPicker), T012 (useDashboardCanvas hook), react-grid-layout, DashboardContext from completed tasks, ViewModeToggle from Feature 004
+**Success Criteria**: Page renders canvas with react-grid-layout, widgets draggable/resizable, "Add Widget" button opens picker, widgets added/removed dynamically, layout auto-saves (debounced), view mode toggle works, responsive layout, loading/empty/error states
+
+### T014 [P]: Update NPCSummaryWidget for size-adaptive rendering
+**File**: `frontend/src/components/dashboard/NPCSummaryWidget.tsx`
+**Description**: Update existing NPCSummaryWidget (completed task) to support size-adaptive rendering. Add `size: WidgetSize` prop to component signature. Conditional rendering: `size === '2x2'` shows compact view (total count, "View All" link), `size === '3x3'` or larger shows detailed view (count, relationship breakdown chart, 5 recent NPCs, link). Use React.memo for performance. Remove campaignId from props (gets from context or BaseWidget).
+**Dependencies**: Existing NPCSummaryWidget from completed tasks, BaseWidgetProps interface from data-model.md
+**Success Criteria**: Widget accepts size prop, renders compact view for 2x2, renders detailed view for 3x3+, memoized, no prop drilling of campaignId
+
+### T015 [P]: Update LocationExplorerWidget for size-adaptive rendering
+**File**: `frontend/src/components/dashboard/LocationExplorerWidget.tsx`
+**Description**: Update existing LocationExplorerWidget for size-adaptive rendering. Same pattern as T014: add size prop, compact view (2x2) shows count + link, detailed view (3x3+) shows count + type breakdown chart + 5 recent + link. React.memo.
+**Dependencies**: Existing LocationExplorerWidget from completed tasks
+**Success Criteria**: Size-adaptive rendering works, memoized
+
+### T016 [P]: Update FactionPowerWidget for size-adaptive rendering
+**File**: `frontend/src/components/dashboard/FactionPowerWidget.tsx`
+**Description**: Update existing FactionPowerWidget for size-adaptive rendering. Same pattern: add size prop, compact (2x2) shows count + link, detailed (3x3+) shows count + power level distribution + 5 recent + link. React.memo.
+**Dependencies**: Existing FactionPowerWidget from completed tasks
+**Success Criteria**: Size-adaptive rendering works, memoized
+
+### T017 [P]: Update QuestTrackerWidget for size-adaptive rendering
+**File**: `frontend/src/components/dashboard/QuestTrackerWidget.tsx`
+**Description**: Update existing QuestTrackerWidget for size-adaptive rendering. Compact (2x2): active count + "View All" link. Detailed (3x3+): active/completed counts + progress bar + 5 active quests + link. React.memo.
+**Dependencies**: Existing QuestTrackerWidget from completed tasks
+**Success Criteria**: Size-adaptive rendering works, memoized
+
+### T018 [P]: Update SessionTimelineWidget for size-adaptive rendering
+**File**: `frontend/src/components/dashboard/SessionTimelineWidget.tsx`
+**Description**: Update existing SessionTimelineWidget for size-adaptive rendering. Compact (2x2): last recap title + date + link. Detailed (3x3+): last recap (excerpt) + next prep + in-game date + 2 links. React.memo.
+**Dependencies**: Existing SessionTimelineWidget from completed tasks
+**Success Criteria**: Size-adaptive rendering works, memoized
+
+### T019 [P]: Update PlayerCharactersWidget for size-adaptive rendering
+**File**: `frontend/src/components/dashboard/PlayerCharactersWidget.tsx`
+**Description**: Update existing PlayerCharactersWidget for size-adaptive rendering. Compact (2x2): active PC count + level range + link. Detailed (3x3+): count + level range + 5 PCs (name, player, class, level) + link. React.memo.
+**Dependencies**: Existing PlayerCharactersWidget from completed tasks
+**Success Criteria**: Size-adaptive rendering works, memoized
+
+### T020 [P]: Update RecentActivityWidget for size-adaptive rendering
+**File**: `frontend/src/components/dashboard/RecentActivityWidget.tsx`
+**Description**: Update existing RecentActivityWidget for size-adaptive rendering. Compact (2x2): 3 most recent items + "View All" link. Detailed (3x3+): 10 most recent items with category icons + relative time. React.memo.
+**Dependencies**: Existing RecentActivityWidget from completed tasks
+**Success Criteria**: Size-adaptive rendering works, memoized
 
 ---
 
-## Phase 3.11: Sidebar Components
+## Phase 5: Category Landing Canvas
 
-### T065: Create CategoryLink component
+### T021: Create CategoryLandingCanvas component
+**File**: `frontend/src/components/categories/landing/CategoryLandingCanvas.tsx`
+**Description**: Create constrained canvas for category landing pages (reuses dashboard canvas patterns). Props: `{campaignId, category}`. Uses useCategoryLandingCanvas hook (similar to useDashboardCanvas but for category configs). Renders react-grid-layout constrained to max-height: 50vh. BaseWidget wrapper for each widget. "Add Widget" button. WidgetPicker filters by category (WidgetRegistry.getAllByCategory(category)). Same drag/resize functionality as dashboard. Auto-saves layout via categoryLandingConfigService.
+**Dependencies**: T008 (BaseWidget), T009 (WidgetPicker with category filter), T011 (categoryLandingConfigService), react-grid-layout
+**Success Criteria**: Canvas renders with 50vh max height, widgets draggable/resizable, "Add Widget" opens picker filtered by category, layout auto-saves, empty state shows "Add Widget" prompt
+
+### T022: Create CategoryLandingTextEditor component
+**File**: `frontend/src/components/categories/landing/CategoryLandingTextEditor.tsx`
+**Description**: Create editable title + description section for category landing pages (below canvas). Props: `{campaignId, category, initialTitle, initialDescription, onSave}`. Renders: editable title (input field, max 200 chars), TipTap editor for description (reuse from Feature 003), "Save" button (debounced 1s). Calls onSave(title, description) with TipTap JSON. Displays save indicator ("Saving...", "Saved", error message). Empty state: "Add a title and description for this category."
+**Dependencies**: TipTap components from Feature 003, T011 (categoryLandingConfigService for saves)
+**Success Criteria**: Title input works (max 200 chars), TipTap editor renders, saves debounced (1s), onSave callback fires with title + TipTap JSON, save indicator shows state, empty state displayed
+
+---
+
+## Phase 6: Sidebar & Navigation (Unchanged)
+
+**4 tasks from original plan** - These remain unchanged from the original Feature 015 plan:
+
+### T023: Create CategoryLink component
 **File**: `frontend/src/components/sidebar/CategoryLink.tsx`
-**Description**: Create category navigation link. Props: `{ category, label, active, onClick }`. Renders link with category icon, themed label, and active highlight styling. Uses Link from react-router-dom for navigation.
+**Description**: Create category navigation link. Props: `{category, label, active, onClick}`. Renders link with category icon, themed label, and active highlight styling. Uses Link from react-router-dom for navigation.
 **Dependencies**: react-router-dom
 **Success Criteria**: Component renders link, icon and label displayed, active state highlighted, onClick navigates
 
-### T066: Create TypeSection component
+### T024: Create TypeSection component
 **File**: `frontend/src/components/sidebar/TypeSection.tsx`
-**Description**: Create collapsible type section. Props: `{ type, categories, collapsed, onToggle, activeCategory }`. Renders section header (type icon, label, collapse arrow), CategoryLink (T065) for each enabled category (when expanded). Animate collapse/expand transition.
-**Dependencies**: T065 (CategoryLink)
+**Description**: Create collapsible type section. Props: `{type, categories, collapsed, onToggle, activeCategory}`. Renders section header (type icon, label, collapse arrow), CategoryLink (T023) for each enabled category (when expanded). Animate collapse/expand transition.
+**Dependencies**: T023 (CategoryLink)
 **Success Criteria**: Component renders section header and links, collapse/expand animation smooth, onToggle fires, active category highlighted
 
-### T067: Create SidebarNavigation component
+### T025: Create SidebarNavigation component
 **File**: `frontend/src/components/sidebar/SidebarNavigation.tsx`
-**Description**: Create main sidebar container. Props: `{ campaignId }`. Renders ViewModeToggle (reuse from Feature 004 or create), 4 TypeSection components (SETTING, LIVING WORLD, CAMPAIGN, EXTENDED), Wiki button at bottom. Fetches campaign settings (enabled categories, thematic labels) via GET /campaigns/{campaignId}/settings. Uses SidebarContext (T002) for collapse state. Uses useThematicLabels (T024) for themed labels.
-**Dependencies**: T002 (SidebarContext), T024 (thematic labels hook), T066 (TypeSection), ViewModeToggle
+**Description**: Create main sidebar container. Props: `{campaignId}`. Renders ViewModeToggle (reuse from Feature 004 or create), 4 TypeSection components (SETTING, LIVING WORLD, CAMPAIGN, EXTENDED), Wiki button at bottom. Fetches campaign settings (enabled categories, thematic labels) via GET /campaigns/{campaignId}/settings. Uses SidebarContext from completed tasks for collapse state. Uses useThematicLabels hook from completed tasks for themed labels.
+**Dependencies**: SidebarContext from completed tasks, useThematicLabels from completed tasks, T024 (TypeSection), ViewModeToggle from Feature 004
 **Success Criteria**: Sidebar renders 4 type sections, fetches settings, collapse state persisted, themed labels displayed, view mode toggle works
 
-### T068: Create or extend ViewModeToggle component
+### T026: Create or extend ViewModeToggle component
 **File**: `frontend/src/components/sidebar/ViewModeToggle.tsx`
-**Description**: If ViewModeToggle doesn't exist from Feature 004, create it. Props: `{ viewMode, onChange }`. Renders Radix UI Dropdown with "DM View" and "Player View" options. Icon indicator (eye-open for DM, eye-closed for Player). Persists change to localStorage and triggers context update. If it exists from Feature 004, verify it works in sidebar and can be imported/reused.
-**Dependencies**: @radix-ui/react-dropdown-menu, InformationLevelContext (from Feature 004)
+**Description**: If ViewModeToggle doesn't exist from Feature 004, create it. Props: `{viewMode, onChange}`. Renders Radix UI Dropdown with "DM View" and "Player View" options. Icon indicator (eye-open for DM, eye-closed for Player). Persists change to localStorage and triggers context update. If it exists from Feature 004, verify it works in sidebar and can be imported/reused.
+**Dependencies**: @radix-ui/react-dropdown-menu, InformationLevelContext from Feature 004
 **Success Criteria**: Toggle renders dropdown, options selectable, onChange fires, localStorage persisted, context updated, icon displayed
 
 ---
 
-## Phase 3.12: Top-Level Pages
+## Phase 7: Top-Level Pages (Mostly Unchanged)
 
-### T069: Create CategoryLandingPageRoute component
+**6 tasks from original plan** - Minor updates for canvas integration:
+
+### T027: Update CategoryLandingPageRoute component
 **File**: `frontend/src/pages/CategoryLandingPageRoute.tsx`
-**Description**: Create route page wrapper for category landing. Extracts campaignId and category from URL params (useParams). Renders CategoryLandingPage component (T044). Wraps in ErrorBoundary (T029).
-**Dependencies**: T044 (CategoryLandingPage), T029, react-router-dom
-**Success Criteria**: Page extracts params, renders landing page, error boundary catches errors
+**Description**: Create route page wrapper for category landing with canvas. Extracts campaignId and category from URL params (useParams). Renders: CategoryLandingCanvas (T021) at top, CategoryLandingTextEditor (T022) below canvas, SearchFilterBar + "View Table" button at bottom. Wraps in ErrorBoundary. Fetches category landing config for initial title/description.
+**Dependencies**: T021 (CategoryLandingCanvas), T022 (CategoryLandingTextEditor), SearchFilterBar from completed tasks, ErrorBoundary from completed tasks, react-router-dom
+**Success Criteria**: Page extracts params, renders canvas + text editor + search bar, "View Table" navigates to table view, error boundary catches errors
 
-### T070: Create CategoryTablePageRoute component
+### T028: Create CategoryTablePageRoute component
 **File**: `frontend/src/pages/CategoryTablePageRoute.tsx`
-**Description**: Create route page for table view. Extracts campaignId and category from URL. Renders SearchFilterBar (T043), CategoryTable (T050), and PaginationControls (T047). Manages filter, sort, pagination state from URL query params (useSearchParams). Wraps in ErrorBoundary.
-**Dependencies**: T043, T047, T050, T051 (column definitions), T029, react-router-dom
+**Description**: Create route page for table view. Extracts campaignId and category from URL. Renders TableToolbar (SearchBar + FilterPanel), CategoryTable, and PaginationControls. Manages filter, sort, pagination state from URL query params (useSearchParams). Wraps in ErrorBoundary.
+**Dependencies**: CategoryTable from completed tasks, TableToolbar from completed tasks, PaginationControls from completed tasks, ErrorBoundary from completed tasks, react-router-dom
 **Success Criteria**: Page extracts params, renders table with filters, state synced with URL params, error boundary catches errors
 
-### T071: Create CategoryDetailPageRoute component
+### T029: Create CategoryDetailPageRoute component
 **File**: `frontend/src/pages/CategoryDetailPageRoute.tsx`
-**Description**: Create route page for entity detail. Extracts campaignId, category, entityId from URL. Renders EntityDetailPage component (T056). Wraps in ErrorBoundary (T029).
-**Dependencies**: T056 (EntityDetailPage), T029, react-router-dom
+**Description**: Create route page for entity detail. Extracts campaignId, category, entityId from URL. Renders EntityDetailPage component (completed tasks). Wraps in ErrorBoundary.
+**Dependencies**: EntityDetailPage from completed tasks, ErrorBoundary from completed tasks, react-router-dom
 **Success Criteria**: Page extracts params, renders detail page, error boundary catches errors
 
-### T072: Create CategoryCreatePageRoute component
+### T030: Create CategoryCreatePageRoute component
 **File**: `frontend/src/pages/CategoryCreatePageRoute.tsx`
-**Description**: Create route page for entity creation. Extracts campaignId and category from URL. Renders EntityCreateForm (T052). Handles onSubmit (calls API service, navigates to detail page on success), onCancel (navigates back). Wraps in ErrorBoundary.
-**Dependencies**: T007-T019 (services), T052 (EntityCreateForm), T029, react-router-dom
+**Description**: Create route page for entity creation. Extracts campaignId and category from URL. Renders GenericEntityForm (completed tasks). Handles onSubmit (calls API service, navigates to detail page on success), onCancel (navigates back). Wraps in ErrorBoundary.
+**Dependencies**: Category services from completed tasks, GenericEntityForm from completed tasks, ErrorBoundary from completed tasks, react-router-dom
 **Success Criteria**: Page renders create form, onSubmit creates entity and navigates, onCancel navigates back, error boundary catches errors
 
-### T073: Create CategoryEditPageRoute component
+### T031: Create CategoryEditPageRoute component
 **File**: `frontend/src/pages/CategoryEditPageRoute.tsx`
-**Description**: Create route page for entity editing. Extracts campaignId, category, entityId from URL. Fetches entity via API service. Renders EntityEditForm (T053) with initialData. Handles onSubmit (updates entity, navigates to detail page), onCancel (navigates back). Wraps in ErrorBoundary.
-**Dependencies**: T007-T019 (services), T053 (EntityEditForm), T029, react-router-dom
+**Description**: Create route page for entity editing. Extracts campaignId, category, entityId from URL. Fetches entity via API service. Renders GenericEntityForm with initialData. Handles onSubmit (updates entity, navigates to detail page), onCancel (navigates back). Wraps in ErrorBoundary.
+**Dependencies**: Category services from completed tasks, GenericEntityForm from completed tasks, ErrorBoundary from completed tasks, react-router-dom
 **Success Criteria**: Page fetches entity, renders edit form, onSubmit updates and navigates, onCancel navigates back, error boundary catches errors
 
-### T074: Create DashboardPageRoute component
+### T032: Create DashboardPageRoute component
 **File**: `frontend/src/pages/DashboardPageRoute.tsx`
-**Description**: Create route page for dashboard. Extracts campaignId from URL. Renders DashboardPage component (T064). Wraps in ErrorBoundary (T029).
-**Dependencies**: T064 (DashboardPage), T029, react-router-dom
-**Success Criteria**: Page extracts params, renders dashboard, error boundary catches errors
+**Description**: Create route page for dashboard. Extracts campaignId from URL. Renders DashboardPage component (T013 with canvas). Wraps in ErrorBoundary.
+**Dependencies**: T013 (DashboardPage with canvas), ErrorBoundary from completed tasks, react-router-dom
+**Success Criteria**: Page extracts params, renders dashboard with canvas, error boundary catches errors
 
 ---
 
-## Phase 3.13: Route Configuration
+## Phase 8: Route Configuration
 
-### T075: Update AppRoutes.tsx with new routes
+### T033: Update AppRoutes.tsx with new routes
 **File**: `frontend/src/routes/AppRoutes.tsx`
-**Description**: Add routes for Feature 015 to existing router config. Routes: `/campaigns/:campaignId/dashboard` → DashboardPageRoute (T074), `/campaigns/:campaignId/:category` → CategoryLandingPageRoute (T069), `/campaigns/:campaignId/:category/table` → CategoryTablePageRoute (T070), `/campaigns/:campaignId/:category/create` → CategoryCreatePageRoute (T072), `/campaigns/:campaignId/:category/:entityId` → CategoryDetailPageRoute (T071), `/campaigns/:campaignId/:category/:entityId/edit` → CategoryEditPageRoute (T073). All routes protected (require auth from Feature 002). Use React.lazy + Suspense for code splitting.
-**Dependencies**: T069-T074 (page routes), existing AppRoutes.tsx from Feature 002
+**Description**: Add routes for Feature 015 to existing router config. Routes: `/campaigns/:campaignId/dashboard` → DashboardPageRoute (T032), `/campaigns/:campaignId/:category` → CategoryLandingPageRoute (T027), `/campaigns/:campaignId/:category/table` → CategoryTablePageRoute (T028), `/campaigns/:campaignId/:category/create` → CategoryCreatePageRoute (T030), `/campaigns/:campaignId/:category/:entityId` → CategoryDetailPageRoute (T029), `/campaigns/:campaignId/:category/:entityId/edit` → CategoryEditPageRoute (T031). All routes protected (require auth from Feature 002). Use React.lazy + Suspense for code splitting.
+**Dependencies**: T027-T032 (page routes), existing AppRoutes.tsx from Feature 002
 **Success Criteria**: Routes added, navigation works, protected routes redirect to login if not authenticated, code splitting via lazy loading, Suspense shows loading fallback
 
 ---
 
-## Phase 3.14: Component Tests
+## Phase 9: Testing
 
-### T076 [P]: Test DashboardPage component
+### T034 [P]: Test DashboardPage with canvas
 **File**: `frontend/tests/components/DashboardPage.test.tsx`
-**Description**: Unit test DashboardPage (T064). Test scenarios: renders 7 widgets, fetches data on mount, loading skeleton shown during fetch, error boundary catches widget errors, view mode toggle changes context. Use Vitest + React Testing Library. Mock API calls with MSW or vitest.mock.
-**Dependencies**: T064, vitest, @testing-library/react
-**Success Criteria**: 5 test cases pass, coverage >80%, mocks work
+**Description**: Unit test DashboardPage with canvas (T013). Test scenarios: renders canvas with react-grid-layout, "Add Widget" button opens picker, adding widget creates BaseWidget, removing widget updates layout, drag/resize updates layout, layout auto-saves (debounced), view mode toggle works, loading/empty states. Use Vitest + React Testing Library. Mock dashboardConfigService and react-grid-layout.
+**Dependencies**: T013, vitest, @testing-library/react
+**Success Criteria**: 8 test cases pass, coverage >80%, mocks work, debounce tested with fake timers
 
-### T077 [P]: Test NPCSummaryWidget component
-**File**: `frontend/tests/components/NPCSummaryWidget.test.tsx`
-**Description**: Unit test NPCSummaryWidget (T057). Test: fetches NPC stats, renders count and breakdown, renders 5 recent NPCs, "View All" link navigates. Mock npcService.
-**Dependencies**: T057, vitest, @testing-library/react
-**Success Criteria**: 4 test cases pass, coverage >80%
+### T035 [P]: Test BaseWidget component
+**File**: `frontend/tests/components/BaseWidget.test.tsx`
+**Description**: Unit test BaseWidget (T008). Test: renders widget from registry, drag handle present, remove button calls onRemove, error boundary catches child widget errors, size CSS classes applied. Mock WidgetRegistry.
+**Dependencies**: T008, vitest, @testing-library/react
+**Success Criteria**: 5 test cases pass, coverage >80%
 
-### T078 [P]: Test SidebarNavigation component
+### T036 [P]: Test WidgetPicker modal
+**File**: `frontend/tests/components/WidgetPicker.test.tsx`
+**Description**: Unit test WidgetPicker (T009). Test: renders widget grid, "Add" button fires onSelect, existing widgets disabled, Escape closes, category filter works. Mock WidgetRegistry.
+**Dependencies**: T009, vitest, @testing-library/react
+**Success Criteria**: 5 test cases pass, coverage >80%
+
+### T037 [P]: Test size-adaptive widget rendering
+**File**: `frontend/tests/components/SizeAdaptiveWidgets.test.tsx`
+**Description**: Unit test all 7 widgets (T014-T020) for size-adaptive rendering. For each widget: test compact view (size='2x2') shows limited content, detailed view (size='3x3') shows full content, memoization works. Mock API services.
+**Dependencies**: T014-T020, vitest, @testing-library/react
+**Success Criteria**: 21 test cases pass (3 per widget), coverage >80%, memoization verified
+
+### T038 [P]: Test CategoryLandingCanvas component
+**File**: `frontend/tests/components/CategoryLandingCanvas.test.tsx`
+**Description**: Unit test CategoryLandingCanvas (T021). Test: renders canvas with 50vh constraint, "Add Widget" opens filtered picker, widgets draggable/resizable, layout auto-saves, category filter works. Mock categoryLandingConfigService.
+**Dependencies**: T021, vitest, @testing-library/react
+**Success Criteria**: 5 test cases pass, coverage >80%
+
+### T039 [P]: Test CategoryLandingTextEditor component
+**File**: `frontend/tests/components/CategoryLandingTextEditor.test.tsx`
+**Description**: Unit test CategoryLandingTextEditor (T022). Test: title input works (max 200 chars), TipTap editor renders, save debounced (1s), onSave fires with title + TipTap JSON, save indicator updates. Use fake timers for debounce.
+**Dependencies**: T022, vitest, @testing-library/react
+**Success Criteria**: 5 test cases pass, debounce tested with fake timers
+
+### T040 [P]: Test SidebarNavigation component
 **File**: `frontend/tests/components/SidebarNavigation.test.tsx`
-**Description**: Unit test SidebarNavigation (T067). Test: fetches campaign settings, renders 4 type sections, collapse/expand toggles, themed labels displayed, active category highlighted. Mock API calls.
-**Dependencies**: T067, vitest, @testing-library/react
+**Description**: Unit test SidebarNavigation (T025). Test: fetches campaign settings, renders 4 type sections, collapse/expand toggles, themed labels displayed, active category highlighted. Mock API calls.
+**Dependencies**: T025, vitest, @testing-library/react
 **Success Criteria**: 5 test cases pass, coverage >80%
 
-### T079 [P]: Test CategoryTable component
-**File**: `frontend/tests/components/CategoryTable.test.tsx`
-**Description**: Unit test CategoryTable (T050). Test: renders table with columns, sorting works, row selection works, pagination controls present, empty state shown if no data, virtualization enabled for 50+ rows. Mock entity data.
-**Dependencies**: T050, vitest, @testing-library/react
-**Success Criteria**: 6 test cases pass, coverage >80%
+### T041 [P]: E2E test dashboard canvas
+**File**: `frontend/tests/e2e/dashboard-canvas.spec.ts`
+**Description**: Playwright E2E test for dashboard canvas. Test: dashboard loads with canvas, "Add Widget" opens picker, select widget adds to canvas, drag widget updates position, resize widget updates size, remove widget, layout persists after refresh, view mode toggle hides dm_* content in widgets.
+**Dependencies**: Feature 014 backend running, T001-T005 backend routes, T013 DashboardPage, Playwright setup
+**Success Criteria**: E2E test passes, canvas interactions work, persistence validated, screenshots captured
 
-### T080 [P]: Test EntityCreateForm component
-**File**: `frontend/tests/components/EntityCreateForm.test.tsx`
-**Description**: Unit test EntityCreateForm (T052). Test: renders dynamic fields from schema, validation errors display inline, required fields enforced, onSubmit fires with validated data, onCancel navigates. Mock React Hook Form.
-**Dependencies**: T052, vitest, @testing-library/react
-**Success Criteria**: 5 test cases pass, coverage >80%
+### T042 [P]: E2E test category landing canvas
+**File**: `frontend/tests/e2e/category-landing-canvas.spec.ts`
+**Description**: Playwright E2E test for category landing canvas. Test: navigate to NPCs category, canvas renders (50vh height), add widget (category-filtered picker), edit title and description, save, verify persistence after refresh, navigate to table view.
+**Dependencies**: Feature 014 backend running, T001-T005 backend routes, T021-T022 components, Playwright setup
+**Success Criteria**: E2E test passes, canvas + text editor work, persistence validated
 
-### T081 [P]: Test EntityDetailPage component
-**File**: `frontend/tests/components/EntityDetailPage.test.tsx`
-**Description**: Unit test EntityDetailPage (T056). Test: fetches entity, renders all fields, DM fields hidden in Player View, Edit button navigates, Delete button confirms and deletes. Mock API calls and InformationLevelContext.
-**Dependencies**: T056, vitest, @testing-library/react
-**Success Criteria**: 5 test cases pass, coverage >80%
-
-### T082 [P]: Test SearchFilterBar component
-**File**: `frontend/tests/components/SearchFilterBar.test.tsx`
-**Description**: Unit test SearchFilterBar (T043). Test: search input debounces 300ms, filter dropdowns update state, active chips displayed and removable, clearAll resets filters. Use fake timers for debounce.
-**Dependencies**: T043, vitest, @testing-library/react
-**Success Criteria**: 4 test cases pass, debounce works with fake timers
-
-### T083 [P]: Test ConfirmDialog component
-**File**: `frontend/tests/components/ConfirmDialog.test.tsx`
-**Description**: Unit test ConfirmDialog (T030). Test: renders modal when open, Confirm button calls onConfirm, Cancel button calls onCancel, Escape key closes, focus trapped inside dialog. Test accessibility with axe.
-**Dependencies**: T030, vitest, @testing-library/react, jest-axe
-**Success Criteria**: 5 test cases pass, accessibility audit passes
-
----
-
-## Phase 3.15: E2E Tests
-
-### T084 [P]: E2E test dashboard.spec.ts
-**File**: `frontend/tests/e2e/dashboard.spec.ts`
-**Description**: Playwright E2E test for Test Scenario 1 from quickstart.md (Dashboard Widget Display). Test: dashboard loads, all 7 widgets render, counts match API responses, recent items display, links navigate to category landing pages. Use Playwright page object model.
-**Dependencies**: Feature 014 backend running, Playwright setup
-**Success Criteria**: E2E test passes, 7 widgets validated, links work, screenshots captured
-
-### T085 [P]: E2E test sidebar-navigation.spec.ts
+### T043 [P]: E2E test sidebar-navigation.spec.ts
 **File**: `frontend/tests/e2e/sidebar-navigation.spec.ts`
-**Description**: Playwright E2E test for Test Scenario 2 (Sidebar Navigation). Test: sidebar renders 4 type sections, collapse/expand works, navigation to NPCs landing page, collapse state persists across refresh, view mode toggle triggers re-fetch.
-**Dependencies**: Feature 014 backend running, Playwright setup
+**Description**: Playwright E2E test for Sidebar Navigation (reuse from original plan). Test: sidebar renders 4 type sections, collapse/expand works, navigation to NPCs landing page (now with canvas), collapse state persists across refresh, view mode toggle triggers re-fetch.
+**Dependencies**: Feature 014 backend running, T023-T026 sidebar components, Playwright setup
 **Success Criteria**: E2E test passes, sidebar navigation validated, persistence works
 
-### T086 [P]: E2E test table-operations.spec.ts
+### T044 [P]: E2E test table-operations.spec.ts
 **File**: `frontend/tests/e2e/table-operations.spec.ts`
-**Description**: Playwright E2E test for Test Scenarios 3-4 (Table Sorting, Search and Filter). Test: table columns sortable, sort direction toggles, search filters table, combined filters work (AND logic), active filter chips removable, filters persist in URL.
-**Dependencies**: Feature 014 backend running, Playwright setup
+**Description**: Playwright E2E test for Table Operations (reuse from original plan). Test: table columns sortable, sort direction toggles, search filters table, combined filters work (AND logic), active filter chips removable, filters persist in URL.
+**Dependencies**: Feature 014 backend running, CategoryTable from completed tasks, Playwright setup
 **Success Criteria**: E2E test passes, sorting and filtering validated, URL params correct
 
-### T087 [P]: E2E test category-crud.spec.ts
+### T045 [P]: E2E test category-crud.spec.ts
 **File**: `frontend/tests/e2e/category-crud.spec.ts`
-**Description**: Playwright E2E test for Test Scenarios 5-7 (Create, Edit, Validation). Test: create NPC form renders, required validation works, successful creation redirects to detail page, edit form pre-fills data, update saves changes, dirty form warns on navigation.
-**Dependencies**: Feature 014 backend running, Playwright setup
+**Description**: Playwright E2E test for CRUD operations (reuse from original plan). Test: create NPC form renders, required validation works, successful creation redirects to detail page, edit form pre-fills data, update saves changes, delete confirmation works.
+**Dependencies**: Feature 014 backend running, GenericEntityForm from completed tasks, Playwright setup
 **Success Criteria**: E2E test passes, CRUD operations validated, validation works
-
-### T088 [P]: E2E test thematic-naming.spec.ts
-**File**: `frontend/tests/e2e/thematic-naming.spec.ts`
-**Description**: Playwright E2E test for Test Scenario 9 (Thematic Naming). Test: campaign with Cyberpunk theme shows "Corporations" (not "Factions") in sidebar, page header, breadcrumbs, form labels. API still uses /factions endpoint.
-**Dependencies**: Feature 014 backend running, test campaign with Cyberpunk theme, Playwright setup
-**Success Criteria**: E2E test passes, themed labels validated, API uses internal names
-
-### T089 [P]: E2E test information-filtering.spec.ts
-**File**: `frontend/tests/e2e/information-filtering.spec.ts`
-**Description**: Playwright E2E test for Test Scenario 11 (Information Level Filtering). Test: DM View shows all entities and fields, Player View hides dm_only entities, Player View hides dm_* fields, dashboard widgets respect view mode, view mode persists across navigation and refresh.
-**Dependencies**: Feature 014 backend running, test NPCs with dm_only player_knowledge, Playwright setup
-**Success Criteria**: E2E test passes, information filtering validated, persistence works
-
-### T090 [P]: E2E test relationship-display.spec.ts
-**File**: `frontend/tests/e2e/relationship-display.spec.ts`
-**Description**: Playwright E2E test for Test Scenario 10 (Location Hierarchy Display). Test: create location hierarchy (Continent → Region → City), table shows parent relationships, detail page shows parent chain, reverse relationships (children) displayed, circular reference validation prevents invalid hierarchies.
-**Dependencies**: Feature 014 backend running, Playwright setup
-**Success Criteria**: E2E test passes, relationships validated, circular ref blocked
 
 ---
 
-## Phase 3.16: Polish & Documentation
+## Phase 10: Polish & Documentation
 
-### T091: Run quickstart.md validation
+### T046: Run quickstart.md validation
 **File**: `specs/015-create-the-dashboard/quickstart.md`
-**Description**: Execute all 11 test scenarios from quickstart.md manually or with E2E tests (T084-T090). Verify all acceptance criteria pass. Document any deviations or issues. Capture screenshots for visual validation.
-**Dependencies**: T001-T090 (all implementation and tests)
-**Success Criteria**: All 11 scenarios pass, screenshots captured, deviations documented
+**Description**: Execute all test scenarios from quickstart.md (updated with canvas scenarios). Verify all acceptance criteria pass. Document any deviations or issues. Capture screenshots for visual validation of canvas interactions.
+**Dependencies**: T001-T045 (all implementation and tests)
+**Success Criteria**: All scenarios pass, canvas interactions validated, screenshots captured, deviations documented
 
-### T092: Performance validation
+### T047: Performance validation
 **File**: N/A (manual testing)
-**Description**: Validate performance goals from plan.md: Dashboard load <2s (1000 entities), category landing <1s (500 entities), table pagination <500ms, entity detail <500ms, search/filter <200ms. Use browser DevTools Performance tab. Record metrics and compare to goals. Optimize if needed (React.memo, virtualization, debouncing).
-**Dependencies**: T001-T090 (all implementation)
-**Success Criteria**: Performance goals met or exceeded, metrics documented
+**Description**: Validate performance goals from plan.md: Dashboard canvas load <2s (with 7 widgets), category landing canvas <1s, widget drag/resize <16ms (60fps), auto-save debounce works (500ms), table pagination <500ms. Use browser DevTools Performance tab. Record metrics. Optimize if needed (React.memo verified on widgets, debouncing confirmed).
+**Dependencies**: T001-T045 (all implementation)
+**Success Criteria**: Performance goals met, canvas interactions smooth (60fps), debouncing prevents excessive API calls, metrics documented
 
-### T093: Accessibility audit
+### T048: Accessibility audit
 **File**: N/A (manual testing)
-**Description**: Run accessibility audit using axe DevTools, Lighthouse, or WAVE. Verify WCAG 2.1 AA compliance: keyboard navigation, ARIA labels, focus management, color contrast, screen reader support. Fix critical and serious issues. Document minor issues for future.
-**Dependencies**: T001-T090 (all implementation)
-**Success Criteria**: Accessibility score >90, critical issues fixed, keyboard navigation works, screen reader compatible
+**Description**: Run accessibility audit using axe DevTools, Lighthouse, or WAVE. Verify WCAG 2.1 AA compliance: keyboard navigation (canvas focus management, widget picker keyboard nav), ARIA labels (widgets, drag handles, remove buttons), focus management (modal traps), color contrast, screen reader support (announce widget add/remove). Fix critical and serious issues.
+**Dependencies**: T001-T045 (all implementation)
+**Success Criteria**: Accessibility score >90, critical issues fixed, keyboard navigation works (Tab through widgets, Enter to remove), screen reader announces changes, focus trap in modals
 
-### T094: Update CLAUDE.md with Feature 015
+### T049: Update CLAUDE.md with Feature 015 canvas
 **File**: `CLAUDE.md`
-**Description**: Run `.specify/scripts/bash/update-agent-context.sh claude` to update CLAUDE.md with Feature 015 technologies and recent changes. Add: TanStack Table v8, React Hook Form, Zod, thematic naming, information filtering, 13 category services, 40+ components. Keep under 150 lines.
-**Dependencies**: T001-T093 (all implementation complete)
-**Success Criteria**: CLAUDE.md updated, Feature 015 technologies added, recent changes section updated, file under 150 lines
+**Description**: Run `.specify/scripts/bash/update-agent-context.sh claude` to update CLAUDE.md with Feature 015 canvas technologies and recent changes. Add: react-grid-layout, dashboard canvas with drag/drop, size-adaptive widgets, category landing canvas, TanStack Table v8, React Hook Form, Zod, 13 category services, 45+ components. Keep under 150 lines.
+**Dependencies**: T001-T048 (all implementation complete)
+**Success Criteria**: CLAUDE.md updated, Feature 015 technologies added (including canvas), recent changes section updated, file under 150 lines
+
+---
+
+## Task Summary
+
+**Total Tasks**: 49 (canvas transition only)
+
+**By Phase**:
+- **Backend Canvas Support**: 5 tasks (T001-T005) [5 parallel]
+- **Canvas Infrastructure**: 4 tasks (T006-T009) [T007-T009 parallel after T006]
+- **Canvas Services & Hooks**: 3 tasks (T010-T012) [T010-T011 parallel, T012 depends on T010]
+- **Dashboard Canvas Integration**: 8 tasks (T013-T020) [T013 sequential, T014-T020 parallel widget updates]
+- **Category Landing Canvas**: 2 tasks (T021-T022) [sequential]
+- **Sidebar & Navigation**: 4 tasks (T023-T026) [T023 parallel, rest sequential]
+- **Top-Level Pages**: 6 tasks (T027-T032) [can be parallel after dependencies]
+- **Route Configuration**: 1 task (T033) [sequential]
+- **Testing**: 12 tasks (T034-T045) [8 unit tests parallel, 4 E2E tests parallel]
+- **Polish**: 4 tasks (T046-T049) [sequential]
+
+**Maximum Parallelization**: 23 tasks can run in parallel (5 backend + 3 canvas infra + 2 services + 7 widget updates + 8 unit tests + 4 E2E tests)
+
+**Estimated Time**: 25-35 hours (10-15 hours implementation, 8-10 hours testing, 5-10 hours polish)
 
 ---
 
 ## Dependencies Graph
 
 ```
-Foundation Layer (T001-T005) → API Services (T006-T019) → Hooks (T020-T025)
-                             ↓
-Common Components (T026-T030) → Form Inputs (T031-T040)
-                             ↓
-Category Landing (T041-T044) ← Hooks (T020-T025)
-                             ↓
-Table Components (T045-T051) ← Hooks (T020-T025)
-                             ↓
-Form Components (T052-T053) ← Form Inputs (T031-T040)
-                             ↓
-Detail Components (T054-T056) ← API Services (T007-T019)
-                             ↓
-Dashboard Widgets (T057-T064) ← API Services (T007-T019)
-                             ↓
-Sidebar (T065-T068) ← Contexts (T001-T002), Hooks (T024-T025)
-                             ↓
-Pages (T069-T074) ← All Components
-                             ↓
-Routes (T075) ← Pages (T069-T074)
-                             ↓
-Tests (T076-T090) ← All Implementation (T001-T075)
-                             ↓
-Polish (T091-T094) ← Tests Complete
+Backend Canvas (T001-T005) → Canvas Infrastructure (T006-T009)
+                           ↓
+         Canvas Services & Hooks (T010-T012)
+                           ↓
+    Dashboard Canvas Integration (T013-T020)
+                           ↓
+        Category Landing Canvas (T021-T022)
+                           ↓
+         Sidebar & Navigation (T023-T026)
+                           ↓
+            Top-Level Pages (T027-T032)
+                           ↓
+          Route Configuration (T033)
+                           ↓
+               Testing (T034-T045)
+                           ↓
+              Polish (T046-T049)
 ```
 
-**Critical Path**: T001-T005 → T006-T019 → T020-T025 → T031-T040 → T052-T053 → T069-T075 → T076-T090 → T091-T094
+**Critical Path**: T001-T005 → T006-T009 → T010-T012 → T013 → T021 → T027-T033 → T034-T045 → T046-T049
 
 ---
 
-## Parallel Execution Examples
-
-```bash
-# Phase 3.1: Foundation (all parallel)
-Task: "Create DashboardContext in frontend/src/contexts/DashboardContext.tsx"
-Task: "Create SidebarContext in frontend/src/contexts/SidebarContext.tsx"
-Task: "Create thematicNames.ts utility in frontend/src/utils/thematicNames.ts"
-Task: "Create relationshipHelpers.ts utility in frontend/src/utils/relationshipHelpers.ts"
-Task: "Create validationSchemas.ts in frontend/src/utils/validationSchemas.ts"
-
-# Phase 3.2: API Services (13 parallel after T006)
-Task: "Create npcService.ts in frontend/src/services/npcService.ts"
-Task: "Create locationService.ts in frontend/src/services/locationService.ts"
-Task: "Create factionService.ts in frontend/src/services/factionService.ts"
-# ... (all 13 services T007-T019)
-
-# Phase 3.4: Common Components (5 parallel)
-Task: "Create LoadingSpinner component in frontend/src/components/common/LoadingSpinner.tsx"
-Task: "Create SkeletonLoader component in frontend/src/components/common/SkeletonLoader.tsx"
-Task: "Create EmptyState component in frontend/src/components/common/EmptyState.tsx"
-Task: "Create ErrorBoundary component in frontend/src/components/common/ErrorBoundary.tsx"
-Task: "Create ConfirmDialog component in frontend/src/components/common/ConfirmDialog.tsx"
-
-# Phase 3.5: Form Inputs (10 parallel)
-Task: "Create TextInput component in frontend/src/components/categories/forms/TextInput.tsx"
-Task: "Create TextAreaInput component in frontend/src/components/categories/forms/TextAreaInput.tsx"
-# ... (all 10 inputs T031-T040)
-
-# Phase 3.10: Dashboard Widgets (7 parallel)
-Task: "Create NPCSummaryWidget component in frontend/src/components/dashboard/NPCSummaryWidget.tsx"
-Task: "Create LocationExplorerWidget component in frontend/src/components/dashboard/LocationExplorerWidget.tsx"
-# ... (all 7 widgets T057-T063)
-
-# Phase 3.14: Component Tests (8 parallel)
-Task: "Test DashboardPage component in frontend/tests/components/DashboardPage.test.tsx"
-Task: "Test NPCSummaryWidget component in frontend/tests/components/NPCSummaryWidget.test.tsx"
-# ... (all 8 test files T076-T083)
-
-# Phase 3.15: E2E Tests (7 parallel)
-Task: "E2E test dashboard.spec.ts in frontend/tests/e2e/dashboard.spec.ts"
-Task: "E2E test sidebar-navigation.spec.ts in frontend/tests/e2e/sidebar-navigation.spec.ts"
-# ... (all 7 E2E files T084-T090)
-```
-
----
-
-## Task Summary
-
-**Total Tasks**: 94
-- **Foundation**: 5 tasks (T001-T005) [5 parallel]
-- **API Services**: 14 tasks (T006-T019) [13 parallel after T006]
-- **Hooks**: 6 tasks (T020-T025) [4 parallel, 2 sequential]
-- **Common Components**: 5 tasks (T026-T030) [5 parallel]
-- **Form Inputs**: 10 tasks (T031-T040) [10 parallel]
-- **Category Landing**: 4 tasks (T041-T044) [sequential, depend on hooks]
-- **Table Components**: 7 tasks (T045-T051) [sequential, depend on hooks]
-- **Form Components**: 2 tasks (T052-T053) [sequential]
-- **Detail Components**: 3 tasks (T054-T056) [sequential]
-- **Dashboard Widgets**: 8 tasks (T057-T064) [7 parallel widgets + 1 page container]
-- **Sidebar**: 4 tasks (T065-T068) [sequential]
-- **Pages**: 6 tasks (T069-T074) [can be parallel]
-- **Routes**: 1 task (T075) [sequential]
-- **Component Tests**: 8 tasks (T076-T083) [8 parallel]
-- **E2E Tests**: 7 tasks (T084-T090) [7 parallel]
-- **Polish**: 4 tasks (T091-T094) [sequential]
-
-**Estimated Time**: 45-55 hours (15-20 hours for implementation, 10-15 hours for testing, 5-10 hours for E2E tests, 5-10 hours for polish)
-
-**Maximum Parallelization**: 42 tasks can run in parallel (5 foundation + 13 services + 4 hooks + 5 common + 10 inputs + 7 widgets + 8 component tests + 7 E2E tests)
-
----
-
-## Validation Checklist
-*GATE: Checked before implementation*
-
-- [x] All component contracts have implementation tasks (40+ components)
-- [x] All 13 API services have tasks
-- [x] All 6 hooks have tasks
-- [x] Component tests for critical components (8 test files)
-- [x] E2E tests for all acceptance scenarios (7 E2E files covering 11 scenarios)
-- [x] Parallel tasks truly independent (different files)
-- [x] Each task specifies exact file path
-- [x] No task modifies same file as another [P] task
-- [x] Dependencies clearly documented
-- [x] Performance goals addressed (React.memo, virtualization, debouncing)
-- [x] Accessibility addressed (T093 audit task)
-
----
-
-**Status**: ✅ Tasks ready for implementation - 94 tasks generated, dependency order validated, parallel execution optimized, ready for Feature 015 execution
+**Status**: ✅ Tasks ready for canvas implementation - 49 focused tasks, dependency order validated, parallel execution optimized

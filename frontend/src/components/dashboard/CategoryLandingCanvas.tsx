@@ -1,45 +1,61 @@
 /**
- * Dashboard Page - Canvas System
- * Feature: 015-create-the-dashboard
+ * CategoryLandingCanvas - Canvas system for category landing pages
+ * Feature: 015-create-the-dashboard (T021)
  *
- * Interactive dashboard with drag-and-drop widget canvas.
- * Users can add/remove/resize/reorder widgets with react-grid-layout.
- * Configuration persists per user per campaign.
+ * Interactive canvas with:
+ * - Category-filtered widgets (only widgets relevant to this category)
+ * - Rich text editor for category description
+ * - Link to database table view
+ * - Same drag-and-drop grid system as main dashboard
  */
 
 import React from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Responsive, WidthProvider, Layout as RGLLayout } from 'react-grid-layout';
-import { useDashboardCanvas } from '../hooks/useDashboardCanvas';
-import { useViewMode } from '../contexts/ViewModeContext';
-import { BaseWidget } from '../components/dashboard/BaseWidget';
-import { WidgetPicker } from '../components/dashboard/WidgetPicker';
-import { ViewModeToggle } from '../components/ViewModeToggle';
-import { LoadingSpinner } from '../components/common/LoadingSpinner';
-import './DashboardPage.css';
+import { useCategoryLandingCanvas } from '../../hooks/useCategoryLandingCanvas';
+import { useViewMode } from '../../contexts/ViewModeContext';
+import { WidgetRegistry, type CategoryName } from './WidgetRegistry';
+import { BaseWidget } from './BaseWidget';
+import { WidgetPicker } from './WidgetPicker';
+import { CategoryLandingTextEditor } from './CategoryLandingTextEditor';
+import { ViewModeToggle } from '../ViewModeToggle';
+import { LoadingSpinner } from '../common/LoadingSpinner';
+import '../../pages/DashboardPage.css'; // Reuse dashboard styles
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
-export interface DashboardPageProps {
-  campaignId?: string;
+interface CategoryLandingCanvasProps {
+  campaignId: string;
+  category: CategoryName;
 }
 
+// Category display names
+const CATEGORY_DISPLAY_NAMES: Record<CategoryName, string> = {
+  npcs: 'NPCs',
+  locations: 'Locations',
+  factions: 'Factions',
+  session_recaps: 'Session Recaps',
+  quests: 'Quests',
+  player_characters: 'Player Characters',
+  lore_entries: 'Lore Entries',
+  world_rules: 'World Rules',
+  planar_forces: 'Planar Forces',
+  session_prep: 'Session Prep',
+  custom_mechanics: 'Custom Mechanics',
+  items: 'Items',
+  creatures: 'Creatures',
+};
+
 /**
- * Campaign Dashboard Page - Canvas System
- *
- * Interactive dashboard with drag-and-drop widget canvas using react-grid-layout.
- * Features:
- * - Add/remove widgets via WidgetPicker modal
- * - Drag and drop to reorder widgets
- * - Resize widgets (respects min/max sizes from registry)
- * - Auto-save layout changes (500ms debounce)
- * - dm_view/player_view filtering via ViewModeToggle
- * - Responsive breakpoints: lg (1200px+), md (768px+), sm (<768px)
- * - Loading and empty states
+ * CategoryLandingCanvas Component
+ * Canvas system for individual category landing pages
+ * Filters widgets by category and includes rich text description editor
  */
-export const DashboardPage: React.FC<DashboardPageProps> = ({ campaignId: propCampaignId }) => {
-  const params = useParams<{ campaignId: string }>();
-  const campaignId = propCampaignId || params.campaignId || '';
+export const CategoryLandingCanvas: React.FC<CategoryLandingCanvasProps> = ({
+  campaignId,
+  category,
+}) => {
+  const navigate = useNavigate();
   const { viewMode } = useViewMode();
 
   const {
@@ -48,19 +64,24 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ campaignId: propCa
     saving,
     error,
     pickerOpen,
+    description,
     setPickerOpen,
     addWidget,
     removeWidget,
     onLayoutChange,
+    updateDescription,
     resetLayout,
-  } = useDashboardCanvas(campaignId);
+  } = useCategoryLandingCanvas(campaignId, category);
+
+  // Get category display name
+  const categoryDisplayName = CATEGORY_DISPLAY_NAMES[category] || category;
 
   // Handle error state
   if (error) {
     return (
       <div className="dashboard-page">
         <div className="dashboard-error">
-          <p>Error loading dashboard: {error}</p>
+          <p>Error loading {categoryDisplayName} landing page: {error}</p>
           <button onClick={() => window.location.reload()}>Retry</button>
         </div>
       </div>
@@ -73,7 +94,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ campaignId: propCa
       <div className="dashboard-page">
         <div className="dashboard-loading">
           <LoadingSpinner size="lg" />
-          <p>Loading dashboard...</p>
+          <p>Loading {categoryDisplayName} landing page...</p>
         </div>
       </div>
     );
@@ -90,15 +111,18 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ campaignId: propCa
     );
   }
 
-  // Empty state: no widgets added yet
+  // Check if canvas is empty
   const isEmpty = layout.length === 0;
+
+  // Filter widgets by category
+  const availableWidgets = WidgetRegistry.getAllByCategory(category);
 
   return (
     <div className="dashboard-page">
-      {/* Header with Add Widget button and ViewModeToggle */}
+      {/* Header with category name, buttons, and ViewModeToggle */}
       <header className="dashboard-header">
         <div className="dashboard-header-left">
-          <h1 className="dashboard-title">Campaign Dashboard</h1>
+          <h1 className="dashboard-title">{categoryDisplayName}</h1>
           {saving && <span className="dashboard-saving-indicator">Saving...</span>}
         </div>
         <div className="dashboard-header-right">
@@ -107,14 +131,29 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ campaignId: propCa
             className="dashboard-add-widget-button"
             onClick={() => setPickerOpen(true)}
             aria-label="Add Widget"
+            title="Add widget to canvas"
           >
             + Add Widget
           </button>
           <button
             type="button"
+            className="dashboard-add-widget-button"
+            onClick={() => navigate(`/campaigns/${campaignId}/${category}/database`)}
+            aria-label="View Database Table"
+            title={`View ${categoryDisplayName} database table`}
+            style={{ backgroundColor: '#6c757d' }}
+          >
+            📊 Database
+          </button>
+          <button
+            type="button"
             className="dashboard-reset-button"
             onClick={() => {
-              if (window.confirm('Reset dashboard to default layout? This will remove all widgets and cannot be undone.')) {
+              if (
+                window.confirm(
+                  `Reset ${categoryDisplayName} landing page to default? This will remove all widgets and cannot be undone.`
+                )
+              ) {
                 resetLayout();
               }
             }}
@@ -127,12 +166,20 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ campaignId: propCa
         </div>
       </header>
 
+      {/* Rich text editor for category description */}
+      <CategoryLandingTextEditor
+        campaignId={campaignId}
+        category={category}
+        content={description}
+        onChange={updateDescription}
+      />
+
       {/* Empty state */}
       {isEmpty && (
         <div className="dashboard-empty-state">
           <div className="empty-state-content">
-            <h2>Welcome to your Campaign Dashboard</h2>
-            <p>Get started by adding widgets to track your campaign.</p>
+            <h2>Welcome to your {categoryDisplayName} Landing Page</h2>
+            <p>Add widgets to track and visualize your {categoryDisplayName.toLowerCase()}.</p>
             <button
               type="button"
               className="empty-state-add-button"
@@ -193,12 +240,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ campaignId: propCa
         </ResponsiveGridLayout>
       )}
 
-      {/* Widget Picker Modal */}
+      {/* Widget Picker Modal - filtered to category-specific widgets */}
       <WidgetPicker
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
         onSelect={addWidget}
         existingWidgets={layout.map((item) => item.widgetId)}
+        categoryFilter={category}
       />
     </div>
   );

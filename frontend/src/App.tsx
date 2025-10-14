@@ -1,10 +1,13 @@
 /**
  * Main App Component
  * T067: Updated with Feature 015 category pages and dashboard routing
+ * T006: Added react-grid-layout CSS imports for dashboard canvas system
  */
 
 import React from 'react';
 import { BrowserRouter, Routes, Route, useLocation, useParams } from 'react-router-dom';
+import 'react-grid-layout/css/styles.css';
+import 'react-resizable/css/styles.css';
 import { AuthProvider } from './contexts/AuthContext';
 import { ViewModeProvider } from './contexts/ViewModeContext';
 import { InformationLevelProvider } from './contexts/InformationLevelContext';
@@ -34,6 +37,19 @@ import { GenericCategoryDetailView } from './components/pages/GenericCategoryDet
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { FloatingEasel } from './components/FloatingEasel';
 import { Sidebar } from './components/navigation/Sidebar';
+import { NPCsLandingPage } from './pages/category-landing/NPCsLandingPage';
+import { LocationsLandingPage } from './pages/category-landing/LocationsLandingPage';
+import { FactionsLandingPage } from './pages/category-landing/FactionsLandingPage';
+import { QuestsLandingPage } from './pages/category-landing/QuestsLandingPage';
+import { SessionRecapsLandingPage } from './pages/category-landing/SessionRecapsLandingPage';
+import { PlayerCharactersLandingPage } from './pages/category-landing/PlayerCharactersLandingPage';
+import { LoreEntriesLandingPage } from './pages/category-landing/LoreEntriesLandingPage';
+import { WorldRulesLandingPage } from './pages/category-landing/WorldRulesLandingPage';
+import { PlanarForcesLandingPage } from './pages/category-landing/PlanarForcesLandingPage';
+import { SessionPrepLandingPage } from './pages/category-landing/SessionPrepLandingPage';
+import { CustomMechanicsLandingPage } from './pages/category-landing/CustomMechanicsLandingPage';
+import { ItemsLandingPage } from './pages/category-landing/ItemsLandingPage';
+import { CreaturesLandingPage } from './pages/category-landing/CreaturesLandingPage';
 
 /**
  * CampaignLayout - Wraps campaign pages with Sidebar and DashboardProvider
@@ -119,13 +135,13 @@ function AppContent() {
           }
         />
 
-        {/* Feature 015: Category List Pages */}
+        {/* Feature 015: Category Landing Pages (with canvas) - T023 */}
         <Route
           path="/campaigns/:campaignId/npcs"
           element={
             <ProtectedRoute>
               <CampaignLayoutWrapper>
-                <NPCListPage />
+                <NPCsLandingPage />
               </CampaignLayoutWrapper>
             </ProtectedRoute>
           }
@@ -135,7 +151,7 @@ function AppContent() {
           element={
             <ProtectedRoute>
               <CampaignLayoutWrapper>
-                <LocationListPage />
+                <LocationsLandingPage />
               </CampaignLayoutWrapper>
             </ProtectedRoute>
           }
@@ -145,7 +161,7 @@ function AppContent() {
           element={
             <ProtectedRoute>
               <CampaignLayoutWrapper>
-                <FactionListPage />
+                <FactionsLandingPage />
               </CampaignLayoutWrapper>
             </ProtectedRoute>
           }
@@ -155,7 +171,7 @@ function AppContent() {
           element={
             <ProtectedRoute>
               <CampaignLayoutWrapper>
-                <QuestListPage />
+                <QuestsLandingPage />
               </CampaignLayoutWrapper>
             </ProtectedRoute>
           }
@@ -165,7 +181,7 @@ function AppContent() {
           element={
             <ProtectedRoute>
               <CampaignLayoutWrapper>
-                <SessionRecapListPage />
+                <SessionRecapsLandingPage />
               </CampaignLayoutWrapper>
             </ProtectedRoute>
           }
@@ -175,7 +191,7 @@ function AppContent() {
           element={
             <ProtectedRoute>
               <CampaignLayoutWrapper>
-                <PlayerCharacterListPage />
+                <PlayerCharactersLandingPage />
               </CampaignLayoutWrapper>
             </ProtectedRoute>
           }
@@ -185,7 +201,7 @@ function AppContent() {
           element={
             <ProtectedRoute>
               <CampaignLayoutWrapper>
-                <LoreEntryListPage />
+                <LoreEntriesLandingPage />
               </CampaignLayoutWrapper>
             </ProtectedRoute>
           }
@@ -195,7 +211,7 @@ function AppContent() {
           element={
             <ProtectedRoute>
               <CampaignLayoutWrapper>
-                <WorldRuleListPage />
+                <WorldRulesLandingPage />
               </CampaignLayoutWrapper>
             </ProtectedRoute>
           }
@@ -205,7 +221,7 @@ function AppContent() {
           element={
             <ProtectedRoute>
               <CampaignLayoutWrapper>
-                <PlanarForceListPage />
+                <PlanarForcesLandingPage />
               </CampaignLayoutWrapper>
             </ProtectedRoute>
           }
@@ -215,7 +231,7 @@ function AppContent() {
           element={
             <ProtectedRoute>
               <CampaignLayoutWrapper>
-                <SessionPrepListPage />
+                <SessionPrepLandingPage />
               </CampaignLayoutWrapper>
             </ProtectedRoute>
           }
@@ -225,7 +241,7 @@ function AppContent() {
           element={
             <ProtectedRoute>
               <CampaignLayoutWrapper>
-                <CustomMechanicListPage />
+                <CustomMechanicsLandingPage />
               </CampaignLayoutWrapper>
             </ProtectedRoute>
           }
@@ -235,13 +251,145 @@ function AppContent() {
           element={
             <ProtectedRoute>
               <CampaignLayoutWrapper>
-                <ItemListPage />
+                <ItemsLandingPage />
               </CampaignLayoutWrapper>
             </ProtectedRoute>
           }
         />
         <Route
           path="/campaigns/:campaignId/creatures"
+          element={
+            <ProtectedRoute>
+              <CampaignLayoutWrapper>
+                <CreaturesLandingPage />
+              </CampaignLayoutWrapper>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Feature 015: Category Database Table Views - T023 */}
+        <Route
+          path="/campaigns/:campaignId/npcs/database"
+          element={
+            <ProtectedRoute>
+              <CampaignLayoutWrapper>
+                <NPCListPage />
+              </CampaignLayoutWrapper>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/campaigns/:campaignId/locations/database"
+          element={
+            <ProtectedRoute>
+              <CampaignLayoutWrapper>
+                <LocationListPage />
+              </CampaignLayoutWrapper>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/campaigns/:campaignId/factions/database"
+          element={
+            <ProtectedRoute>
+              <CampaignLayoutWrapper>
+                <FactionListPage />
+              </CampaignLayoutWrapper>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/campaigns/:campaignId/quests/database"
+          element={
+            <ProtectedRoute>
+              <CampaignLayoutWrapper>
+                <QuestListPage />
+              </CampaignLayoutWrapper>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/campaigns/:campaignId/session_recaps/database"
+          element={
+            <ProtectedRoute>
+              <CampaignLayoutWrapper>
+                <SessionRecapListPage />
+              </CampaignLayoutWrapper>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/campaigns/:campaignId/player_characters/database"
+          element={
+            <ProtectedRoute>
+              <CampaignLayoutWrapper>
+                <PlayerCharacterListPage />
+              </CampaignLayoutWrapper>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/campaigns/:campaignId/lore_entries/database"
+          element={
+            <ProtectedRoute>
+              <CampaignLayoutWrapper>
+                <LoreEntryListPage />
+              </CampaignLayoutWrapper>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/campaigns/:campaignId/world_rules/database"
+          element={
+            <ProtectedRoute>
+              <CampaignLayoutWrapper>
+                <WorldRuleListPage />
+              </CampaignLayoutWrapper>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/campaigns/:campaignId/planar_forces/database"
+          element={
+            <ProtectedRoute>
+              <CampaignLayoutWrapper>
+                <PlanarForceListPage />
+              </CampaignLayoutWrapper>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/campaigns/:campaignId/session_prep/database"
+          element={
+            <ProtectedRoute>
+              <CampaignLayoutWrapper>
+                <SessionPrepListPage />
+              </CampaignLayoutWrapper>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/campaigns/:campaignId/custom_mechanics/database"
+          element={
+            <ProtectedRoute>
+              <CampaignLayoutWrapper>
+                <CustomMechanicListPage />
+              </CampaignLayoutWrapper>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/campaigns/:campaignId/items/database"
+          element={
+            <ProtectedRoute>
+              <CampaignLayoutWrapper>
+                <ItemListPage />
+              </CampaignLayoutWrapper>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/campaigns/:campaignId/creatures/database"
           element={
             <ProtectedRoute>
               <CampaignLayoutWrapper>

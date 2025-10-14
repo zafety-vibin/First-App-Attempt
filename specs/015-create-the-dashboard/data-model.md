@@ -956,4 +956,536 @@ window.addEventListener('storage', (e) => {
 
 ---
 
-**Status**: ✅ Data model complete - 40+ component interfaces, 8 UI state models, validation schemas for all 13 categories, data flow patterns documented
+## Dashboard Canvas System (EXPANDED SCOPE)
+
+### 9. Dashboard Canvas State (NEW)
+
+```typescript
+interface DashboardCanvasState {
+  layout: LayoutConfig;
+  widgets: WidgetInstance[];
+  loading: boolean;
+  saving: boolean;
+  error: string | null;
+  pickerOpen: boolean;
+}
+
+interface LayoutConfig {
+  layouts: {
+    lg: GridLayoutItem[]; // Desktop breakpoint
+    md?: GridLayoutItem[]; // Tablet (deferred to future)
+    sm?: GridLayoutItem[]; // Mobile (deferred to future)
+  };
+  breakpoint: 'lg' | 'md' | 'sm';
+}
+
+interface GridLayoutItem {
+  i: string; // Unique instance ID: 'npc-summary-1', 'quest-tracker-2'
+  x: number; // Grid column position (0-11 for 12-column grid)
+  y: number; // Grid row position
+  w: number; // Width in grid columns
+  h: number; // Height in grid rows
+  minW?: number; // Minimum width
+  minH?: number; // Minimum height
+  maxW?: number; // Maximum width
+  maxH?: number; // Maximum height
+  widgetId: string; // Widget type: 'npc-summary', 'quest-tracker'
+  static?: boolean; // Cannot be dragged/resized if true
+}
+
+interface WidgetInstance {
+  instanceId: string; // Unique instance: 'npc-summary-1'
+  widgetId: string; // Widget type: 'npc-summary'
+  definition: WidgetDefinition; // Metadata from registry
+  gridData: GridLayoutItem; // Layout positioning
+}
+```
+
+### 10. Widget Definition Models (NEW)
+
+```typescript
+// Widget Registry - Central registry of available widgets
+interface WidgetDefinition {
+  id: string; // Unique widget type ID: 'npc-summary', 'quest-tracker'
+  type: WidgetCategoryType; // Category grouping for picker
+  name: string; // Display name: "NPC Summary"
+  description: string; // User-facing description
+  icon?: string; // Icon name/path for picker
+  supportedSizes: WidgetSize[]; // ['2x2', '3x3']
+  defaultSize: WidgetSize; // '2x2'
+  minSize: { w: number; h: number }; // Minimum grid cells
+  maxSize?: { w: number; h: number }; // Maximum grid cells
+  component: React.ComponentType<BaseWidgetProps>; // React component
+}
+
+type WidgetCategoryType =
+  | 'category-summary' // NPCs, Locations, Factions summaries
+  | 'activity' // Recent Activity, Recent Updates
+  | 'timeline' // Session Timeline, Quest Timeline
+  | 'analytics' // Charts, graphs (future)
+  | 'custom'; // User-defined widgets (future)
+
+type WidgetSize = '1x1' | '2x2' | '3x3' | '2x4' | '4x2' | '3x2' | '4x3' | '4x4';
+
+// Base widget props - all widgets receive these
+interface BaseWidgetProps {
+  size: WidgetSize; // Current grid size
+  viewMode: 'dm_view' | 'player_view'; // From InformationLevelContext
+  campaignId: string;
+  onRemove?: () => void; // Remove this widget instance
+  onConfigure?: () => void; // Open widget configuration modal (future)
+}
+```
+
+### 11. Database Entity: DashboardConfig (NEW)
+
+```typescript
+// Stored in SQLite - backend/src/db/migrations/015-dashboard-configs.sql
+interface DashboardConfig {
+  id: string; // UUID primary key
+  campaign_id: string; // FK to campaigns.id (CASCADE delete)
+  user_id: string; // FK to users.user_id (CASCADE delete)
+  layout: string; // JSON string of LayoutConfig
+  created_at: number; // Unix timestamp
+  updated_at: number; // Unix timestamp
+}
+
+// SQL Schema
+/*
+CREATE TABLE dashboard_configs (
+  id TEXT PRIMARY KEY,
+  campaign_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  layout TEXT NOT NULL, -- JSON string
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+  updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+  FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+  UNIQUE(campaign_id, user_id)
+);
+
+CREATE INDEX idx_dashboard_configs_campaign_user ON dashboard_configs(campaign_id, user_id);
+*/
+
+// Parsed layout JSON structure
+interface DashboardConfigLayout {
+  layouts: {
+    lg: Array<{
+      i: string; // Instance ID
+      x: number;
+      y: number;
+      w: number;
+      h: number;
+      minW?: number;
+      minH?: number;
+      widgetId: string; // Widget type
+    }>;
+  };
+  breakpoint: 'lg';
+}
+
+// Default layout for new users
+const DEFAULT_DASHBOARD_LAYOUT: DashboardConfigLayout = {
+  layouts: {
+    lg: [
+      { i: 'npc-summary-1', x: 0, y: 0, w: 3, h: 2, minW: 2, minH: 2, widgetId: 'npc-summary' },
+      { i: 'quest-tracker-1', x: 3, y: 0, w: 3, h: 2, minW: 2, minH: 2, widgetId: 'quest-tracker' },
+      { i: 'recent-activity-1', x: 6, y: 0, w: 6, h: 2, minW: 2, minH: 2, widgetId: 'recent-activity' },
+    ]
+  },
+  breakpoint: 'lg'
+};
+```
+
+### 12. Backend API Models (NEW)
+
+```typescript
+// GET /api/campaigns/:campaignId/dashboard-config
+interface GetDashboardConfigResponse {
+  config: DashboardConfig | null; // Null if first-time user
+  defaultLayout: DashboardConfigLayout; // Provided for first-time setup
+}
+
+// PUT /api/campaigns/:campaignId/dashboard-config
+interface UpdateDashboardConfigRequest {
+  layout: DashboardConfigLayout;
+}
+
+interface UpdateDashboardConfigResponse {
+  config: DashboardConfig;
+  success: boolean;
+}
+
+// POST /api/campaigns/:campaignId/dashboard-config/reset
+interface ResetDashboardConfigResponse {
+  config: DashboardConfig; // Reset to default layout
+  success: boolean;
+}
+```
+
+### 13. Canvas Component Interfaces (NEW)
+
+```typescript
+// DashboardCanvas.tsx - Main grid container
+interface DashboardCanvasProps {
+  campaignId: string;
+  layout: LayoutConfig;
+  widgets: WidgetInstance[];
+  viewMode: 'dm_view' | 'player_view';
+  onLayoutChange: (newLayout: GridLayoutItem[]) => void;
+  onWidgetRemove: (instanceId: string) => void;
+  onAddWidget: () => void; // Opens WidgetPicker
+}
+
+// WidgetPicker.tsx - Modal for adding widgets
+interface WidgetPickerProps {
+  open: boolean;
+  onClose: () => void;
+  onAddWidget: (widgetId: string, size: WidgetSize) => void;
+  existingWidgets: WidgetInstance[]; // To show "already added" state
+}
+
+// BaseWidget.tsx - Wrapper for all widgets
+interface BaseWidgetWrapperProps {
+  instanceId: string;
+  definition: WidgetDefinition;
+  size: WidgetSize;
+  viewMode: 'dm_view' | 'player_view';
+  campaignId: string;
+  onRemove: () => void;
+}
+
+// WidgetRegistry.ts - Static registry
+class WidgetRegistry {
+  private static widgets: Map<string, WidgetDefinition> = new Map();
+
+  static register(widget: WidgetDefinition): void;
+  static get(id: string): WidgetDefinition | undefined;
+  static getAll(): WidgetDefinition[];
+  static getByCategory(category: WidgetCategoryType): WidgetDefinition[];
+}
+```
+
+### 14. Example Widget Interfaces (v1 - 3 widgets)
+
+```typescript
+// NPCSummaryWidget.tsx
+interface NPCSummaryWidgetProps extends BaseWidgetProps {
+  // Inherits: size, viewMode, campaignId, onRemove, onConfigure
+}
+
+interface NPCSummaryData {
+  totalCount: number;
+  recentNPCs: Array<{ id: string; name: string; race: string | null }>;
+  relationshipBreakdown?: Record<string, number>; // Only in 3x3 size
+}
+
+// RecentActivityWidget.tsx
+interface RecentActivityWidgetProps extends BaseWidgetProps {}
+
+interface RecentActivityData {
+  recentEntities: Array<{
+    id: string;
+    name: string;
+    category: CategoryName;
+    categoryLabel: string; // Themed label
+    updated_at: number;
+    relativeTime: string; // "2 hours ago"
+  }>;
+}
+
+// QuestTrackerWidget.tsx
+interface QuestTrackerWidgetProps extends BaseWidgetProps {}
+
+interface QuestTrackerData {
+  activeCount: number;
+  completedCount: number;
+  activeQuests: Array<{ id: string; name: string; status: string }>;
+  completionPercentage: number; // (completed / total) * 100
+}
+```
+
+### Canvas Data Flow
+
+```
+User Drags Widget
+        ↓
+react-grid-layout onLayoutChange fires
+        ↓
+DashboardCanvas handleLayoutChange (debounced 500ms)
+        ↓
+State Update (immediate for smooth UX)
+        ↓
+After 500ms: PUT /api/campaigns/:id/dashboard-config
+        ↓
+Backend: DashboardConfigService.update()
+        ↓
+SQLite: UPDATE dashboard_configs SET layout = ? WHERE campaign_id = ? AND user_id = ?
+        ↓
+Response: { success: true, config: {...} }
+        ↓
+(No UI update needed - state already updated optimistically)
+```
+
+### Widget Add Flow
+
+```
+User Clicks "+ Add Widget"
+        ↓
+WidgetPicker Modal Opens
+        ↓
+User Searches/Filters Widget Library
+        ↓
+User Clicks Widget Size Button (e.g., "2x2")
+        ↓
+Generate Unique Instance ID: `${widgetId}-${timestamp}`
+        ↓
+Find Empty Grid Position (bottom of canvas)
+        ↓
+Create GridLayoutItem with position + widgetId
+        ↓
+Add to Layout State
+        ↓
+react-grid-layout Renders New Widget
+        ↓
+500ms Debounce → Save to Database
+```
+
+### Widget Remove Flow
+
+```
+User Clicks Widget Remove Button (X)
+        ↓
+BaseWidget onRemove Handler Fires
+        ↓
+DashboardCanvas handleWidgetRemove(instanceId)
+        ↓
+Remove from Layout State (filter out instanceId)
+        ↓
+react-grid-layout Re-renders (compacts grid)
+        ↓
+500ms Debounce → Save to Database
+```
+
+---
+
+## Category Landing Canvas (ADDITIONAL REQUIREMENT)
+
+### 15. Category Landing Configuration Entity (NEW)
+
+```typescript
+// Stored in SQLite - backend/src/db/migrations/015-category-landing-configs.sql
+interface CategoryLandingConfig {
+  id: string; // UUID primary key
+  campaign_id: string; // FK to campaigns.id (CASCADE delete)
+  user_id: string; // FK to users.user_id (CASCADE delete)
+  category: CategoryName; // 'npcs' | 'locations' | 'factions' | ...
+  layout: string; // JSON string of LayoutConfig (same format as dashboard)
+  title: string | null; // User-editable category title override
+  description: string | null; // TipTap JSON for rich text description
+  created_at: number; // Unix timestamp
+  updated_at: number; // Unix timestamp
+}
+
+// SQL Schema
+/*
+CREATE TABLE category_landing_configs (
+  id TEXT PRIMARY KEY,
+  campaign_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  category TEXT NOT NULL,
+  layout TEXT NOT NULL,
+  title TEXT,
+  description TEXT,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+  updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+  FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+  UNIQUE(campaign_id, user_id, category)
+);
+
+CREATE INDEX idx_category_landing_configs_campaign_user_category
+  ON category_landing_configs(campaign_id, user_id, category);
+*/
+
+// Default layout per category (initially empty - user adds widgets)
+const DEFAULT_CATEGORY_LANDING_LAYOUT: DashboardConfigLayout = {
+  layouts: {
+    lg: [] // Empty - users add widgets as needed
+  },
+  breakpoint: 'lg'
+};
+```
+
+### 16. Category Landing Page State (EXTENDED)
+
+```typescript
+// Extends existing CategoryLandingState with canvas
+interface CategoryLandingPageState {
+  // Canvas state
+  canvasLayout: LayoutConfig;
+  canvasWidgets: WidgetInstance[];
+  canvasLoading: boolean;
+  canvasSaving: boolean;
+
+  // Text editor state
+  title: string; // Editable title (defaults to themed category name)
+  description: string; // TipTap JSON string
+  textEditing: boolean;
+  textSaving: boolean;
+
+  // Existing state (from original plan)
+  statistics: {
+    totalCount: number;
+    statusBreakdown: Record<CoreStatus, number>;
+    lastUpdated: number | null;
+  };
+  loading: boolean;
+  error: string | null;
+}
+```
+
+### 17. Category Landing Components (NEW)
+
+```typescript
+// CategoryLandingCanvas.tsx - Constrained canvas (max-height: 50vh)
+interface CategoryLandingCanvasProps {
+  campaignId: string;
+  category: CategoryName;
+  layout: LayoutConfig;
+  widgets: WidgetInstance[];
+  viewMode: 'dm_view' | 'player_view';
+  onLayoutChange: (newLayout: GridLayoutItem[]) => void;
+  onWidgetRemove: (instanceId: string) => void;
+  onAddWidget: () => void;
+  maxHeight: string; // '50vh' by default
+}
+
+// CategoryLandingTextEditor.tsx - Title + description editor
+interface CategoryLandingTextEditorProps {
+  campaignId: string;
+  category: CategoryName;
+  title: string;
+  description: string; // TipTap JSON
+  placeholder: string; // Themed category label
+  onSave: (title: string, description: string) => Promise<void>;
+  readOnly?: boolean; // Player view = read-only
+}
+
+// Updated CategoryLandingPage.tsx - Combines canvas + text editor
+interface CategoryLandingPageProps {
+  campaignId: string;
+  category: CategoryName;
+}
+
+// Component structure:
+// <CategoryLandingPage>
+//   <div className="landing-canvas-area" style={{ height: '50vh' }}>
+//     <CategoryLandingCanvas {...canvasProps} />
+//   </div>
+//   <div className="landing-text-area" style={{ minHeight: '50vh' }}>
+//     <CategoryLandingTextEditor {...textProps} />
+//   </div>
+//   <CategoryStatsSection {...statsProps} /> // Below text area
+//   <CategoryTable {...tableProps} /> // Existing table view
+// </CategoryLandingPage>
+```
+
+### 18. Category Landing API Models (NEW)
+
+```typescript
+// GET /api/campaigns/:campaignId/:category/landing-config
+interface GetCategoryLandingConfigResponse {
+  config: CategoryLandingConfig | null; // Null if first-time
+  defaultLayout: DashboardConfigLayout; // Empty layout initially
+  themedLabel: string; // Category label for title placeholder
+}
+
+// PUT /api/campaigns/:campaignId/:category/landing-config
+interface UpdateCategoryLandingConfigRequest {
+  layout?: DashboardConfigLayout; // Optional - only if layout changed
+  title?: string; // Optional - only if title changed
+  description?: string; // Optional - only if description changed
+}
+
+interface UpdateCategoryLandingConfigResponse {
+  config: CategoryLandingConfig;
+  success: boolean;
+}
+
+// POST /api/campaigns/:campaignId/:category/landing-config/reset
+interface ResetCategoryLandingConfigResponse {
+  config: CategoryLandingConfig; // Reset to empty layout + null title/description
+  success: boolean;
+}
+```
+
+### 19. Widget Definition Extension (NEW)
+
+```typescript
+// Extended WidgetDefinition to support category filtering
+interface WidgetDefinition {
+  id: string;
+  type: WidgetCategoryType;
+  name: string;
+  description: string;
+  icon?: string;
+  supportedSizes: WidgetSize[];
+  defaultSize: WidgetSize;
+  minSize: { w: number; h: number };
+  maxSize?: { w: number; h: number };
+  component: React.ComponentType<BaseWidgetProps>;
+
+  // NEW: Optional category filtering
+  categories?: CategoryName[]; // If specified, only show on these category landing pages
+  // If omitted, widget available everywhere (dashboard + all landing pages)
+}
+
+// Example: Generic widget (shows everywhere)
+WidgetRegistry.register({
+  id: 'recent-activity',
+  name: 'Recent Activity',
+  type: 'activity',
+  supportedSizes: ['2x2', '2x4'],
+  component: RecentActivityWidget,
+  // No 'categories' field = available everywhere
+});
+
+// Example: Category-specific widget (future)
+WidgetRegistry.register({
+  id: 'npc-relationship-chart',
+  name: 'NPC Relationship Chart',
+  type: 'category-summary',
+  supportedSizes: ['3x3', '4x4'],
+  component: NPCRelationshipChartWidget,
+  categories: ['npcs'], // Only on NPCs landing page
+});
+```
+
+### Category Landing Data Flow
+
+```
+User Opens NPCs Landing Page
+        ↓
+GET /api/campaigns/:id/npcs/landing-config
+        ↓
+Backend: CategoryLandingConfigService.getByCategory('npcs')
+        ↓
+Response: { config: {...layout, title, description}, defaultLayout, themedLabel }
+        ↓
+Frontend: Render CategoryLandingCanvas (top 50%) + CategoryLandingTextEditor (bottom 50%)
+        ↓
+User Drags Widget in Canvas
+        ↓
+Debounced 500ms → PUT /api/campaigns/:id/npcs/landing-config { layout }
+        ↓
+User Edits Title/Description
+        ↓
+Debounced 1s → PUT /api/campaigns/:id/npcs/landing-config { title, description }
+        ↓
+Both saves independent (can happen concurrently)
+```
+
+---
+
+**Status**: ✅ Data model complete - 55+ component interfaces, 19 state/entity models, validation schemas for all 13 categories, dashboard canvas + category landing canvas fully modeled, 2 backend database schemas defined

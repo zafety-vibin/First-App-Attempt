@@ -504,9 +504,573 @@ function App() {
 
 **Target Bundle Size**: <500KB gzipped (acceptable for desktop-only prototype)
 
+### 11. Dashboard Canvas System (EXPANDED SCOPE)
+
+**Decision**: Use react-grid-layout for drag-drop widget canvas with database-stored configuration
+
+**Rationale**:
+- Feature 015 scope expanded per user requirement: "dashboard to work how we intend" = customizable canvas
+- Dashboard must be drag-and-drop grid, not static widget list
+- Users choose which widgets to display, resize, and position
+- Configuration persists per user per campaign
+- Widgets respect dm_view/player_view filtering
+- Extensible architecture allows adding widgets as separate features later
+
+**Alternatives Considered**:
+- Static widget grid (original plan): Rejected - doesn't meet user's vision of customizable dashboard
+- @dnd-kit (already in project): Rejected - designed for list reordering, not 2D grids with resize
+- react-beautiful-dnd: Rejected - focused on list drag-drop, no grid support
+- gridstack.js: Rejected - jQuery dependency, not React-friendly
+- Custom CSS Grid: Rejected - weeks of work to build drag-drop + resize + collision detection
+
+**Why react-grid-layout:**
+- Mature library (20k+ GitHub stars, actively maintained since 2015)
+- Built for dashboard use cases (drag, drop, resize, grid snapping)
+- Controlled mode for persisting layout to database
+- Responsive breakpoints (lg/md/sm) out of the box
+- Collision detection prevents widget overlap
+- Performance: CSS transforms for 60fps dragging
+- TypeScript support via @types/react-grid-layout
+- Bundle size: ~50KB (acceptable for desktop prototype)
+
+**Implementation Notes**:
+```typescript
+// Install
+npm install react-grid-layout @types/react-grid-layout
+
+// Usage
+import GridLayout from 'react-grid-layout';
+import 'react-grid-layout/css/styles.css';
+import 'react-resizable/css/styles.css';
+
+<GridLayout
+  className="dashboard-grid"
+  layout={layout} // Persisted from database
+  cols={12}
+  rowHeight={80}
+  width={1200}
+  onLayoutChange={handleLayoutChange} // Save to database
+  isDraggable={true}
+  isResizable={true}
+  compactType="vertical"
+>
+  {widgets.map((widget) => (
+    <div key={widget.id} data-grid={widget.gridData}>
+      <WidgetComponent {...widget} />
+    </div>
+  ))}
+</GridLayout>
+```
+
+### 11.1 Widget Architecture Pattern
+
+**Decision**: Registry pattern with size-adaptive widget components
+
+**Base Widget Interface:**
+```typescript
+interface BaseWidgetProps {
+  size: WidgetSize; // Current grid size: 1x1, 2x2, 3x3, 2x4, 4x2
+  viewMode: 'dm_view' | 'player_view';
+  campaignId: string;
+  onRemove?: () => void;
+  onConfigure?: () => void;
+}
+
+type WidgetSize = '1x1' | '2x2' | '3x3' | '2x4' | '4x2' | '3x2' | '4x3';
+
+interface WidgetDefinition {
+  id: string; // Unique identifier: 'npc-summary', 'quest-tracker'
+  type: WidgetType; // Category: 'category-summary', 'activity', 'timeline'
+  name: string; // Display name: "NPC Summary"
+  description: string; // "Shows total NPC count and recent NPCs"
+  supportedSizes: WidgetSize[]; // ['2x2', '3x3']
+  defaultSize: WidgetSize; // '2x2'
+  minSize: { w: number; h: number }; // Min grid cells: { w: 2, h: 2 }
+  component: React.ComponentType<BaseWidgetProps>;
+}
+```
+
+**Widget Registry Pattern:**
+```typescript
+// frontend/src/components/dashboard/WidgetRegistry.ts
+class WidgetRegistry {
+  private static widgets: Map<string, WidgetDefinition> = new Map();
+
+  static register(widget: WidgetDefinition) {
+    this.widgets.set(widget.id, widget);
+  }
+
+  static get(id: string): WidgetDefinition | undefined {
+    return this.widgets.get(id);
+  }
+
+  static getAll(): WidgetDefinition[] {
+    return Array.from(this.widgets.values());
+  }
+
+  static getByCategory(category: string): WidgetDefinition[] {
+    return this.getAll().filter(w => w.type === category);
+  }
+}
+
+// Register widgets
+WidgetRegistry.register({
+  id: 'npc-summary',
+  type: 'category-summary',
+  name: 'NPC Summary',
+  description: 'Total NPC count, recent NPCs',
+  supportedSizes: ['2x2', '3x3'],
+  defaultSize: '2x2',
+  minSize: { w: 2, h: 2 },
+  component: NPCSummaryWidget,
+});
+```
+
+**Size-Adaptive Widget Pattern:**
+```typescript
+// Widget adapts content density based on size prop
+export const NPCSummaryWidget: React.FC<BaseWidgetProps> = React.memo(({ size, viewMode, campaignId }) => {
+  const { data, loading } = useNPCSummary(campaignId);
+
+  if (loading) return <SkeletonLoader type="widget" />;
+
+  // Adapt content based on size
+  if (size === '1x1') {
+    return <div className="widget-compact"><h3>{data.totalCount}</h3><p>NPCs</p></div>;
+  }
+
+  if (size === '2x2') {
+    return (
+      <div className="widget-medium">
+        <h3>NPCs ({data.totalCount})</h3>
+        <ul>{data.recentNPCs.slice(0, 3).map(npc => <li key={npc.id}>{npc.name}</li>)}</ul>
+      </div>
+    );
+  }
+
+  if (size === '3x3') {
+    return (
+      <div className="widget-large">
+        <h3>NPCs ({data.totalCount})</h3>
+        <div className="breakdown">{/* Relationship breakdown chart */}</div>
+        <ul>{data.recentNPCs.slice(0, 5).map(npc => <li key={npc.id}>{npc.name}</li>)}</ul>
+      </div>
+    );
+  }
+});
+```
+
+### 11.2 Configuration Storage
+
+**Database Schema:**
+```sql
+CREATE TABLE dashboard_configs (
+  id TEXT PRIMARY KEY,
+  campaign_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  layout JSON NOT NULL, -- react-grid-layout format
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+  updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+  FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+  UNIQUE(campaign_id, user_id)
+);
+
+CREATE INDEX idx_dashboard_configs_campaign_user ON dashboard_configs(campaign_id, user_id);
+```
+
+**Layout JSON Format (react-grid-layout):**
+```json
+{
+  "layouts": {
+    "lg": [
+      {
+        "i": "npc-summary-1",
+        "x": 0,
+        "y": 0,
+        "w": 2,
+        "h": 2,
+        "minW": 2,
+        "minH": 2,
+        "widgetId": "npc-summary"
+      },
+      {
+        "i": "quest-tracker-1",
+        "x": 2,
+        "y": 0,
+        "w": 2,
+        "h": 2,
+        "minW": 2,
+        "minH": 2,
+        "widgetId": "quest-tracker"
+      }
+    ]
+  },
+  "breakpoint": "lg"
+}
+```
+
+**Backend API Additions:**
+- GET `/api/campaigns/:id/dashboard-config` - Fetch user's dashboard config
+- PUT `/api/campaigns/:id/dashboard-config` - Save layout changes
+- POST `/api/campaigns/:id/dashboard-config/reset` - Reset to default layout
+
+**Default Layout (first-time users):**
+```typescript
+const DEFAULT_LAYOUT = {
+  layouts: {
+    lg: [
+      { i: 'npc-summary-1', x: 0, y: 0, w: 3, h: 2, widgetId: 'npc-summary' },
+      { i: 'quest-tracker-1', x: 3, y: 0, w: 3, h: 2, widgetId: 'quest-tracker' },
+      { i: 'recent-activity-1', x: 6, y: 0, w: 6, h: 2, widgetId: 'recent-activity' },
+    ]
+  },
+  breakpoint: 'lg'
+};
+```
+
+### 11.3 Widget Picker UI
+
+**Decision**: Radix UI Dialog with widget library grid
+
+**Implementation:**
+```typescript
+// WidgetPicker.tsx - Modal for adding new widgets
+interface WidgetPickerProps {
+  open: boolean;
+  onClose: () => void;
+  onAddWidget: (widgetId: string, size: WidgetSize) => void;
+}
+
+export const WidgetPicker: React.FC<WidgetPickerProps> = ({ open, onClose, onAddWidget }) => {
+  const [searchText, setSearchText] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  const availableWidgets = WidgetRegistry.getAll();
+  const filteredWidgets = useMemo(() => {
+    return availableWidgets.filter(w => {
+      const matchesSearch = w.name.toLowerCase().includes(searchText.toLowerCase());
+      const matchesCategory = !selectedCategory || w.type === selectedCategory;
+      return matchesSearch && matchesCategory;
+    });
+  }, [searchText, selectedCategory, availableWidgets]);
+
+  return (
+    <Dialog.Root open={open} onOpenChange={onClose}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="dialog-overlay" />
+        <Dialog.Content className="widget-picker-dialog">
+          <Dialog.Title>Add Widget</Dialog.Title>
+          <div className="picker-filters">
+            <input
+              type="text"
+              placeholder="Search widgets..."
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+            />
+            <select value={selectedCategory || ''} onChange={(e) => setSelectedCategory(e.target.value || null)}>
+              <option value="">All Categories</option>
+              <option value="category-summary">Category Summaries</option>
+              <option value="activity">Activity</option>
+              <option value="timeline">Timeline</option>
+            </select>
+          </div>
+          <div className="widget-grid">
+            {filteredWidgets.map((widget) => (
+              <div key={widget.id} className="widget-card">
+                <h4>{widget.name}</h4>
+                <p>{widget.description}</p>
+                <div className="size-options">
+                  {widget.supportedSizes.map((size) => (
+                    <button
+                      key={size}
+                      onClick={() => onAddWidget(widget.id, size)}
+                      className="size-button"
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+};
+```
+
+**Trigger Button:**
+```typescript
+// DashboardPage.tsx header
+<button onClick={() => setPickerOpen(true)} className="add-widget-button">
+  + Add Widget
+</button>
+```
+
+### 11.4 Example Widgets for v1 (Proof of Concept)
+
+**Priority: 3 simple widgets to validate canvas system**
+
+**1. NPCSummaryWidget**
+- Sizes: 2x2 (compact), 3x3 (detailed)
+- Data: Total count, recent 3-5 NPCs
+- 2x2: Count + list
+- 3x3: Count + relationship breakdown + list
+
+**2. RecentActivityWidget**
+- Sizes: 2x4 (vertical), 4x2 (horizontal)
+- Data: 10 most recent updates across all categories
+- Both sizes show same data, different layout (vertical vs horizontal scroll)
+
+**3. QuestTrackerWidget**
+- Sizes: 2x2 (single size)
+- Data: Active/completed counts, 3 active quests
+- Simple compact widget, no size variations needed
+
+**Deferred to Future:**
+- LocationExplorerWidget (complex hierarchy visualization)
+- FactionPowerWidget (relationship graphs)
+- SessionTimelineWidget (timeline UI)
+- PlayerCharactersWidget (party roster with details)
+- All chart/graph visualizations (d3.js/recharts not needed for v1)
+
+### 11.5 Information Level Filtering Integration
+
+**Requirement**: All widgets MUST respect dm_view/player_view filtering
+
+**Implementation:**
+```typescript
+// Every widget receives viewMode prop from context
+export const NPCSummaryWidget: React.FC<BaseWidgetProps> = ({ size, viewMode, campaignId }) => {
+  // Hook automatically sends X-View-Mode header
+  const { data, loading } = useNPCSummary(campaignId); // Uses viewMode from context
+
+  // Widget only receives filtered data from backend
+  // No additional client-side filtering needed
+  return <div>{/* Render data */}</div>;
+};
+
+// Custom hook pattern
+function useNPCSummary(campaignId: string) {
+  const { viewMode } = useViewMode(); // From ViewModeContext (Feature 004)
+
+  return useQuery({
+    queryKey: ['npc-summary', campaignId, viewMode],
+    queryFn: () => apiClient.get(`/npcs/stats`, {
+      params: { campaign_id: campaignId },
+      headers: { 'X-View-Mode': viewMode } // Automatic from interceptor
+    })
+  });
+}
+```
+
+**Testing Validation:**
+- Create NPCs with player_knowledge='dm_only'
+- Toggle dashboard to Player View
+- Verify dm_only NPCs don't appear in NPCSummaryWidget recent list
+- Verify counts exclude dm_only NPCs in Player View
+
+### 11.6 Performance Optimization for Canvas
+
+**Strategies:**
+- React.memo on ALL widget components (prevent cascade re-renders on drag)
+- Debounced layout save (500ms delay after drag stops, don't save on every pixel move)
+- Lazy load widget components with React.lazy (code splitting)
+- Virtual scrolling if user adds 20+ widgets (unlikely but defensive)
+
+**Example:**
+```typescript
+// Debounced save
+const debouncedSave = useMemo(() =>
+  debounce((layout: Layout[]) => {
+    apiClient.put(`/campaigns/${campaignId}/dashboard-config`, { layout });
+  }, 500),
+  [campaignId]
+);
+
+const handleLayoutChange = (newLayout: Layout[]) => {
+  setLayout(newLayout); // Update state immediately for smooth drag
+  debouncedSave(newLayout); // Save to DB after 500ms of no changes
+};
+```
+
+### 11.7 Implementation Phases
+
+**Phase A: Backend Infrastructure (2-3 tasks)**
+1. Migration: Create dashboard_configs table
+2. Service: DashboardConfigService (CRUD operations)
+3. Routes: GET/PUT /api/campaigns/:id/dashboard-config
+
+**Phase B: Canvas Infrastructure (6-7 tasks)**
+1. Install react-grid-layout + types
+2. Create DashboardCanvas component (grid container)
+3. Create BaseWidget wrapper component
+4. Create WidgetRegistry system
+5. Implement save/load configuration with debouncing
+6. Create WidgetPicker dialog (Radix UI)
+7. Create default layout for first-time users
+
+**Phase C: Example Widgets (3 tasks)**
+1. NPCSummaryWidget (2 size variants: 2x2, 3x3)
+2. RecentActivityWidget (2 size variants: 2x4, 4x2)
+3. QuestTrackerWidget (single size: 2x2)
+
+**Phase D: Testing (3-4 tasks)**
+1. Component tests: DashboardCanvas, WidgetPicker, BaseWidget
+2. Widget tests: NPCSummaryWidget, RecentActivityWidget, QuestTrackerWidget
+3. Integration test: Save/load configuration, view mode filtering
+4. E2E test: Drag-drop workflow, add/remove widgets, resize widgets
+
+**Total Additional Tasks: ~15-18 tasks** (on top of existing Feature 015 tasks)
+
+### 11.8 Extensibility Architecture
+
+**Adding New Widgets (Future Features):**
+```typescript
+// Step 1: Create widget component
+export const LocationExplorerWidget: React.FC<BaseWidgetProps> = ({ size, viewMode, campaignId }) => {
+  // Widget implementation
+};
+
+// Step 2: Register widget
+WidgetRegistry.register({
+  id: 'location-explorer',
+  type: 'category-summary',
+  name: 'Location Explorer',
+  description: 'Explore location hierarchy',
+  supportedSizes: ['2x2', '3x3', '4x3'],
+  defaultSize: '3x3',
+  minSize: { w: 2, h: 2 },
+  component: LocationExplorerWidget,
+});
+
+// Step 3: Widget automatically appears in picker, no dashboard code changes
+```
+
+**No Dashboard Code Changes Needed:**
+- WidgetPicker reads from registry
+- DashboardCanvas renders any registered widget
+- Configuration storage is widget-agnostic (stores widgetId string)
+
+### 11.9 Category Landing Page Canvas (ADDITIONAL REQUIREMENT)
+
+**Decision**: Category landing pages use same canvas system, but constrained to top 50% with editable text area below
+
+**Layout Structure:**
+```
++--------------------------------+
+|  Category Landing Canvas       |
+|  (Top 50% of page)            |
+|  - Drag-drop category widgets  |
+|  - Smaller than dashboard      |
+|  - Category-specific widgets   |
++--------------------------------+
+|  Editable Text Area            |
+|  (Bottom 50% of page)         |
+|  - Category title (editable)   |
+|  - Category description (edit) |
+|  - TipTap rich text editor     |
++--------------------------------+
+```
+
+**Differences from Dashboard Canvas:**
+- **Height constraint**: Canvas max-height = 50vh (viewport height)
+- **Widget scope**: Only category-relevant widgets shown in picker
+  - NPCs landing → NPC-specific widgets only
+  - Locations landing → Location-specific widgets only
+  - etc.
+- **Separate configuration storage**: `category_landing_configs` table (per category per user)
+- **Text area component**: Reuse TipTap editor from Feature 003
+
+**Category-Specific Widgets Examples:**
+- NPCs landing page: NPC Relationship Chart, Recent NPCs, NPC by Faction
+- Locations landing page: Location Hierarchy Map, Recent Locations, Locations by Type
+- Quests landing page: Quest Status Tracker, Active Quests, Quest Timeline
+
+**Database Schema Addition:**
+```sql
+CREATE TABLE category_landing_configs (
+  id TEXT PRIMARY KEY,
+  campaign_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  category TEXT NOT NULL, -- 'npcs', 'locations', 'factions', etc.
+  layout TEXT NOT NULL, -- JSON string (react-grid-layout format)
+  title TEXT, -- Editable category title override
+  description TEXT, -- Editable rich text description (TipTap JSON)
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+  updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+  FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+  UNIQUE(campaign_id, user_id, category)
+);
+
+CREATE INDEX idx_category_landing_configs_campaign_user_category
+  ON category_landing_configs(campaign_id, user_id, category);
+```
+
+**Backend API Additions:**
+- GET `/api/campaigns/:id/:category/landing-config` - Fetch category landing config
+- PUT `/api/campaigns/:id/:category/landing-config` - Save layout + title/description
+- POST `/api/campaigns/:id/:category/landing-config/reset` - Reset to default
+
+**Widget Registry Filtering:**
+```typescript
+// Filter widgets by category when opening picker on landing page
+const categoryWidgets = WidgetRegistry.getAll().filter(w =>
+  w.categories?.includes(currentCategory) || w.type === 'category-summary'
+);
+
+// Widget definition includes which categories it applies to
+WidgetRegistry.register({
+  id: 'npc-relationship-chart',
+  name: 'NPC Relationship Chart',
+  categories: ['npcs'], // Only show on NPCs landing page
+  supportedSizes: ['3x3', '4x4'],
+  component: NPCRelationshipChartWidget
+});
+```
+
+**Editable Text Area Implementation:**
+```typescript
+// CategoryLandingTextEditor.tsx
+interface CategoryLandingTextEditorProps {
+  campaignId: string;
+  category: CategoryName;
+  title: string;
+  description: string; // TipTap JSON string
+  onSave: (title: string, description: string) => Promise<void>;
+}
+
+// Uses TipTap editor (Feature 003 dependency)
+// Auto-save on blur with 1s debounce
+// Displays themed category label as placeholder title
+```
+
+**Default Category Landing Layouts:**
+Each category gets sensible 1-2 widget starter layout:
+- NPCs: Recent NPCs widget (2x2) at top-left
+- Locations: Recent Locations widget (2x2) at top-left
+- Quests: Quest Status Tracker (3x2) spanning top
+- etc. (13 defaults total)
+
+**Performance Note:**
+- Category landing canvas is smaller → fewer widgets → better performance
+- Title/description save debounced separately from layout save
+- Both use optimistic UI updates
+
+**Implementation Phases Affected:**
+- Phase A (Backend): Add `category_landing_configs` table + service + routes (~3 additional tasks)
+- Phase B (Canvas): CategoryLandingCanvas variant (~2 additional tasks)
+- Phase C (Widgets): Category-specific widgets deferred to v2 (use generic widgets in v1)
+- Phase D (Text Editor): CategoryLandingTextEditor component (~1 task)
+
+**Total Additional Tasks: ~6 tasks** (on top of dashboard canvas expansion)
+
 ## Open Questions
 
-**None** - All Technical Context items specified, no NEEDS CLARIFICATION markers.
+**None** - All Technical Context items specified, no NEEDS CLARIFICATION markers. Dashboard canvas expansion fully researched.
 
 ## References
 

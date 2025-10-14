@@ -2,6 +2,7 @@ import React from 'react';
 import { useParams } from 'react-router-dom';
 import { GenericCategoryListView } from '../components/pages/GenericCategoryListView';
 import { ColumnDef } from '@tanstack/react-table';
+import { TruncatedText } from '../components/common/TruncatedText';
 
 export const CreatureListPage: React.FC = () => {
   const { campaignId } = useParams<{ campaignId: string }>();
@@ -64,6 +65,15 @@ export const CreatureListPage: React.FC = () => {
         return tags && tags.length > 0 ? tags.join(', ') : '-';
       },
       size: 150,
+    },
+    {
+      accessorKey: 'dm_behavior_notes',
+      header: 'DM: Behavior Notes',
+      cell: (info) => {
+        const behaviorNotes = info.getValue() as string;
+        return behaviorNotes ? <TruncatedText text={behaviorNotes} maxLength={100} /> : '-';
+      },
+      size: 250,
     },
   ];
 

@@ -2,6 +2,7 @@ import React from 'react';
 import { useParams } from 'react-router-dom';
 import { GenericCategoryListView } from '../components/pages/GenericCategoryListView';
 import { ColumnDef } from '@tanstack/react-table';
+import { TruncatedText } from '../components/common/TruncatedText';
 
 export const ItemListPage: React.FC = () => {
   const { campaignId } = useParams<{ campaignId: string }>();
@@ -88,6 +89,24 @@ export const ItemListPage: React.FC = () => {
         return tags && tags.length > 0 ? tags.join(', ') : '-';
       },
       size: 150,
+    },
+    {
+      accessorKey: 'dm_secret_properties',
+      header: 'DM: Secret Properties',
+      cell: (info) => {
+        const secretProps = info.getValue() as string;
+        return secretProps ? <TruncatedText text={secretProps} maxLength={100} /> : '-';
+      },
+      size: 250,
+    },
+    {
+      accessorKey: 'dm_true_nature',
+      header: 'DM: True Nature',
+      cell: (info) => {
+        const trueNature = info.getValue() as string;
+        return trueNature ? <TruncatedText text={trueNature} maxLength={100} /> : '-';
+      },
+      size: 250,
     },
   ];
 

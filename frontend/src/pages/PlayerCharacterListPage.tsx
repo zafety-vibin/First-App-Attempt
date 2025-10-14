@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { GenericCategoryListView } from '../components/pages/GenericCategoryListView';
 import { ColumnDef } from '@tanstack/react-table';
 import { PlayerCharacter } from '../utils/validationSchemas';
+import { TruncatedText } from '../components/common/TruncatedText';
 
 /**
  * T066: Player Character List Page
@@ -103,6 +104,42 @@ export const PlayerCharacterListPage: React.FC = () => {
         return tags && tags.length > 0 ? tags.join(', ') : '-';
       },
       size: 150,
+    },
+    {
+      accessorKey: 'dm_secrets',
+      header: 'DM: Secrets',
+      cell: (info) => {
+        const secrets = info.getValue() as string;
+        return secrets ? <TruncatedText text={secrets} maxLength={100} /> : '-';
+      },
+      size: 250,
+    },
+    {
+      accessorKey: 'dm_plot_threads',
+      header: 'DM: Plot Threads',
+      cell: (info) => {
+        const threads = info.getValue() as string;
+        return threads ? <TruncatedText text={threads} maxLength={100} /> : '-';
+      },
+      size: 250,
+    },
+    {
+      accessorKey: 'dm_true_motivation',
+      header: 'DM: True Motivation',
+      cell: (info) => {
+        const motivation = info.getValue() as string;
+        return motivation ? <TruncatedText text={motivation} maxLength={100} /> : '-';
+      },
+      size: 250,
+    },
+    {
+      accessorKey: 'dm_consequences',
+      header: 'DM: Consequences',
+      cell: (info) => {
+        const consequences = info.getValue() as string;
+        return consequences ? <TruncatedText text={consequences} maxLength={100} /> : '-';
+      },
+      size: 250,
     },
   ];
 

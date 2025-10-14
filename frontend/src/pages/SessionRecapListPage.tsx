@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { GenericCategoryListView } from '../components/pages/GenericCategoryListView';
 import { ColumnDef } from '@tanstack/react-table';
 import { SessionRecap } from '../utils/validationSchemas';
+import { TruncatedText } from '../components/common/TruncatedText';
 
 /**
  * T065: Session Recap List Page
@@ -102,6 +103,24 @@ export const SessionRecapListPage: React.FC = () => {
         return tags && tags.length > 0 ? tags.join(', ') : '-';
       },
       size: 150,
+    },
+    {
+      accessorKey: 'dm_consequences',
+      header: 'DM: Consequences',
+      cell: (info) => {
+        const consequences = info.getValue() as string;
+        return consequences ? <TruncatedText text={consequences} maxLength={100} /> : '-';
+      },
+      size: 250,
+    },
+    {
+      accessorKey: 'dm_behind_scenes',
+      header: 'DM: Behind the Scenes',
+      cell: (info) => {
+        const behindScenes = info.getValue() as string;
+        return behindScenes ? <TruncatedText text={behindScenes} maxLength={100} /> : '-';
+      },
+      size: 250,
     },
   ];
 

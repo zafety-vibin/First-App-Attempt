@@ -8,8 +8,18 @@ import { GraphNodeService } from '../services/GraphNodeService';
 import { KnowledgeGraphService } from '../services/KnowledgeGraphService';
 import { CampaignService } from '../services/CampaignService';
 import { protect } from '../middleware/auth';
+import { GraphNode } from '../models/KnowledgeGraph';
 
 const router = Router();
+
+// Map backend GraphNode model to frontend API format (pinned → is_pinned)
+function mapNodeToAPI(node: GraphNode): any {
+  const { pinned, ...rest } = node;
+  return {
+    ...rest,
+    is_pinned: pinned
+  };
+}
 
 // All routes require authentication
 router.use(protect);
@@ -36,7 +46,7 @@ router.get('/api/campaigns/:campaignId/graphs/:graphId/nodes', async (req: Reque
       offset: req.query.offset ? parseInt(req.query.offset as string) : undefined,
     });
 
-    return res.json({ nodes });
+    return res.json({ nodes: nodes.map(mapNodeToAPI) });
   } catch (error: any) {
     console.error('Error listing nodes:', error);
     return res.status(500).json({ error: 'Internal server error' });
@@ -60,8 +70,15 @@ router.post('/api/campaigns/:campaignId/graphs/:graphId/nodes', async (req: Requ
       return res.status(400).json({ error: 'node_type and name are required' });
     }
 
-    const node = GraphNodeService.createNode(graphId, req.body);
-    return res.status(201).json(node);
+    // Map is_pinned from frontend to pinned for backend
+    const createInput = { ...req.body };
+    if ('is_pinned' in createInput) {
+      createInput.pinned = createInput.is_pinned;
+      delete createInput.is_pinned;
+    }
+
+    const node = GraphNodeService.createNode(graphId, createInput);
+    return res.status(201).json(mapNodeToAPI(node));
   } catch (error: any) {
     console.error('Error creating node:', error);
     if (error.message.includes('required')) return res.status(400).json({ error: error.message });
@@ -81,7 +98,7 @@ router.get('/api/campaigns/:campaignId/graphs/:graphId/nodes/:nodeId', async (re
     const node = GraphNodeService.getNode(nodeId, true); // Auto-reinforce
     if (!node) return res.status(404).json({ error: 'Node not found' });
 
-    return res.json(node);
+    return res.json(mapNodeToAPI(node));
   } catch (error: any) {
     console.error('Error getting node:', error);
     return res.status(500).json({ error: 'Internal server error' });
@@ -97,8 +114,15 @@ router.patch('/api/campaigns/:campaignId/graphs/:graphId/nodes/:nodeId', async (
     const campaign = CampaignService.getCampaignById(campaignId);
     if (!campaign || campaign.ownerId !== userId) return res.status(403).json({ error: 'Forbidden' });
 
-    const node = GraphNodeService.updateNode(nodeId, req.body);
-    return res.json(node);
+    // Map is_pinned from frontend to pinned for backend
+    const updateInput = { ...req.body };
+    if ('is_pinned' in updateInput) {
+      updateInput.pinned = updateInput.is_pinned;
+      delete updateInput.is_pinned;
+    }
+
+    const node = GraphNodeService.updateNode(nodeId, updateInput);
+    return res.json(mapNodeToAPI(node));
   } catch (error: any) {
     console.error('Error updating node:', error);
     if (error.message.includes('not found')) return res.status(404).json({ error: error.message });

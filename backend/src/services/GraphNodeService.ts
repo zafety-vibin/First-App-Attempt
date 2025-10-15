@@ -18,6 +18,7 @@ export interface CreateNodeInput {
   node_type: string;
   name: string;
   attributes?: Record<string, any>;
+  observations?: Array<{ text: string; created_at?: number; last_accessed?: number }>;
   information_level_id?: string | null;
   pinned?: boolean;
 }
@@ -26,6 +27,7 @@ export interface UpdateNodeInput {
   node_type?: string;
   name?: string;
   attributes?: Record<string, any>;
+  observations?: Array<{ text: string; created_at?: number; last_accessed?: number }>;
   information_level_id?: string | null;
   pinned?: boolean;
 }
@@ -64,12 +66,23 @@ export class GraphNodeService {
     // Serialize attributes to JSON
     const attributesJson = JSON.stringify(input.attributes || {});
 
+    // Format observations with timestamps
+    let observationsJson = null;
+    if (input.observations && input.observations.length > 0) {
+      const formattedObservations = input.observations.map(obs => ({
+        text: obs.text,
+        created_at: obs.created_at || now,
+        last_accessed: obs.last_accessed || now
+      }));
+      observationsJson = JSON.stringify(formattedObservations);
+    }
+
     // Insert node
     const stmt = db.prepare(`
       INSERT INTO graph_nodes (
-        id, graph_id, node_type, name, attributes,
+        id, graph_id, node_type, name, attributes, observations,
         information_level_id, created_at, last_accessed, pinned
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     stmt.run(
@@ -78,6 +91,7 @@ export class GraphNodeService {
       input.node_type,
       input.name,
       attributesJson,
+      observationsJson,
       input.information_level_id || null,
       now,
       now,
@@ -249,6 +263,17 @@ export class GraphNodeService {
     if (input.attributes !== undefined) {
       updates.push('attributes = ?');
       values.push(JSON.stringify(input.attributes));
+    }
+
+    if (input.observations !== undefined) {
+      const now = Math.floor(Date.now() / 1000);
+      const formattedObservations = input.observations.map(obs => ({
+        text: obs.text,
+        created_at: obs.created_at || now,
+        last_accessed: obs.last_accessed || now
+      }));
+      updates.push('observations = ?');
+      values.push(JSON.stringify(formattedObservations));
     }
 
     if (input.information_level_id !== undefined) {

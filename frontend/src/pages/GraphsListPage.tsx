@@ -4,8 +4,8 @@
  * Mind/Dream theme aesthetic
  */
 
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState, useRef } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Brain, MapPin, Users, Clock, BookOpen, Plus, Info } from 'lucide-react';
 import { graphService } from '../services/graphService';
 import { KnowledgeGraph, GraphOverview, GraphStats } from '../types/graph';
@@ -14,6 +14,7 @@ import './GraphsListPage.css';
 const GraphsListPage: React.FC = () => {
   const { campaignId } = useParams<{ campaignId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const [graphOverviews, setGraphOverviews] = useState<GraphOverview[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -25,12 +26,21 @@ const GraphsListPage: React.FC = () => {
     graph_name: '',
     custom_type: ''
   });
+  const hasMountedRef = useRef(false);
 
+  // Load graphs on mount and when returning from subpages
   useEffect(() => {
     if (campaignId) {
-      loadGraphs();
+      // Always fetch on mount
+      if (!hasMountedRef.current) {
+        hasMountedRef.current = true;
+        loadGraphs();
+      } else {
+        // Refetch when returning to this page
+        loadGraphs();
+      }
     }
-  }, [campaignId]);
+  }, [campaignId, location.pathname]);
 
   const loadGraphs = async () => {
     if (!campaignId) return;
@@ -41,31 +51,29 @@ const GraphsListPage: React.FC = () => {
     try {
       const graphs = await graphService.listGraphs(campaignId);
 
-      // Map to overviews with placeholder stats for now
-      const overviews = graphs.map(graph => ({
-        graph,
-        stats: {
-          total_nodes: 0,
-          total_edges: 0,
-          confidence_distribution: {
-            high: 0,
-            medium: 0,
-            low: 0,
-            pinned: 0
-          },
-          avg_confidence: 0,
-          stale_nodes_count: 0,
-          last_updated: graph.updated_at
-        } as GraphStats
-      }));
+      // Map graphs to overviews using node_count and edge_count already returned by backend
+      const overviews = graphs.map(graph => {
+        // Backend returns node_count and edge_count in the list endpoint
+        const nodeCount = graph.node_count || 0;
+        const edgeCount = graph.edge_count || 0;
 
-      // TODO: Load actual stats for each graph
-      // const overviews = await Promise.all(
-      //   graphs.map(async graph => {
-      //     const stats = await graphService.getGraphStats(campaignId, graph.id);
-      //     return { graph, stats };
-      //   })
-      // );
+        return {
+          graph,
+          stats: {
+            total_nodes: nodeCount,
+            total_edges: edgeCount,
+            confidence_distribution: {
+              high: 0, // TODO: Backend doesn't calculate confidence distribution yet
+              medium: 0,
+              low: 0,
+              pinned: 0
+            },
+            avg_confidence: 0,
+            stale_nodes_count: 0,
+            last_updated: graph.updated_at
+          } as GraphStats
+        };
+      });
 
       setGraphOverviews(overviews);
     } catch (err) {

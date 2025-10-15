@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { GenericEntityForm } from '../components/forms/GenericEntityForm';
 import { ErrorBoundary } from '../components/common/ErrorBoundary';
 import { CategoryName } from '../contexts/SidebarContext';
-import { useCategoryService } from '../hooks/useCategory';
+import { useCategory } from '../hooks/useCategory';
 
 /**
  * T030: CategoryCreatePageRoute component
@@ -13,7 +13,7 @@ import { useCategoryService } from '../hooks/useCategory';
 export const CategoryCreatePageRoute: React.FC = () => {
   const { campaignId, category } = useParams<{ campaignId: string; category: CategoryName }>();
   const navigate = useNavigate();
-  const { createEntity } = useCategoryService(category!);
+  const { create: createEntity } = useCategory(category!, campaignId!);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

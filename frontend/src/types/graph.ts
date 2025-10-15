@@ -10,6 +10,9 @@ export interface KnowledgeGraph {
   user_defined_schema?: Record<string, any>;
   created_at: string;
   updated_at: string;
+  // Optional counts returned by list endpoint
+  node_count?: number;
+  edge_count?: number;
 }
 
 export interface GraphNode {
@@ -18,6 +21,7 @@ export interface GraphNode {
   name: string;
   type: string;
   attributes: Record<string, any>;
+  observations?: Array<{ text: string; created_at: number; last_accessed: number }>;
   confidence?: number;
   is_pinned: boolean;
   last_reinforced_at?: string;

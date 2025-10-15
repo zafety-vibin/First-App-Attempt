@@ -25,7 +25,13 @@
       "Read(//c/Users/zmanl/Projects/VVD-mimic/specs/015-create-the-dashboard/**)",
       "mcp__chrome-devtools__fill",
       "mcp__chrome-devtools__evaluate_script",
-      "mcp__chrome-devtools__handle_dialog"
+      "mcp__chrome-devtools__handle_dialog",
+      "Bash(npm run build)",
+      "Bash(npx tsc:*)",
+      "mcp__chrome-devtools__navigate_page",
+      "Read(//tmp/chrome-devtools-mcp-2gbpxb/**)",
+      "Read(//c/Users/zmanl/projects/VVD-mimic/frontend/src/services/**)",
+      "Read(//c/Users/zmanl/projects/VVD-mimic/frontend/src/pages/**)"
     ],
     "deny": [],
     "ask": []

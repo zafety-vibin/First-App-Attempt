@@ -4,7 +4,7 @@ import { GenericEntityForm } from '../components/forms/GenericEntityForm';
 import { ErrorBoundary } from '../components/common/ErrorBoundary';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { CategoryName } from '../contexts/SidebarContext';
-import { useCategoryService } from '../hooks/useCategory';
+import { useCategory } from '../hooks/useCategory';
 
 /**
  * T031: CategoryEditPageRoute component
@@ -18,7 +18,7 @@ export const CategoryEditPageRoute: React.FC = () => {
     entityId: string;
   }>();
   const navigate = useNavigate();
-  const { getEntity, updateEntity } = useCategoryService(category!);
+  const { getById: getEntity, update: updateEntity } = useCategory(category!, campaignId!);
 
   const [entity, setEntity] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);

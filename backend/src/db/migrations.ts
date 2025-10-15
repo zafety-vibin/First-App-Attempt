@@ -27,6 +27,16 @@ export const migrations: Migration[] = [
     },
   },
   {
+    version: 6,
+    description: 'Feature 006 - Knowledge Graph Architecture with confidence decay (knowledge_graphs, graph_nodes, graph_edges, graph_versions)',
+    up: (db) => {
+      const migrationPath = path.join(__dirname, 'migrations', '006-knowledge-graphs.sql');
+      const sql = fs.readFileSync(migrationPath, 'utf8');
+      db.exec(sql);
+      console.log('Migration 6: Knowledge graph tables created');
+    },
+  },
+  {
     version: 14,
     description: 'Feature 014 - Category tables (factions, npcs, locations, session_recaps, quests, player_characters, lore_entries, world_rules, planar_forces, session_prep, custom_mechanics, items, creatures, custom_field_definitions)',
     up: (db) => {

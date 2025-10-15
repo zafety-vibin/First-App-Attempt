@@ -48,6 +48,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ campaignId }) => {
     navigate(`/campaigns/${campaignId}`);
   };
 
+  const handleGraphsClick = (): void => {
+    setActiveCategory(null);
+    navigate(`/campaigns/${campaignId}/graphs`);
+  };
+
   // Check if category is active based on current route
   const isCategoryActive = (category: CategoryName): boolean => {
     return location.pathname.includes(`/${category}`);
@@ -61,6 +66,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ campaignId }) => {
     return location.pathname === `/campaigns/${campaignId}` || location.pathname === `/campaigns/${campaignId}/`;
   };
 
+  const isGraphsActive = (): boolean => {
+    return location.pathname.includes('/graphs');
+  };
+
   return (
     <aside className="sidebar" role="navigation" aria-label="Campaign navigation">
       <div className="sidebar-header">
@@ -70,6 +79,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ campaignId }) => {
           onClick={handleDashboardClick}
         >
           Dashboard
+        </button>
+        <button
+          type="button"
+          className={`sidebar-item sidebar-graphs ${isGraphsActive() ? 'active' : ''}`}
+          onClick={handleGraphsClick}
+        >
+          Graphs
         </button>
         <button
           type="button"

@@ -210,9 +210,10 @@ frontend/
 
 ### Entities (from spec.md Key Entities section)
 
-1. **Knowledge Graph**
+1. **Knowledge Graph** (with Confidence Decay Configuration)
    - Graph type (World-Foundations, Political-Web, Geographical, Campaign-Story, custom)
    - Graph name (unique per campaign)
+   - **Decay rate** (REAL: 0.0-1.0, graph-specific confidence decay rate)
    - Nodes collection (JSONB or separate table)
    - Edges collection (JSONB or separate table)
    - Creation timestamp
@@ -223,15 +224,17 @@ frontend/
    - Current version reference
    - Backup version reference
 
-2. **Graph Node**
+2. **Graph Node** (with Confidence Decay)
    - Node ID (UUID)
    - Graph reference (FK)
    - Node type (user-defined: NPC, Location, Deity, Event, etc.)
    - Name
    - Attributes (JSONB free-form)
-   - Observations (text for cross-graph context)
+   - Observations (JSONB array: [{text, created_at, last_accessed}] for temporal tracking)
    - Information level (FK to information_levels from Feature 004)
    - Creation timestamp
+   - **Last accessed timestamp** (for confidence decay calculation)
+   - **Pinned flag** (boolean: bypass decay for critical entities)
 
 3. **Graph Edge**
    - Edge ID (UUID)
@@ -250,9 +253,25 @@ frontend/
    - Created timestamp
    - Version type (current | backup)
 
-5. **Graph Summary Panel** (UI component, no DB entity)
+5. **Confidence Decay System** (Memento-style Temporal Memory)
+   - **Formula**: `confidence = 1.0 * (1 - decay_rate * weeks_elapsed)`
+   - **Graph-Specific Decay Rates**:
+     - World-Foundations: 0.0 (never decays - permanent rules)
+     - Political-Web: 0.1 (fades over ~10 weeks - NPC relationships)
+     - Geographical: 0.05 (fades over ~20 weeks - locations persist)
+     - Campaign-Story: 0.2 (fades over ~5 weeks - recent sessions prioritized)
+   - **Reinforcement**: Accessing entities updates `last_accessed`, resetting confidence to 1.0
+   - **Pinning**: Critical entities (BBEGs, major factions) can be pinned to maintain confidence 1.0
+   - **Stale Detection**: Entities with confidence < threshold flagged as stale
+   - **AI Integration**: AI expresses uncertainty for low-confidence entities (< 0.4)
+   - **Service**: ConfidenceDecayService for on-demand calculation (no background jobs)
 
-6. **Context Engineering Help Page** (static content, no DB entity)
+6. **Graph Summary Panel** (UI component, no DB entity)
+   - Display active entity count (confidence >= threshold)
+   - Color-coded confidence indicators (green/yellow/red)
+   - Filter by confidence level
+
+7. **Context Engineering Help Page** (static content, no DB entity)
 
 ### API Contracts
 
@@ -286,6 +305,19 @@ Based on functional requirements, generate OpenAPI 3.0 specs for:
 6. **cross-graph-query.yaml** - Multi-graph querying
    - POST /api/campaigns/{campaignId}/graphs/query - Query across multiple graphs with toggle filters
 
+7. **graph-tools.json** - MCP Tools for Graph Operations (Feature 011 integration)
+   - 13 MCP tools for temporal-aware graph operations:
+   - create_entities, create_relations, add_observations
+   - search_entities (with confidence filtering), get_entity
+   - update_entity, delete_entity, pin_entity, reinforce_entity
+   - list_graph_entities, list_entity_relations
+   - find_stale_entities, calculate_confidence
+
+8. **confidence-decay.json** - Confidence Decay System Specification
+   - Defines decay formula, reinforcement mechanism, pinning behavior
+   - Graph-specific decay rates and AI integration thresholds
+   - Testing scenarios for decay, reinforcement, and pinning
+
 ### Contract Tests
 
 Generate failing tests for each endpoint in backend/tests/contract/:
@@ -295,6 +327,8 @@ Generate failing tests for each endpoint in backend/tests/contract/:
 - graph-nodes.test.ts
 - graph-edges.test.ts
 - cross-graph-query.test.ts
+- mcp-graph-tools.test.ts (13 MCP tools)
+- confidence-decay.test.ts (decay calculations, reinforcement, pinning)
 
 ### Integration Test Scenarios
 

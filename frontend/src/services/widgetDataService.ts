@@ -56,6 +56,23 @@ export interface RecentActivityData {
   }>;
 }
 
+export interface KnowledgeGraphsOverviewData {
+  totalGraphs: number;
+  totalNodes: number;
+  graphs: Array<{
+    id: string;
+    graphType: string;
+    graphName: string;
+    nodeCount: number;
+    confidenceDistribution: {
+      high: number;    // >= 0.7
+      medium: number;  // 0.4-0.7
+      low: number;     // < 0.4
+      pinned: number;
+    };
+  }>;
+}
+
 // ============================================================================
 // API Functions
 // ============================================================================
@@ -367,4 +384,85 @@ export async function getRecentActivityData(campaignId: string): Promise<RecentA
   return {
     recentUpdates: allUpdates.slice(0, 10), // Top 10 most recent
   };
+}
+
+/**
+ * Feature 006: Knowledge Graphs Overview Widget Data
+ * Fetches all knowledge graphs and calculates confidence distributions
+ */
+export async function getKnowledgeGraphsOverview(campaignId: string): Promise<KnowledgeGraphsOverviewData> {
+  try {
+    // Fetch all graphs for the campaign
+    const graphsResponse = await apiClient.get(`/campaigns/${campaignId}/graphs`);
+    const graphs = graphsResponse.data.graphs || [];
+
+    let totalNodes = 0;
+    const graphOverviews = [];
+
+    // For each graph, fetch nodes and calculate confidence distribution
+    for (const graph of graphs) {
+      try {
+        const nodesResponse = await apiClient.get(`/campaigns/${campaignId}/graphs/${graph.id}/nodes`);
+        const nodes = nodesResponse.data.nodes || [];
+
+        // Calculate confidence distribution
+        const distribution = {
+          high: 0,
+          medium: 0,
+          low: 0,
+          pinned: 0
+        };
+
+        nodes.forEach((node: any) => {
+          const confidence = node.confidence ?? 1.0;
+
+          if (node.is_pinned) {
+            distribution.pinned++;
+          }
+
+          if (confidence >= 0.7) {
+            distribution.high++;
+          } else if (confidence >= 0.4) {
+            distribution.medium++;
+          } else {
+            distribution.low++;
+          }
+        });
+
+        totalNodes += nodes.length;
+
+        graphOverviews.push({
+          id: graph.id,
+          graphType: graph.graph_type,
+          graphName: graph.graph_name,
+          nodeCount: nodes.length,
+          confidenceDistribution: distribution
+        });
+      } catch (error) {
+        console.error(`Failed to fetch nodes for graph ${graph.id}:`, error);
+        // Continue with empty node data for this graph
+        graphOverviews.push({
+          id: graph.id,
+          graphType: graph.graph_type,
+          graphName: graph.graph_name,
+          nodeCount: 0,
+          confidenceDistribution: {
+            high: 0,
+            medium: 0,
+            low: 0,
+            pinned: 0
+          }
+        });
+      }
+    }
+
+    return {
+      totalGraphs: graphs.length,
+      totalNodes,
+      graphs: graphOverviews
+    };
+  } catch (error) {
+    console.error('Failed to fetch knowledge graphs overview:', error);
+    throw error;
+  }
 }

@@ -52,6 +52,11 @@ import { SessionPrepLandingPage } from './pages/category-landing/SessionPrepLand
 import { CustomMechanicsLandingPage } from './pages/category-landing/CustomMechanicsLandingPage';
 import { ItemsLandingPage } from './pages/category-landing/ItemsLandingPage';
 import { CreaturesLandingPage } from './pages/category-landing/CreaturesLandingPage';
+import { GraphsListPage } from './pages/GraphsListPage';
+import { GeographicGraphPage } from './pages/GeographicGraphPage';
+import { PoliticalWebPage } from './pages/PoliticalWebPage';
+import { CampaignStoryPage } from './pages/CampaignStoryPage';
+import { WorldFoundationsPage } from './pages/WorldFoundationsPage';
 
 /**
  * CampaignLayout - Wraps campaign pages with Sidebar and DashboardProvider
@@ -132,6 +137,58 @@ function AppContent() {
             <ProtectedRoute>
               <CampaignLayoutWrapper>
                 <DashboardPage />
+              </CampaignLayoutWrapper>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Feature 006: Knowledge Graphs Routes */}
+        <Route
+          path="/campaigns/:campaignId/graphs"
+          element={
+            <ProtectedRoute>
+              <CampaignLayoutWrapper>
+                <GraphsListPage />
+              </CampaignLayoutWrapper>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/campaigns/:campaignId/graphs/geographic"
+          element={
+            <ProtectedRoute>
+              <CampaignLayoutWrapper>
+                <GeographicGraphPage />
+              </CampaignLayoutWrapper>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/campaigns/:campaignId/graphs/political"
+          element={
+            <ProtectedRoute>
+              <CampaignLayoutWrapper>
+                <PoliticalWebPage />
+              </CampaignLayoutWrapper>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/campaigns/:campaignId/graphs/story"
+          element={
+            <ProtectedRoute>
+              <CampaignLayoutWrapper>
+                <CampaignStoryPage />
+              </CampaignLayoutWrapper>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/campaigns/:campaignId/graphs/foundations"
+          element={
+            <ProtectedRoute>
+              <CampaignLayoutWrapper>
+                <WorldFoundationsPage />
               </CampaignLayoutWrapper>
             </ProtectedRoute>
           }

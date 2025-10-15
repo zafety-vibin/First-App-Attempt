@@ -32,6 +32,14 @@ import creatureRoutes from './routes/creatures';
 // Feature 015 canvas routes
 import dashboardConfigRoutes from './routes/dashboardConfigs';
 import categoryLandingConfigRoutes from './routes/categoryLandingConfigs';
+// Feature 006 knowledge graph routes
+import knowledgeGraphRoutes from './routes/knowledge-graphs';
+import graphNodeRoutes from './routes/graph-nodes';
+import graphEdgeRoutes from './routes/graph-edges';
+import graphVersionRoutes from './routes/graph-versions';
+import graphToggleRoutes from './routes/graph-toggles';
+import crossGraphQueryRoutes from './routes/cross-graph-query';
+import confidenceDecayRoutes from './routes/confidence-decay';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -72,6 +80,15 @@ app.use('/api/creatures', creatureRoutes);
 // Feature 015: Canvas configuration routes
 app.use('/api/dashboard-configs', dashboardConfigRoutes);
 app.use('/api/category-landing-configs', categoryLandingConfigRoutes);
+
+// Feature 006: Knowledge Graph routes
+app.use(knowledgeGraphRoutes);
+app.use(graphNodeRoutes);
+app.use(graphEdgeRoutes);
+app.use(graphVersionRoutes);
+app.use(graphToggleRoutes);
+app.use(crossGraphQueryRoutes);
+app.use(confidenceDecayRoutes);
 
 // Error handler (must be last)
 app.use(errorHandler);

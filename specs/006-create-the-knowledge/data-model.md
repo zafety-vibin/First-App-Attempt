@@ -36,6 +36,7 @@ graph_nodes → information_levels (from Feature 004)
 | graph_type | TEXT | NOT NULL | World-Foundations \| Political-Web \| Geographical \| Campaign-Story \| custom:{name} |
 | graph_name | TEXT | NOT NULL | Unique per campaign (e.g., "Faerun Politics", "Waterdeep Map") |
 | toggle_state | INTEGER | NOT NULL, DEFAULT 1, CHECK IN (0,1) | 1=toggled on (AI can access), 0=toggled off |
+| decay_rate | REAL | NOT NULL, DEFAULT 0.1 | Confidence decay rate per week (0.0-1.0). Default rates: World-Foundations=0.0, Political-Web=0.1, Geographical=0.05, Campaign-Story=0.2 |
 | maintenance_rules | TEXT | NULLABLE | JSONB: User-defined automatic maintenance config (opt-in) |
 | created_at | INTEGER | NOT NULL, DEFAULT current timestamp | Unix timestamp |
 | updated_at | INTEGER | NOT NULL, DEFAULT current timestamp | Unix timestamp |
@@ -54,8 +55,8 @@ graph_nodes → information_levels (from Feature 004)
 **Initial Data**:
 - On campaign creation, insert 1 default World-Foundations graph:
   ```sql
-  INSERT INTO knowledge_graphs (id, campaign_id, graph_type, graph_name, toggle_state, created_at, updated_at)
-  VALUES (uuid(), campaign_id, 'World-Foundations', 'World Foundations', 1, timestamp, timestamp);
+  INSERT INTO knowledge_graphs (id, campaign_id, graph_type, graph_name, toggle_state, decay_rate, created_at, updated_at)
+  VALUES (uuid(), campaign_id, 'World-Foundations', 'World Foundations', 1, 0.0, timestamp, timestamp);
   ```
 
 ---
@@ -72,14 +73,18 @@ graph_nodes → information_levels (from Feature 004)
 | node_type | TEXT | NOT NULL | User-defined (e.g., NPC, Location, Deity, Event, Faction, Spell) |
 | name | TEXT | NOT NULL | Node name (e.g., "Lord Neverember", "Waterdeep", "The Sundering") |
 | attributes | TEXT | NOT NULL, DEFAULT '{}' | JSONB free-form user-defined content |
-| observations | TEXT | NULLABLE | Free-form text for cross-graph context (e.g., "current location: Waterdeep") |
+| observations | TEXT | NULLABLE | JSONB array format: [{text, created_at, last_accessed}] for temporal tracking |
 | information_level_id | TEXT | NULLABLE, FK → information_levels(id) | Information level for filtering (null = Common Knowledge) |
 | created_at | INTEGER | NOT NULL, DEFAULT current timestamp | Unix timestamp |
+| last_accessed | INTEGER | NOT NULL, DEFAULT current timestamp | Unix timestamp for confidence decay calculation (updated on read) |
+| pinned | INTEGER | NOT NULL, DEFAULT 0, CHECK IN (0,1) | 1=pinned (bypass decay), 0=normal decay |
 
 **Indexes**:
 - PRIMARY KEY on id
 - INDEX on graph_id
 - INDEX on information_level_id (for filtering queries)
+- INDEX on last_accessed (for confidence decay queries)
+- INDEX on pinned (for filtering pinned vs unpinned entities)
 
 **Constraints**:
 - FOREIGN KEY graph_id → knowledge_graphs(id) ON DELETE CASCADE
@@ -98,9 +103,22 @@ graph_nodes → information_levels (from Feature 004)
     "personality": "Ambitious, pragmatic",
     "goals": ["Maintain control of Waterdeep", "Rebuild Neverwinter"]
   },
-  "observations": "current location: Waterdeep; allied with: Harpers faction",
+  "observations": [
+    {
+      "text": "current location: Waterdeep",
+      "created_at": 1696118400,
+      "last_accessed": 1696118400
+    },
+    {
+      "text": "allied with: Harpers faction",
+      "created_at": 1696118450,
+      "last_accessed": 1696118450
+    }
+  ],
   "information_level_id": "level-player-knowledge",
-  "created_at": 1696118400
+  "created_at": 1696118400,
+  "last_accessed": 1696118400,
+  "pinned": 0
 }
 ```
 
@@ -225,6 +243,7 @@ CREATE TABLE IF NOT EXISTS knowledge_graphs (
   graph_type TEXT NOT NULL,
   graph_name TEXT NOT NULL,
   toggle_state INTEGER NOT NULL DEFAULT 1 CHECK(toggle_state IN (0,1)),
+  decay_rate REAL NOT NULL DEFAULT 0.1,
   maintenance_rules TEXT, -- JSONB
   created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
   updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
@@ -243,15 +262,19 @@ CREATE TABLE IF NOT EXISTS graph_nodes (
   node_type TEXT NOT NULL,
   name TEXT NOT NULL,
   attributes TEXT NOT NULL DEFAULT '{}', -- JSONB
-  observations TEXT,
+  observations TEXT, -- JSONB array: [{text, created_at, last_accessed}]
   information_level_id TEXT,
   created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+  last_accessed INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+  pinned INTEGER NOT NULL DEFAULT 0 CHECK(pinned IN (0,1)),
   FOREIGN KEY (graph_id) REFERENCES knowledge_graphs(id) ON DELETE CASCADE,
   FOREIGN KEY (information_level_id) REFERENCES information_levels(id) ON DELETE SET NULL
 );
 
 CREATE INDEX idx_graph_nodes_graph ON graph_nodes(graph_id);
 CREATE INDEX idx_graph_nodes_info_level ON graph_nodes(information_level_id);
+CREATE INDEX idx_graph_nodes_last_accessed ON graph_nodes(last_accessed);
+CREATE INDEX idx_graph_nodes_pinned ON graph_nodes(pinned);
 
 -- Graph Edges
 CREATE TABLE IF NOT EXISTS graph_edges (
@@ -307,12 +330,15 @@ END;
 - `graph_name` must be unique per campaign
 - `graph_type` must match pattern: `World-Foundations|Political-Web|Geographical|Campaign-Story|custom:.*`
 - `toggle_state` must be 0 or 1
+- `decay_rate` must be between 0.0 and 1.0 (inclusive)
 - `maintenance_rules` if present, must be valid JSON
 
 ### GraphNode
 - `name` must not be empty
 - `attributes` must be valid JSON (default: `{}`)
-- `observations` max length: 2000 characters
+- `observations` must be valid JSON array of format: `[{text, created_at, last_accessed}]`
+- `last_accessed` must be a valid Unix timestamp
+- `pinned` must be 0 or 1
 - If `information_level_id` is null, node is treated as Common Knowledge
 
 ### GraphEdge
@@ -443,6 +469,7 @@ interface KnowledgeGraph {
   graph_type: 'World-Foundations' | 'Political-Web' | 'Geographical' | 'Campaign-Story' | `custom:${string}`;
   graph_name: string;
   toggle_state: boolean;
+  decay_rate: number; // 0.0-1.0
   maintenance_rules: MaintenanceRule[] | null;
   created_at: number;
   updated_at: number;
@@ -458,9 +485,12 @@ interface GraphNode {
   node_type: string;
   name: string;
   attributes: Record<string, any>; // Free-form user-defined
-  observations: string | null;
+  observations: Array<{text: string; created_at: number; last_accessed: number}> | null;
   information_level_id: string | null;
   created_at: number;
+  last_accessed: number;
+  pinned: boolean;
+  confidence?: number; // Calculated on-demand, not stored
 }
 
 interface GraphEdge {

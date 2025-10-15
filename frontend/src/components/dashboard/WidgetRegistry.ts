@@ -18,6 +18,7 @@ import { QuestTrackerWidget } from './widgets/QuestTrackerWidget';
 import { SessionTimelineWidget } from './widgets/SessionTimelineWidget';
 import { PlayerCharactersWidget } from './widgets/PlayerCharactersWidget';
 import { RecentActivityWidget } from './widgets/RecentActivityWidget';
+import { KnowledgeGraphsWidget } from './widgets/KnowledgeGraphsWidget';
 
 // Valid category names from Feature 014
 export type CategoryName =
@@ -39,7 +40,7 @@ export type CategoryName =
 export type WidgetSize = '1x1' | '2x2' | '3x3' | '2x4' | '4x2' | '3x2' | '4x3' | '4x4';
 
 // Widget category types for grouping in picker
-export type WidgetCategoryType = 'category-summary' | 'activity' | 'timeline' | 'analytics' | 'custom';
+export type WidgetCategoryType = 'category-summary' | 'activity' | 'timeline' | 'analytics' | 'knowledge' | 'custom';
 
 // Base widget props - all widgets receive these
 export interface BaseWidgetProps {
@@ -225,6 +226,19 @@ WidgetRegistry.register({
   minSize: { w: 1, h: 1 },
   maxSize: { w: 12, h: 50 },
   component: RecentActivityWidget,
+  // No categories filter = available everywhere (dashboard + all landing pages)
+});
+
+WidgetRegistry.register({
+  id: 'knowledge-graphs',
+  type: 'knowledge',
+  name: 'Knowledge Graphs Overview',
+  description: 'View all knowledge graphs with confidence distributions',
+  supportedSizes: ['2x2', '3x3', '4x3'],
+  defaultSize: '3x3',
+  minSize: { w: 2, h: 2 },
+  maxSize: { w: 12, h: 50 },
+  component: KnowledgeGraphsWidget,
   // No categories filter = available everywhere (dashboard + all landing pages)
 });
 

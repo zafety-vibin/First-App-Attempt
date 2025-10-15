@@ -96,6 +96,17 @@ export function runMigrations(): void {
     }
   });
 
+  // Migration 6: Feature 006 - Knowledge Graph Architecture
+  runMigration(6, () => {
+    const migrationsDir = path.join(__dirname, '../db/migrations');
+    const filePath = path.join(migrationsDir, '006-knowledge-graphs.sql');
+    if (fs.existsSync(filePath)) {
+      const sql = fs.readFileSync(filePath, 'utf-8');
+      db.exec(sql);
+      console.log(`  ✓ Applied 006-knowledge-graphs.sql`);
+    }
+  });
+
   // Migration 8: Feature 008 - BYOLLM Configuration
   runMigration(8, () => {
     const migrationsDir = path.join(__dirname, '../db/migrations');

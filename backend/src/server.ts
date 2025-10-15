@@ -6,6 +6,9 @@
 import express from 'express';
 import { corsMiddleware } from './middleware/cors';
 import { errorHandler } from './middleware/errorHandler';
+import { db } from './services/DatabaseService';
+import { createDatabaseChangeDetectionService } from './services/DatabaseChangeDetectionService';
+import { createSessionImportService } from './services/SessionImportService';
 import authRoutes from './routes/auth';
 import campaignRoutes from './routes/campaigns';
 import settingRoutes from './routes/settings';
@@ -40,9 +43,14 @@ import graphVersionRoutes from './routes/graph-versions';
 import graphToggleRoutes from './routes/graph-toggles';
 import crossGraphQueryRoutes from './routes/cross-graph-query';
 import confidenceDecayRoutes from './routes/confidence-decay';
+import campaignStorySessionRoutes from './routes/campaign-story-sessions';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Initialize Campaign-Story services
+const changeDetectionService = createDatabaseChangeDetectionService(db);
+const sessionImportService = createSessionImportService(db, changeDetectionService);
 
 // Middleware
 app.use(corsMiddleware);
@@ -89,6 +97,9 @@ app.use(graphVersionRoutes);
 app.use(graphToggleRoutes);
 app.use(crossGraphQueryRoutes);
 app.use(confidenceDecayRoutes);
+
+// Feature 006 Extension: Campaign-Story session routes
+app.use(campaignStorySessionRoutes);
 
 // Error handler (must be last)
 app.use(errorHandler);

@@ -1,0 +1,132 @@
+/* Campaign-Story Timeline Styles */
+
+.campaign-story-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  color: #ffffff;
+  overflow: hidden;
+}
+
+.timeline-container {
+  flex: 1;
+  position: relative;
+  padding: 2rem;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.vis-timeline-container {
+  width: 100%;
+  height: 100%;
+  background: rgba(15, 23, 42, 0.5);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Override vis-timeline default styles */
+.vis-timeline {
+  border: none;
+  background: transparent;
+  font-family: inherit;
+}
+
+.vis-item {
+  border-radius: 6px;
+  border-width: 2px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s;
+}
+
+.vis-item.vis-selected {
+  border-color: #fbbf24;
+  box-shadow: 0 4px 16px rgba(251, 191, 36, 0.4);
+  z-index: 100;
+}
+
+.vis-item.session-node {
+  background: #3b82f6;
+  border-color: #60a5fa;
+  color: #ffffff;
+}
+
+/* Confidence-based opacity classes */
+.vis-item.confidence-10 { opacity: 1.0; }
+.vis-item.confidence-9 { opacity: 0.9; }
+.vis-item.confidence-8 { opacity: 0.8; }
+.vis-item.confidence-7 { opacity: 0.7; }
+.vis-item.confidence-6 { opacity: 0.6; }
+.vis-item.confidence-5 { opacity: 0.5; }
+.vis-item.confidence-4 { opacity: 0.45; }
+.vis-item.confidence-3 { opacity: 0.4; }
+
+.vis-time-axis .vis-text {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.75rem;
+}
+
+.vis-time-axis .vis-grid.vis-minor {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.vis-time-axis .vis-grid.vis-major {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.empty-state-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem;
+  background: rgba(15, 23, 42, 0.8);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.empty-state-overlay svg {
+  color: #60a5fa;
+  opacity: 0.5;
+}
+
+.empty-state-overlay p {
+  margin: 0;
+  font-size: 1.125rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.empty-state-overlay .hint {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.5);
+  font-style: italic;
+}
+
+.add-first-button {
+  margin-top: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border: 1px solid #60a5fa;
+  border-radius: 8px;
+  color: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s;
+}
+
+.add-first-button:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}

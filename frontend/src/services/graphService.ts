@@ -26,7 +26,7 @@ export const graphService = {
         include_edges: includeEdges
       }
     });
-    return response.data.graph;
+    return response.data;
   },
 
   async createGraph(

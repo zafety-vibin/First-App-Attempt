@@ -91,6 +91,7 @@ const WorldFoundationsPage: React.FC = () => {
   const [hoverTooltip, setHoverTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
   const previousViewportRef = useRef<{ zoom: number; pan: { x: number; y: number } } | null>(null);
   const [showDebugInfo, setShowDebugInfo] = useState(false);
+  const [isZoomedToCategory, setIsZoomedToCategory] = useState(false); // Track if we're in zoomed state
 
   // Entity form modal state
   const [showEntityModal, setShowEntityModal] = useState(false);
@@ -352,8 +353,27 @@ const WorldFoundationsPage: React.FC = () => {
           return 1 / zoom; // Scale arrows inversely with zoom
         },
         'curve-style': 'bezier',
-        'opacity': 0.5,
+        'opacity': 0.25, // Reduced from 0.5 to reduce visual noise
         'label': '' // No label by default
+      } as any
+    },
+    // Highlighted edges (when category or node is selected) - show labels
+    {
+      selector: 'edge.relationship-edge.highlighted-edge',
+      style: {
+        'label': 'data(label)',
+        'font-size': (ele: any) => {
+          const cy = ele.cy();
+          const zoom = cy.zoom();
+          return 12 / zoom; // Maintain constant 12px font at all zoom levels
+        },
+        'color': '#ffffff',
+        'text-background-color': '#000000',
+        'text-background-opacity': 0.7,
+        'text-background-padding': '3px',
+        'text-background-shape': 'roundrectangle',
+        'text-outline-width': 0,
+        'opacity': 0.6 // Slightly higher opacity for highlighted edges
       } as any
     },
     // Selected node highlighting
@@ -475,7 +495,7 @@ const WorldFoundationsPage: React.FC = () => {
   const METABALL_BASE_RADIUS = 80; // Base influence radius (scaled by zoom)
   const METABALL_THRESHOLD = 0.6; // Raised threshold for harder boundaries
   const METABALL_MIN_RADIUS = 60; // Minimum protected zone around each node (same for all nodes)
-  const GRID_SIZE = 5; // Marching squares grid resolution (lower = faster, higher = smoother)
+  const GRID_SIZE = 2; // Marching squares grid resolution (lower = faster, higher = smoother) - reduced to 2 for smooth rendering
 
   // Calculate metaball field strength at a point for a set of nodes with individual radii
   // Small nodes have strong, solid edges. Large nodes have soft, fluid edges.
@@ -714,7 +734,7 @@ const WorldFoundationsPage: React.FC = () => {
         // Draw pixel if winning category exceeds threshold
         if (winningCategory && maxStrength >= METABALL_THRESHOLD) {
           const color = ENTITY_TYPES[winningCategory as keyof typeof ENTITY_TYPES]?.color || '#666';
-          ctx.fillStyle = `${color}20`;
+          ctx.fillStyle = `${color}48`; // 48 hex = 72 decimal = 28% opacity
           ctx.fillRect(worldX, worldY, GRID_SIZE, GRID_SIZE);
         }
       }
@@ -819,7 +839,7 @@ const WorldFoundationsPage: React.FC = () => {
           };
 
           // Clear all previous highlighting and hover listeners
-          cy.elements().removeClass('dimmed highlighted connected-node');
+          cy.elements().removeClass('dimmed highlighted connected-node highlighted-edge');
           cy.elements('node.entity-node').off('mouseover mouseout'); // Remove old hover listeners
           setHoverTooltip(null); // Clear any existing tooltip
 
@@ -830,6 +850,9 @@ const WorldFoundationsPage: React.FC = () => {
           // Highlight the selected node (already has selection styling)
           // Highlight connected nodes
           connectedNodes.addClass('connected-node');
+
+          // Highlight connected edges and dim everything else
+          connectedEdges.addClass('highlighted-edge');
 
           // Dim everything except selected node, connected nodes, and connecting edges
           cy.elements().forEach((ele: any) => {
@@ -842,7 +865,7 @@ const WorldFoundationsPage: React.FC = () => {
               }
               ele.addClass('dimmed');
             } else if (ele.isEdge()) {
-              // Don't dim edges connected to the selected node
+              // Don't dim edges connected to the selected node (already highlighted)
               if (connectedEdges.some((e: any) => e.id() === eleId)) {
                 return;
               }
@@ -934,7 +957,7 @@ const WorldFoundationsPage: React.FC = () => {
     const cy = cyRef.current;
 
     // Remove previous highlighting
-    cy.elements().removeClass('dimmed highlighted');
+    cy.elements().removeClass('dimmed highlighted highlighted-edge');
 
     // Get all nodes of this category
     const categoryNodes = cy.nodes().filter((node: any) =>
@@ -962,6 +985,11 @@ const WorldFoundationsPage: React.FC = () => {
       });
     });
 
+    // Highlight connected nodes from other categories (so their labels show)
+    connectedNodes.forEach((nodeId) => {
+      cy.getElementById(nodeId).addClass('highlighted');
+    });
+
     // Dim everything except the highlighted category and connected nodes
     cy.elements().forEach((ele: any) => {
       const eleId = ele.id();
@@ -973,11 +1001,12 @@ const WorldFoundationsPage: React.FC = () => {
         }
         ele.addClass('dimmed');
       } else if (ele.isEdge()) {
-        // Dim edges unless they connect to this category
+        // Edges that connect to this category: highlight and show labels
         const source = ele.source();
         const target = ele.target();
 
         if (source.data('entityType') === entityType || target.data('entityType') === entityType) {
+          ele.addClass('highlighted-edge');
           return;
         }
 
@@ -1001,86 +1030,196 @@ const WorldFoundationsPage: React.FC = () => {
 
     if (categoryNodes.length === 0) return;
 
-    // Save current viewport
+    // Save current viewport to restore later
     previousViewportRef.current = {
       zoom: cy.zoom(),
       pan: cy.pan()
     };
 
-    // Get IDs of selected category for edge length calculation
+    // Get IDs of selected category
     const categoryNodeIds = new Set(categoryNodes.map((n: any) => n.id()));
 
-    // Get current bounding box
-    const currentBB = categoryNodes.boundingBox();
-    const currentCenterX = (currentBB.x1 + currentBB.x2) / 2;
-    const currentCenterY = (currentBB.y1 + currentBB.y2) / 2;
-
-    // Calculate target zoom
-    const legendWidth = 320;
-    const padding = {
-      left: 150,
-      right: legendWidth + 100,
-      top: 120,
-      bottom: 150
-    };
-
-    const viewportWidth = cy.width();
-    const viewportHeight = cy.height();
-    const estimatedWidth = Math.max(currentBB.w, 400) + padding.left + padding.right;
-    const estimatedHeight = Math.max(currentBB.h, 400) + padding.top + padding.bottom;
-
-    const targetZoom = Math.min(viewportWidth / estimatedWidth, viewportHeight / estimatedHeight, 2.0);
-    const leftShift = legendWidth / 3;
-    const targetPanX = viewportWidth / 2 - (currentCenterX * targetZoom) - leftShift;
-    const targetPanY = viewportHeight / 2 - (currentCenterY * targetZoom);
-
-    // Start zoom animation
-    cy.animate({
-      zoom: targetZoom,
-      pan: { x: targetPanX, y: targetPanY },
-      duration: 800,
-      easing: 'ease-in-out-cubic'
+    // Build category map
+    const nodeCategoryMap: Record<string, string> = {};
+    cy.nodes('.entity-node').forEach((node: any) => {
+      nodeCategoryMap[node.id()] = node.data('entityType');
     });
 
-    // Run layout on ALL nodes so collision detection works properly
-    // Use nodeGroups to force selected category together
-    const layout = cy.layout({
-      name: 'fcose',
-      quality: 'proof',
-      randomize: false,
-      animate: true,
-      animationDuration: 800,
-      fit: false,
-      padding: 50,
-      nodeDimensionsIncludeLabels: true,
-      // Extremely short edges for selected category to force consolidation
-      idealEdgeLength: (edge: any) => {
-        const sourceId = edge.source().id();
-        const targetId = edge.target().id();
-        const sourceDegree = edge.source().data('degree') || 0;
-        const targetDegree = edge.target().data('degree') || 0;
-        const avgDegree = (sourceDegree + targetDegree) / 2;
+    // STEP 1: Find existing clusters - detect nodes already close together
+    const categoryNodesArray = categoryNodes.toArray();
+    const CLUSTER_THRESHOLD = 200; // Nodes within 200px are considered clustered
+    const positions = categoryNodesArray.map((n: any) => ({
+      node: n,
+      pos: n.position()
+    }));
 
-        // If both nodes are in selected category, use VERY short edges
-        if (categoryNodeIds.has(sourceId) && categoryNodeIds.has(targetId)) {
-          return 25 + (avgDegree * 2); // Extremely short to force consolidation
+    // Find the largest existing cluster
+    let largestCluster: any[] = [];
+    const visited = new Set<string>();
+
+    for (const item of positions) {
+      if (visited.has(item.node.id())) continue;
+
+      const cluster = [item];
+      visited.add(item.node.id());
+
+      // BFS to find all nodes within CLUSTER_THRESHOLD
+      const queue = [item];
+      while (queue.length > 0) {
+        const current = queue.shift()!;
+
+        for (const other of positions) {
+          if (visited.has(other.node.id())) continue;
+
+          const dx = other.pos.x - current.pos.x;
+          const dy = other.pos.y - current.pos.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+
+          if (dist <= CLUSTER_THRESHOLD) {
+            cluster.push(other);
+            visited.add(other.node.id());
+            queue.push(other);
+          }
         }
-        // Otherwise, use normal edge length
-        return 100 + (avgDegree * 10);
-      },
-      nodeRepulsion: 2000, // Much lower - was 5000
-      nodeOverlap: 20, // Much lower - was 50
-      gravity: 0.35,
-      gravityRange: 2.5,
-      numIter: 3000,
-      nodeSeparation: 30, // Much lower - was 70
-      initialEnergyOnIncremental: 0.5,
-      // Explicit grouping: selected category is one tight group
-      nodeGroups: [Array.from(categoryNodeIds)],
-      groupPadding: 10 // Very tight padding within the group
-    } as any);
+      }
 
-    layout.run();
+      if (cluster.length > largestCluster.length) {
+        largestCluster = cluster;
+      }
+    }
+
+    // STEP 2: Calculate cluster centroid
+    let clusterCenterX = 0;
+    let clusterCenterY = 0;
+
+    if (largestCluster.length > 0) {
+      largestCluster.forEach((item: any) => {
+        clusterCenterX += item.pos.x;
+        clusterCenterY += item.pos.y;
+      });
+      clusterCenterX /= largestCluster.length;
+      clusterCenterY /= largestCluster.length;
+    } else {
+      // No cluster found - use average of all positions
+      positions.forEach((item: any) => {
+        clusterCenterX += item.pos.x;
+        clusterCenterY += item.pos.y;
+      });
+      clusterCenterX /= positions.length;
+      clusterCenterY /= positions.length;
+    }
+
+    console.log(`Found cluster of ${largestCluster.length} nodes, moving ${positions.length - largestCluster.length} outliers`);
+
+    // STEP 3: Move outlier nodes to cluster area
+    const clusterNodeIds = new Set(largestCluster.map((item: any) => item.node.id()));
+
+    categoryNodesArray.forEach((node: any, index: number) => {
+      if (!clusterNodeIds.has(node.id())) {
+        // This is an outlier - move it near the cluster center
+        const angle = (index / categoryNodesArray.length) * 2 * Math.PI;
+        const radius = 80; // Place outliers in small circle around cluster center
+        const offsetX = Math.cos(angle) * radius;
+        const offsetY = Math.sin(angle) * radius;
+
+        node.position({
+          x: clusterCenterX + offsetX,
+          y: clusterCenterY + offsetY
+        });
+      }
+    });
+
+    // STEP 3.5: Find connected nodes from other categories and pull them closer (within 400px)
+    const connectedNodesFromOtherCategories = new Set<any>();
+    categoryNodes.forEach((catNode: any) => {
+      const connectedEdges = catNode.connectedEdges();
+      connectedEdges.forEach((edge: any) => {
+        const source = edge.source();
+        const target = edge.target();
+        const otherNode = source.id() === catNode.id() ? target : source;
+
+        // If connected node is from a different category
+        if (!categoryNodeIds.has(otherNode.id())) {
+          connectedNodesFromOtherCategories.add(otherNode);
+        }
+      });
+    });
+
+    console.log(`Found ${connectedNodesFromOtherCategories.size} connected nodes from other categories`);
+
+    // Move connected nodes closer to cluster (within 400px radius)
+    const MAX_CONNECTION_DISTANCE = 400;
+    connectedNodesFromOtherCategories.forEach((node: any) => {
+      const pos = node.position();
+      const dx = pos.x - clusterCenterX;
+      const dy = pos.y - clusterCenterY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      // If too far, move to 400px from cluster center
+      if (dist > MAX_CONNECTION_DISTANCE) {
+        const ratio = MAX_CONNECTION_DISTANCE / dist;
+        node.position({
+          x: clusterCenterX + dx * ratio,
+          y: clusterCenterY + dy * ratio
+        });
+      }
+    });
+
+    // STEP 4: Enforce minimum spacing (no physics - just manual positioning worked!)
+    const MIN_DISTANCE_SAME_CAT = 130; // Same category: touching bubbles
+    const MIN_DISTANCE_DIFF_CAT = 180; // Different category: clean boundaries
+    const MAX_ITERATIONS = 40;
+
+    for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
+      let hadCollision = false;
+      const allNodes = cy.nodes('.entity-node');
+
+      allNodes.forEach((node1: any) => {
+        const pos1 = node1.position();
+        const cat1 = nodeCategoryMap[node1.id()];
+
+        allNodes.forEach((node2: any) => {
+          if (node1.id() === node2.id()) return;
+
+          const cat2 = nodeCategoryMap[node2.id()];
+          const pos2 = node2.position();
+          const dx = pos2.x - pos1.x;
+          const dy = pos2.y - pos1.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+
+          const minDist = cat1 === cat2 ? MIN_DISTANCE_SAME_CAT : MIN_DISTANCE_DIFF_CAT;
+
+          if (dist < minDist && dist > 0) {
+            hadCollision = true;
+
+            const overlap = minDist - dist;
+            const pushX = (dx / dist) * (overlap / 2);
+            const pushY = (dy / dist) * (overlap / 2);
+
+            node1.position({
+              x: pos1.x - pushX,
+              y: pos1.y - pushY
+            });
+
+            node2.position({
+              x: pos2.x + pushX,
+              y: pos2.y + pushY
+            });
+          }
+        });
+      });
+
+      if (!hadCollision) break;
+    }
+
+    // STEP 5: Zoom to fit the category + its connected nodes
+    const nodesToFit = categoryNodes.union(cy.collection(Array.from(connectedNodesFromOtherCategories)));
+    cy.fit(nodesToFit, 100); // Fit with 100px padding to show connections
+
+    // Set flag - we're now in zoomed state
+    setIsZoomedToCategory(true);
+
+    console.log(`Zoom: ${entityType} consolidated - ${largestCluster.length} in cluster, ${positions.length - largestCluster.length} moved, ${connectedNodesFromOtherCategories.size} connections pulled closer`);
   };
 
   const handleCreateEntity = (entityType?: keyof typeof ENTITY_TYPES) => {
@@ -1308,7 +1447,7 @@ const WorldFoundationsPage: React.FC = () => {
     previousViewportRef.current = null; // Clear saved viewport
 
     // Clear highlighting and hover listeners
-    cyRef.current.elements().removeClass('dimmed highlighted connected-node');
+    cyRef.current.elements().removeClass('dimmed highlighted connected-node highlighted-edge');
     cyRef.current.elements('node.entity-node').off('mouseover mouseout');
 
     // Build category groups for explicit clustering
@@ -1396,7 +1535,7 @@ const WorldFoundationsPage: React.FC = () => {
     const layout = cyRef.current.layout({
       name: 'fcose',
       quality: 'proof',
-      randomize: false, // Start from current positions to preserve category grouping
+      randomize: true, // Random placement to test if rules enforce from any position
       animate: true, // Animate the fcose layout itself
       animationDuration: 1000,
       fit: true, // Fit the graph to viewport after layout
@@ -1658,9 +1797,17 @@ const WorldFoundationsPage: React.FC = () => {
                 // Click on empty background - clear selections
                 cy.on('tap', (event: any) => {
                   if (event.target === cy) {
+                    // If we're in zoomed state from double-click, run full reset
+                    if (isZoomedToCategory) {
+                      setIsZoomedToCategory(false);
+                      handleResetView();
+                      return;
+                    }
+
+                    // Otherwise just clear selections
                     setSelectedNode(null);
                     setSelectedCluster(null);
-                    cy.elements().removeClass('dimmed highlighted connected-node');
+                    cy.elements().removeClass('dimmed highlighted connected-node highlighted-edge');
                     cy.elements('node.entity-node').off('mouseover mouseout'); // Clear hover listeners
                     setHoverTooltip(null); // Clear tooltip
 

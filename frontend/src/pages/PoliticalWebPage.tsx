@@ -124,10 +124,8 @@ const PoliticalWebPage: React.FC = () => {
       const faction = n.attributes?.faction || 'Unaffiliated';
 
       if (isFactionNode) {
-        // Faction node visible ONLY if faction is NOT expanded
-        if (!expandedFactions.has(faction)) {
-          visibleNodes.push(n);
-        }
+        // Faction nodes ALWAYS visible (hold territory even when expanded)
+        visibleNodes.push(n);
       } else {
         // NPC/PC node visible ONLY if faction IS expanded
         if (expandedFactions.has(faction)) {
@@ -136,15 +134,24 @@ const PoliticalWebPage: React.FC = () => {
       }
     });
 
-    // Only show edges between visible nodes
+    // Only show edges between visible nodes (excluding edges from expanded faction nodes)
     const visibleNodeIds = new Set(visibleNodes.map(n => n.id));
 
-    // Check if The Party faction is visible (collapsed)
+    // Get list of expanded faction node IDs (ghosts shouldn't show edges to their members)
+    const expandedFactionNodeIds = new Set<string>();
+    visibleNodes.forEach(n => {
+      if (n.attributes?.is_faction_node && expandedFactions.has(n.attributes.faction)) {
+        expandedFactionNodeIds.add(n.id);
+      }
+    });
+
+    // Check if The Party faction is collapsed (not expanded)
     const partyFactionNode = visibleNodes.find(n =>
       n.attributes?.is_faction_node && n.attributes?.faction === 'The Party'
     );
+    const isPartyCollapsed = partyFactionNode && !expandedFactions.has('The Party');
 
-    if (partyFactionNode) {
+    if (isPartyCollapsed) {
       // The Party is collapsed - create aggregated edges from Party to PC targets
       const pcNodes = allNodes.filter(n => n.node_type === 'PC');
       const pcTargets = new Set<string>();
@@ -176,9 +183,15 @@ const PoliticalWebPage: React.FC = () => {
 
       console.log(`Created ${pcTargets.size} aggregated Party connections`);
     } else {
-      // Party is expanded - show individual PC edges
+      // Party is expanded - show individual PC edges (but not edges FROM/TO ghost faction nodes)
       allEdges.forEach((e: any) => {
-        if (visibleNodeIds.has(e.source_node_id) && visibleNodeIds.has(e.target_node_id)) {
+        const sourceVisible = visibleNodeIds.has(e.source_node_id);
+        const targetVisible = visibleNodeIds.has(e.target_node_id);
+        const sourceIsGhost = expandedFactionNodeIds.has(e.source_node_id);
+        const targetIsGhost = expandedFactionNodeIds.has(e.target_node_id);
+
+        // Only show if both nodes visible AND neither is a ghost faction
+        if (sourceVisible && targetVisible && !sourceIsGhost && !targetIsGhost) {
           visibleEdges.push(e);
         }
       });
@@ -190,21 +203,33 @@ const PoliticalWebPage: React.FC = () => {
       const isFaction = n.attributes?.is_faction_node || false;
       const faction = n.attributes?.faction || 'Unaffiliated';
 
+      // Calculate opacity based on expansion state (BEFORE position check)
+      let nodeOpacity = 1.0;
+      let showLabel = n.name;
+
+      if (isFaction && expandedFactions.has(faction)) {
+        nodeOpacity = 0;
+        showLabel = '';
+      } else if (isFaction) {
+        nodeOpacity = 0.8;
+      }
+
       // Check if this node already exists in Cytoscape (preserve position)
       let position = { x: 0, y: 0 };
       if (cyRef.current) {
         const existingNode = cyRef.current.getElementById(n.id);
         if (existingNode && existingNode.length > 0) {
-          // Node exists - preserve its current position (don't reset it!)
+          // Node exists - preserve position but UPDATE opacity/label
           position = existingNode.position();
           return {
             data: {
               id: n.id,
-              label: n.name,
+              label: showLabel, // Dynamic label
               nodeType: n.node_type,
               nodeData: n,
               faction,
               color: n.attributes?.color || '#6b7280',
+              opacity: nodeOpacity, // Dynamic opacity
               isPC,
               isFaction,
               memberCount: n.attributes?.member_count || 0,
@@ -268,11 +293,12 @@ const PoliticalWebPage: React.FC = () => {
       return {
         data: {
           id: n.id,
-          label: n.name,
+          label: showLabel, // Dynamic label
           nodeType: n.node_type,
           nodeData: n,
           faction,
           color: n.attributes?.color || '#6b7280',
+          opacity: nodeOpacity, // Store opacity in data
           isPC,
           isFaction,
           memberCount: n.attributes?.member_count || 0,
@@ -293,6 +319,8 @@ const PoliticalWebPage: React.FC = () => {
         is_aggregate: e.is_aggregate || false // For aggregated Party edges
       }
     }));
+
+    console.log(`[VISIBILITY] Visible nodes: ${visibleNodes.length}, PCs: ${visibleNodes.filter(n => n.node_type === 'PC').length}, Factions: ${visibleNodes.filter(n => n.attributes?.is_faction_node).length}, NPCs: ${visibleNodes.filter(n => !n.attributes?.is_faction_node && n.node_type !== 'PC').length}`);
 
     setElements([...cyNodes, ...cyEdges]);
   }, [allNodes, allEdges, expandedFactions]); // Removed factionPositions - it shouldn't trigger re-positioning!
@@ -337,7 +365,7 @@ const PoliticalWebPage: React.FC = () => {
     // Zoom to fit all visible nodes after collapse
     setTimeout(() => {
       if (cyRef.current) {
-        cyRef.current.fit(cyRef.current.nodes(), 80); // Tighter padding for compact graph
+        cyRef.current.fit(cyRef.current.nodes(), 50); // Tighter fit
       }
     }, 200);
   };
@@ -373,12 +401,21 @@ const PoliticalWebPage: React.FC = () => {
           // Sequential spiral from faction angle
           const angle = factionAngle + (index * 0.17); // 0.17 radians ≈ 10° per NPC
 
-          // Determine ring based on node_type - tightened by 2x
+          // Determine ring based on node_type (3-tier hierarchy)
           const nodeType = node.data('nodeType');
-          const isMajor = nodeType === 'NPC:major';
+          let innerRadius, outerRadius;
 
-          const innerRadius = isMajor ? 150 : 200; // Major: 150-200px, Minor: 200-250px
-          const outerRadius = isMajor ? 200 : 250;
+          if (nodeType === 'NPC:leader' || nodeType === 'NPC:major') {
+            innerRadius = 125; // Leaders
+            outerRadius = 150;
+          } else if (nodeType === 'NPC:lieutenant') {
+            innerRadius = 150; // Lieutenants
+            outerRadius = 200;
+          } else {
+            innerRadius = 200; // Members (minor or default)
+            outerRadius = 250;
+          }
+
           const radius = innerRadius + Math.random() * (outerRadius - innerRadius);
 
           node.position({
@@ -392,7 +429,7 @@ const PoliticalWebPage: React.FC = () => {
         // Zoom to fit all visible nodes after expansion
         setTimeout(() => {
           if (cyRef.current) {
-            cyRef.current.fit(cyRef.current.nodes(), 80); // Tighter padding for compact graph
+            cyRef.current.fit(cyRef.current.nodes(), 50); // Tighter fit
           }
         }, 100);
       }
@@ -420,10 +457,12 @@ const PoliticalWebPage: React.FC = () => {
     // Define ring constants at function scope (tightened by 2x)
     const FACTION_INNER = 75;
     const FACTION_OUTER = 125;
-    const NPC_MAJOR_INNER = 150; // Leaders/important NPCs
-    const NPC_MAJOR_OUTER = 200;
-    const NPC_MINOR_INNER = 200; // Common members
-    const NPC_MINOR_OUTER = 250;
+    const NPC_LEADER_INNER = 125; // Leaders - closest to faction
+    const NPC_LEADER_OUTER = 150;
+    const NPC_LIEUTENANT_INNER = 150; // Mid-level - lieutenants, advisors
+    const NPC_LIEUTENANT_OUTER = 200;
+    const NPC_MEMBER_INNER = 200; // Common members - furthest out
+    const NPC_MEMBER_OUTER = 250;
 
     const factionNodes = cy.nodes('[?isFaction]').filter((n: any) => n.data('faction') !== 'The Party');
     const npcNodes = cy.nodes('[!isFaction][!isPC]');
@@ -484,15 +523,25 @@ const PoliticalWebPage: React.FC = () => {
       npcs.forEach((node: any, index: number) => {
         const angle = factionAngle + (index * 0.17); // 0.17 radians ≈ 10° per NPC
 
-        // Determine ring based on node_type
+        // Determine ring based on node_type (3-tier hierarchy)
         const nodeType = node.data('nodeType');
-        const isMajor = nodeType === 'NPC:major';
+        let innerRadius, outerRadius;
 
-        const innerRadius = isMajor ? NPC_MAJOR_INNER : NPC_MINOR_INNER;
-        const outerRadius = isMajor ? NPC_MAJOR_OUTER : NPC_MINOR_OUTER;
+        if (nodeType === 'NPC:leader' || nodeType === 'NPC:major') {
+          innerRadius = NPC_LEADER_INNER;
+          outerRadius = NPC_LEADER_OUTER;
+        } else if (nodeType === 'NPC:lieutenant') {
+          innerRadius = NPC_LIEUTENANT_INNER;
+          outerRadius = NPC_LIEUTENANT_OUTER;
+        } else {
+          // NPC:minor, NPC:member, or default
+          innerRadius = NPC_MEMBER_INNER;
+          outerRadius = NPC_MEMBER_OUTER;
+        }
+
         const radius = innerRadius + Math.random() * (outerRadius - innerRadius);
 
-        console.log(`[RESET] ${node.data('label')}: type=${nodeType}, isMajor=${isMajor}, placing at ${Math.round(radius)}px, ${Math.round(angle * 180 / Math.PI)}°`);
+        console.log(`[RESET] ${node.data('label')}: type=${nodeType}, ring=${Math.round(innerRadius)}-${Math.round(outerRadius)}px, placing at ${Math.round(radius)}px, ${Math.round(angle * 180 / Math.PI)}°`);
 
         node.animate({
           position: {
@@ -510,13 +559,15 @@ const PoliticalWebPage: React.FC = () => {
       if (!cyRef.current) return;
 
       // COLLISION ENFORCEMENT: 2D freedom with ring boundary checks
-      const MIN_DISTANCE_SAME_FACTION = 40; // Same faction NPCs can be very close
+      const MIN_DISTANCE_SAME_FACTION = 15; // Same faction NPCs tight clustering
       const MIN_DISTANCE_DIFF_FACTION = 60; // Different factions need more space
-      const MAX_ITERATIONS = 8; // Reduced iterations
+      const MIN_DISTANCE_TO_EDGE = 25; // Minimum distance from multileader paths
+      const MAX_ITERATIONS = 4; // Reduced to minimize jumping
       const cy = cyRef.current;
 
       for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
         let hadCollision = false;
+        let collisionCount = 0;
 
         cy.nodes().forEach((node1: any) => {
           if (node1.locked()) return;
@@ -537,12 +588,13 @@ const PoliticalWebPage: React.FC = () => {
 
             if (dist < minDist && dist > 0) {
               hadCollision = true;
+              collisionCount++;
 
               // Get current radial distance and angle for node2
               const dist2 = Math.sqrt(pos2.x * pos2.x + pos2.y * pos2.y);
               const angle2 = Math.atan2(pos2.y, pos2.x);
 
-              // Determine ring boundaries for node2
+              // Determine ring boundaries for node2 (3-tier hierarchy)
               const isFaction2 = node2.data('isFaction');
               const nodeType2 = node2.data('nodeType');
               let minRadius, maxRadius;
@@ -550,10 +602,16 @@ const PoliticalWebPage: React.FC = () => {
               if (isFaction2) {
                 minRadius = FACTION_INNER;
                 maxRadius = FACTION_OUTER;
+              } else if (nodeType2 === 'NPC:leader' || nodeType2 === 'NPC:major') {
+                minRadius = NPC_LEADER_INNER;
+                maxRadius = NPC_LEADER_OUTER;
+              } else if (nodeType2 === 'NPC:lieutenant') {
+                minRadius = NPC_LIEUTENANT_INNER;
+                maxRadius = NPC_LIEUTENANT_OUTER;
               } else {
-                const isMajor = nodeType2 === 'NPC:major';
-                minRadius = isMajor ? NPC_MAJOR_INNER : NPC_MINOR_INNER;
-                maxRadius = isMajor ? NPC_MAJOR_OUTER : NPC_MINOR_OUTER;
+                // NPC:member, NPC:minor, or default
+                minRadius = NPC_MEMBER_INNER;
+                maxRadius = NPC_MEMBER_OUTER;
               }
 
               // Calculate push
@@ -607,10 +665,72 @@ const PoliticalWebPage: React.FC = () => {
           });
         });
 
-        if (!hadCollision) break;
+        // Early exit if spacing is good (few collisions)
+        if (!hadCollision || collisionCount < 3) {
+          console.log(`Collision complete: ${collisionCount} adjustments in ${iteration + 1} iterations`);
+          break;
+        }
       }
 
-      console.log('Ring enforcement complete: Factions Ring 1 (75-125px), NPCs Ring 2.5/3 (150-250px)');
+      // MULTILEADER AVOIDANCE: Push nodes away from PC edge paths
+      const pcEdges = cy.edges().filter((e: any) => e.source().data('isPC'));
+      const edgePathSamples: { x: number, y: number }[] = [];
+
+      // Sample points along each PC edge path
+      pcEdges.forEach((edge: any) => {
+        const source = edge.source().position();
+        const target = edge.target().position();
+
+        // Sample 10 points along the line
+        for (let t = 0.1; t <= 0.9; t += 0.1) {
+          edgePathSamples.push({
+            x: source.x + (target.x - source.x) * t,
+            y: source.y + (target.y - source.y) * t
+          });
+        }
+      });
+
+      // Check all non-PC nodes against edge path samples
+      cy.nodes('[!isPC]').forEach((node: any) => {
+        if (node.locked()) return;
+        const pos = node.position();
+
+        // Find closest edge path point
+        let minDistToPath = Infinity;
+        let closestPathPoint = null;
+
+        edgePathSamples.forEach(sample => {
+          const d = Math.sqrt((pos.x - sample.x) ** 2 + (pos.y - sample.y) ** 2);
+          if (d < minDistToPath) {
+            minDistToPath = d;
+            closestPathPoint = sample;
+          }
+        });
+
+        // If too close to a path, push away
+        if (minDistToPath < MIN_DISTANCE_TO_EDGE && closestPathPoint) {
+          const dx = pos.x - closestPathPoint.x;
+          const dy = pos.y - closestPathPoint.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+
+          if (dist > 0) {
+            // Push away from path, maintaining ring radius
+            const currentRadius = Math.sqrt(pos.x * pos.x + pos.y * pos.y);
+            const currentAngle = Math.atan2(pos.y, pos.x);
+
+            // Rotate slightly away from path (±0.1 radians)
+            const pushAngle = dx > 0 ? 0.1 : -0.1;
+            const newAngle = currentAngle + pushAngle;
+
+            node.position({
+              x: Math.cos(newAngle) * currentRadius,
+              y: Math.sin(newAngle) * currentRadius
+            });
+          }
+        }
+      });
+
+      console.log('Ring enforcement complete with multileader avoidance: Factions Ring 1 (75-125px), NPCs Ring 2.5/3 (150-250px)');
     }, 850); // Wait for 800ms animations + 50ms buffer
 
     // Save faction positions
@@ -624,8 +744,8 @@ const PoliticalWebPage: React.FC = () => {
     });
     setFactionPositions(prev => ({ ...prev, ...positions }));
 
-    // Fit viewport to show all nodes
-    cy.fit(cy.nodes(), 80); // Tighter padding for compact graph
+    // Fit viewport to show all nodes with better zoom
+    cy.fit(cy.nodes(), 50); // Reduced padding for tighter fit
   };
 
   const handleFactionClick = (factionNode: any) => {
@@ -740,8 +860,18 @@ const PoliticalWebPage: React.FC = () => {
     ctx.arc(centerX, centerY, toScreen(125), 0, Math.PI * 2);
     ctx.stroke();
 
-    // Ring 2.5: NPC:major (150-200px)
-    ctx.strokeStyle = 'rgba(245, 158, 11, 0.2)'; // Orange for major NPCs
+    // Ring 2: NPC:leader (125-150px)
+    ctx.strokeStyle = 'rgba(239, 68, 68, 0.2)'; // Red for leaders
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, toScreen(125), 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, toScreen(150), 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Ring 2.5: NPC:lieutenant (150-200px)
+    ctx.strokeStyle = 'rgba(245, 158, 11, 0.2)'; // Orange for lieutenants
     ctx.beginPath();
     ctx.arc(centerX, centerY, toScreen(150), 0, Math.PI * 2);
     ctx.stroke();
@@ -750,8 +880,8 @@ const PoliticalWebPage: React.FC = () => {
     ctx.arc(centerX, centerY, toScreen(200), 0, Math.PI * 2);
     ctx.stroke();
 
-    // Ring 3: NPC:minor (200-250px)
-    ctx.strokeStyle = 'rgba(52, 211, 153, 0.2)'; // Green for minor NPCs
+    // Ring 3: NPC:member (200-250px)
+    ctx.strokeStyle = 'rgba(52, 211, 153, 0.2)'; // Green for members
     ctx.beginPath();
     ctx.arc(centerX, centerY, toScreen(200), 0, Math.PI * 2);
     ctx.stroke();
@@ -768,8 +898,9 @@ const PoliticalWebPage: React.FC = () => {
       // Ring labels
       ctx.fillText('Ring 0: Party/PCs (0-50px)', centerX + 10, centerY - toScreen(50) - 10);
       ctx.fillText('Ring 1: Factions (75-125px)', centerX + 10, centerY - toScreen(75) - 10);
-      ctx.fillText('Ring 2.5: NPC:major (150-200px)', centerX + 10, centerY - toScreen(150) - 10);
-      ctx.fillText('Ring 3: NPC:minor (200-250px)', centerX + 10, centerY - toScreen(225) - 10);
+      ctx.fillText('Ring 2: Leaders (125-150px)', centerX + 10, centerY - toScreen(125) - 10);
+      ctx.fillText('Ring 2.5: Lieutenants (150-200px)', centerX + 10, centerY - toScreen(150) - 10);
+      ctx.fillText('Ring 3: Members (200-250px)', centerX + 10, centerY - toScreen(225) - 10);
 
       // Pixel ruler from center
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
@@ -832,8 +963,8 @@ const PoliticalWebPage: React.FC = () => {
         };
       });
 
-      // Draw metaball effect using marching squares
-      drawMetaballAOE(ctx, points, factionColor);
+      // Draw metaball effect using field strength algorithm
+      drawMetaballAOE(ctx, points, factionColor, factionName);
     });
 
     // Draw bundled PC edges (multi-leader style)
@@ -1045,53 +1176,79 @@ const PoliticalWebPage: React.FC = () => {
     ctx.restore();
   };
 
+  // Metaball configuration (from World-Foundations)
+  const METABALL_BASE_RADIUS = 40; // Smaller for compact Political-Web
+  const METABALL_THRESHOLD = 0.6;
+  const METABALL_MIN_RADIUS = 30; // Smaller protected zone
+  const GRID_SIZE = 2;
+
+  const calculateFieldStrength = (x: number, y: number, nodes: any[]): number => {
+    let totalStrength = 0;
+
+    for (const node of nodes) {
+      const dx = x - node.x;
+      const dy = y - node.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      const maxRadius = node.radius || METABALL_BASE_RADIUS;
+
+      if (dist === 0) {
+        totalStrength += 1000;
+      } else if (dist <= METABALL_MIN_RADIUS) {
+        // Protected core
+        const radiusSq = METABALL_MIN_RADIUS * METABALL_MIN_RADIUS;
+        totalStrength += radiusSq / (dist * dist);
+      } else {
+        // Beyond minimum radius
+        const radiusSq = maxRadius * maxRadius;
+        const baseStrength = radiusSq / (dist * dist);
+
+        if (dist > maxRadius) {
+          // Soft decay beyond max
+          const beyondMax = (dist - maxRadius) / maxRadius;
+          const decayFactor = Math.pow(0.5, beyondMax);
+          totalStrength += baseStrength * decayFactor;
+        } else {
+          totalStrength += baseStrength;
+        }
+      }
+    }
+
+    return totalStrength;
+  };
+
   const drawMetaballAOE = (
     ctx: CanvasRenderingContext2D,
     points: Array<{ x: number; y: number; radius: number }>,
-    color: string
+    color: string,
+    factionName: string
   ) => {
     if (points.length === 0) return;
 
-    // Calculate bounding box
+    // Use World-Foundations winner-takes-all algorithm
+    // For this specific faction, render its metaball field
+    ctx.save();
+    ctx.fillStyle = `${color}48`; // 28% opacity like WF
+
+    // Only render within bounding box of this faction's nodes
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     points.forEach(p => {
-      minX = Math.min(minX, p.x - p.radius);
-      minY = Math.min(minY, p.y - p.radius);
-      maxX = Math.max(maxX, p.x + p.radius);
-      maxY = Math.max(maxY, p.y + p.radius);
+      minX = Math.min(minX, p.x - p.radius - 50);
+      minY = Math.min(minY, p.y - p.radius - 50);
+      maxX = Math.max(maxX, p.x + p.radius + 50);
+      maxY = Math.max(maxY, p.y + p.radius + 50);
     });
 
-    // Add padding
-    const padding = 50;
-    minX -= padding;
-    minY -= padding;
-    maxX += padding;
-    maxY += padding;
+    // Render pixels where this faction's field exceeds threshold
+    for (let y = Math.max(0, minY); y < Math.min(ctx.canvas.height, maxY); y += GRID_SIZE) {
+      for (let x = Math.max(0, minX); x < Math.min(ctx.canvas.width, maxX); x += GRID_SIZE) {
+        const strength = calculateFieldStrength(x, y, points);
 
-    // Create metaball field
-    const resolution = 10; // Grid resolution
-    const threshold = 1.0; // Metaball threshold
-
-    // Simple blob drawing for now (can be refined to true metaballs later)
-    ctx.save();
-    ctx.globalAlpha = 0.15;
-    ctx.fillStyle = color;
-
-    points.forEach(point => {
-      ctx.beginPath();
-      ctx.arc(point.x, point.y, point.radius, 0, Math.PI * 2);
-      ctx.fill();
-    });
-
-    // Draw border
-    ctx.globalAlpha = 0.4;
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
-    points.forEach(point => {
-      ctx.beginPath();
-      ctx.arc(point.x, point.y, point.radius, 0, Math.PI * 2);
-      ctx.stroke();
-    });
+        if (strength >= METABALL_THRESHOLD) {
+          ctx.fillRect(x, y, GRID_SIZE, GRID_SIZE);
+        }
+      }
+    }
 
     ctx.restore();
   };
@@ -1104,6 +1261,7 @@ const PoliticalWebPage: React.FC = () => {
         'background-color': 'data(color)',
         'label': 'data(label)',
         'shape': 'ellipse', // Default: circles for NPCs
+        'opacity': 'data(opacity)', // Use data property for dynamic opacity
         'width': (ele: any) => {
           const isPC = ele.data('isPC');
           const isFaction = ele.data('isFaction');
@@ -1165,8 +1323,7 @@ const PoliticalWebPage: React.FC = () => {
       style: {
         'shape': 'vee', // Upside-down triangle
         'border-width': 2,
-        'border-color': '#ffffff',
-        'opacity': 0.8
+        'border-color': '#ffffff'
       }
     },
     // The Party faction - special star shape
@@ -1402,7 +1559,7 @@ const PoliticalWebPage: React.FC = () => {
             cyRef.current = cy;
 
             // Set initial viewport BEFORE layout runs
-            cy.zoom(1.1);
+            cy.zoom(1.25);
             cy.pan({ x: cy.width() / 2, y: cy.height() / 2 });
 
             // Remove any existing listeners to prevent duplicates
@@ -1490,12 +1647,19 @@ const PoliticalWebPage: React.FC = () => {
               }
             });
 
-            // Initial draw of rings
+            // Initial draw of rings and edges
             setTimeout(() => {
               if (cyRef.current) {
                 renderFactionMetaballs(cyRef.current);
               }
             }, 100);
+
+            // Redraw on any position change
+            cy.on('position', 'node', () => {
+              if (cyRef.current) {
+                renderFactionMetaballs(cyRef.current);
+              }
+            });
           }}
           layout={{
             name: 'preset' // Don't auto-run layout on element changes

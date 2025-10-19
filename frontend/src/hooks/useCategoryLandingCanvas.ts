@@ -89,14 +89,31 @@ export function useCategoryLandingCanvas(
         );
       } else {
         // No config exists, create default (empty layout)
-        const newConfig = await createCategoryLandingConfig(
-          campaignId,
-          category,
-          DEFAULT_CATEGORY_LANDING_LAYOUT
-        );
-        setConfig(newConfig);
-        setLayout(newConfig.layout.layouts.lg || []);
-        setDescription(null);
+        try {
+          const newConfig = await createCategoryLandingConfig(
+            campaignId,
+            category,
+            DEFAULT_CATEGORY_LANDING_LAYOUT
+          );
+          setConfig(newConfig);
+          setLayout(newConfig.layout.layouts.lg || []);
+          setDescription(null);
+        } catch (createErr: any) {
+          // Handle race condition: another component may have created it
+          if (createErr.response?.status === 400 || createErr.message?.includes('already exists')) {
+            console.log('Category landing config already exists (race condition), refetching...');
+            const refetchedConfig = await getCategoryLandingConfig(campaignId, category);
+            if (refetchedConfig) {
+              setConfig(refetchedConfig);
+              setLayout(refetchedConfig.layout.layouts.lg || []);
+              setDescription(refetchedConfig.description ? JSON.parse(refetchedConfig.description) : null);
+            } else {
+              setLayout(DEFAULT_CATEGORY_LANDING_LAYOUT.layouts.lg);
+            }
+          } else {
+            throw createErr;
+          }
+        }
       }
     } catch (err: any) {
       setError(err.message || 'Failed to load category landing configuration');

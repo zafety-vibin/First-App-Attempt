@@ -26,18 +26,18 @@ export function useThematicLabels(campaignId: string): UseThematicLabelsReturn {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch campaign settings (theme)
+  // Fetch campaign settings (theme) from wizard/status endpoint
   const fetchCampaignSettings = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      // Fetch campaign settings to get theme
-      const response = await apiClient.get(`/campaigns/${campaignId}/settings`);
-      const campaignTheme: ThemeName | undefined = response.data?.theme;
+      // Feature 016: Fetch campaign settings from wizard status
+      const response = await apiClient.get(`/campaigns/${campaignId}/wizard/status`);
+      const existingSettings = response.data?.existingSettings;
 
-      if (campaignTheme) {
-        setTheme(campaignTheme);
-        setCategoryLabels(getAllCategoryLabels(campaignTheme));
+      if (existingSettings && existingSettings.category_labels) {
+        setTheme(existingSettings.theme);
+        setCategoryLabels(existingSettings.category_labels); // Use actual labels from database
       } else {
         // No theme set, use defaults
         setTheme(null);

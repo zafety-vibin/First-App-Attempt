@@ -11,6 +11,7 @@ import { createDatabaseChangeDetectionService } from './services/DatabaseChangeD
 import { createSessionImportService } from './services/SessionImportService';
 import authRoutes from './routes/auth';
 import campaignRoutes from './routes/campaigns';
+import campaignWizardRoutes from './routes/campaign-wizard'; // Feature 016
 import settingRoutes from './routes/settings';
 import cardRoutes from './routes/cards';
 import databaseCardRoutes from './routes/database-cards';
@@ -59,6 +60,7 @@ app.use(express.json());
 // Routes
 app.use('/health', healthRoutes);
 app.use('/api/auth', authRoutes);
+app.use(campaignWizardRoutes); // Feature 016 - wizard routes (must be before general campaign routes for specificity)
 app.use('/api/campaigns', campaignRoutes);
 app.use('/api/settings', settingRoutes);
 app.use('/api/information-levels', informationLevelRoutes); // Feature 004

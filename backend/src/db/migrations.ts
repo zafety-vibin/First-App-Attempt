@@ -46,6 +46,16 @@ export const migrations: Migration[] = [
       console.log('Migration 14: Category tables created');
     },
   },
+  {
+    version: 16,
+    description: 'Feature 016 - Campaign settings table for setup wizard',
+    up: (db) => {
+      const migrationPath = path.join(__dirname, 'migrations', '016-campaign-settings.sql');
+      const sql = fs.readFileSync(migrationPath, 'utf8');
+      db.exec(sql);
+      console.log('Migration 16: Campaign settings table created');
+    },
+  },
 ];
 
 /**

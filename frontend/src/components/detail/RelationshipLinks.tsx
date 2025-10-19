@@ -57,12 +57,34 @@ export const RelationshipLinks: React.FC<RelationshipLinksProps> = ({
             const uniqueIds = [...new Set(ids)];
             const entities: Record<string, { id: string; name: string }> = {};
 
+            // Static service mapping (Vite requires static imports)
+            const SERVICE_MAP: Record<string, any> = {
+              npcs: () => import('../../services/npcService'),
+              factions: () => import('../../services/factionService'),
+              locations: () => import('../../services/locationService'),
+              quests: () => import('../../services/questService'),
+              session_recaps: () => import('../../services/sessionRecapService'),
+              player_characters: () => import('../../services/playerCharacterService'),
+              lore_entries: () => import('../../services/loreEntryService'),
+              world_rules: () => import('../../services/worldRuleService'),
+              planar_forces: () => import('../../services/planarForceService'),
+              session_preps: () => import('../../services/sessionPrepService'),
+              custom_mechanics: () => import('../../services/customMechanicService'),
+              items: () => import('../../services/itemService'),
+              creatures: () => import('../../services/creatureService')
+            };
+
             // Fetch each entity (optimize with batch endpoint later)
             await Promise.all(
               uniqueIds.map(async (id) => {
                 try {
-                  // Dynamically import service based on category
-                  const service = await import(`../../services/${category}Service`);
+                  // Use static service map
+                  const serviceLoader = SERVICE_MAP[category];
+                  if (!serviceLoader) {
+                    throw new Error(`No service for category: ${category}`);
+                  }
+
+                  const service = await serviceLoader();
                   const singularFn = Object.keys(service).find(key => key.startsWith('get') && key.endsWith('ById'));
                   if (singularFn) {
                     const entity = await (service as any)[singularFn](id);

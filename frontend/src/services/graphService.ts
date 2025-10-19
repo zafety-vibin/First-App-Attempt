@@ -111,6 +111,64 @@ export const graphService = {
   async getGraphStats(campaignId: string, graphId: string): Promise<GraphStats> {
     const response = await apiClient.get(`/campaigns/${campaignId}/graphs/${graphId}/stats`);
     return response.data.stats;
+  },
+
+  // Node CRUD operations
+  async createNode(
+    campaignId: string,
+    graphId: string,
+    nodeData: Partial<GraphNode>
+  ): Promise<GraphNode> {
+    const response = await apiClient.post(`/campaigns/${campaignId}/graphs/${graphId}/nodes`, nodeData);
+    return response.data;
+  },
+
+  async updateNode(
+    campaignId: string,
+    graphId: string,
+    nodeId: string,
+    updates: Partial<GraphNode>
+  ): Promise<GraphNode> {
+    const response = await apiClient.patch(`/campaigns/${campaignId}/graphs/${graphId}/nodes/${nodeId}`, updates);
+    return response.data;
+  },
+
+  async deleteNode(campaignId: string, graphId: string, nodeId: string): Promise<void> {
+    await apiClient.delete(`/campaigns/${campaignId}/graphs/${graphId}/nodes/${nodeId}`);
+  },
+
+  async getNode(campaignId: string, graphId: string, nodeId: string): Promise<GraphNode> {
+    const response = await apiClient.get(`/campaigns/${campaignId}/graphs/${graphId}/nodes/${nodeId}`);
+    return response.data;
+  },
+
+  // Edge CRUD operations
+  async createEdge(
+    campaignId: string,
+    graphId: string,
+    edgeData: Partial<GraphEdge>
+  ): Promise<GraphEdge> {
+    const response = await apiClient.post(`/campaigns/${campaignId}/graphs/${graphId}/edges`, edgeData);
+    return response.data;
+  },
+
+  async updateEdge(
+    campaignId: string,
+    graphId: string,
+    edgeId: string,
+    updates: Partial<GraphEdge>
+  ): Promise<GraphEdge> {
+    const response = await apiClient.patch(`/campaigns/${campaignId}/graphs/${graphId}/edges/${edgeId}`, updates);
+    return response.data;
+  },
+
+  async deleteEdge(campaignId: string, graphId: string, edgeId: string): Promise<void> {
+    await apiClient.delete(`/campaigns/${campaignId}/graphs/${graphId}/edges/${edgeId}`);
+  },
+
+  async getEdge(campaignId: string, graphId: string, edgeId: string): Promise<GraphEdge> {
+    const response = await apiClient.get(`/campaigns/${campaignId}/graphs/${graphId}/edges/${edgeId}`);
+    return response.data;
   }
 };
 

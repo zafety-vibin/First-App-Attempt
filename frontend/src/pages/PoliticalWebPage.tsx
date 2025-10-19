@@ -8,11 +8,12 @@
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Users, ArrowLeft, Info, RotateCcw } from 'lucide-react';
+import { Users, ArrowLeft, Info, RotateCcw, Plus, Edit3, Trash2, X } from 'lucide-react';
 import CytoscapeComponent from 'react-cytoscapejs';
 import Cytoscape from 'cytoscape';
 import fcose from 'cytoscape-fcose';
 import { graphService } from '../services/graphService';
+import GraphNodeEditorDialog from '../components/graphs/GraphNodeEditorDialog';
 import './PoliticalWebPage.css';
 
 // Register fcose layout
@@ -32,10 +33,31 @@ const PoliticalWebPage: React.FC = () => {
   const [showInfo, setShowInfo] = useState(false);
   const [showDebug, setShowDebug] = useState(false);
   const [selectedNode, setSelectedNode] = useState<any>(null);
+  const [selectedEdge, setSelectedEdge] = useState<any>(null);
   const [expandedFactions, setExpandedFactions] = useState<Set<string>>(new Set()); // Track which factions are expanded
   const [factionPositions, setFactionPositions] = useState<Record<string, {x: number, y: number}>>({}); // Store faction node positions for NPC spawning
   const detailsTimerRef = useRef<number | null>(null);
   const previousViewportRef = useRef<{ zoom: number; pan: { x: number; y: number } } | null>(null);
+
+  // Editor state
+  const [nodeEditorOpen, setNodeEditorOpen] = useState(false);
+  const [editingNode, setEditingNode] = useState<any>(null);
+
+  // Edge creation state (click-to-select pattern from Geographic Memory)
+  const [addEdgeMode, setAddEdgeMode] = useState(false);
+  const [edgeSourceNode, setEdgeSourceNode] = useState<any>(null);
+  const [edgeTargetNode, setEdgeTargetNode] = useState<any>(null);
+  const [showEdgeModal, setShowEdgeModal] = useState(false);
+  const [edgeFormData, setEdgeFormData] = useState({
+    edgeType: '',
+    customEdgeType: '',
+    directed: true,
+    metadata: {
+      strength: '',
+      context: ''
+    }
+  });
+  const [edgeSubmitting, setEdgeSubmitting] = useState(false);
 
   useEffect(() => {
     if (campaignId) {
@@ -122,13 +144,17 @@ const PoliticalWebPage: React.FC = () => {
     allNodes.forEach((n: any) => {
       const isFactionNode = n.attributes?.is_faction_node || false;
       const faction = n.attributes?.faction || 'Unaffiliated';
+      const secondaryFaction = n.attributes?.secondary_faction; // For dual-membership PCs
 
       if (isFactionNode) {
         // Faction nodes ALWAYS visible (hold territory even when expanded)
         visibleNodes.push(n);
       } else {
-        // NPC/PC node visible ONLY if faction IS expanded
-        if (expandedFactions.has(faction)) {
+        // NPC/PC node visible if PRIMARY faction expanded OR secondary faction expanded
+        const primaryExpanded = expandedFactions.has(faction);
+        const secondaryExpanded = secondaryFaction && expandedFactions.has(secondaryFaction);
+
+        if (primaryExpanded || secondaryExpanded) {
           visibleNodes.push(n);
         }
       }
@@ -145,7 +171,20 @@ const PoliticalWebPage: React.FC = () => {
       }
     });
 
-    // Check if The Party faction is collapsed (not expanded)
+    // ALWAYS show edges between visible nodes (excluding ghost faction edges)
+    allEdges.forEach((e: any) => {
+      const sourceVisible = visibleNodeIds.has(e.source_node_id);
+      const targetVisible = visibleNodeIds.has(e.target_node_id);
+      const sourceIsGhost = expandedFactionNodeIds.has(e.source_node_id);
+      const targetIsGhost = expandedFactionNodeIds.has(e.target_node_id);
+
+      // Show edge if both nodes visible AND neither is a ghost faction
+      if (sourceVisible && targetVisible && !sourceIsGhost && !targetIsGhost) {
+        visibleEdges.push(e);
+      }
+    });
+
+    // ADDITIONALLY: If Party is collapsed, create aggregated edges
     const partyFactionNode = visibleNodes.find(n =>
       n.attributes?.is_faction_node && n.attributes?.faction === 'The Party'
     );
@@ -169,7 +208,7 @@ const PoliticalWebPage: React.FC = () => {
         }
       });
 
-      // Create synthetic edges from Party faction to each target
+      // Create synthetic aggregated edges from Party faction to each target
       pcTargets.forEach(targetId => {
         visibleEdges.push({
           id: `party-aggregate-${targetId}`,
@@ -182,19 +221,6 @@ const PoliticalWebPage: React.FC = () => {
       });
 
       console.log(`Created ${pcTargets.size} aggregated Party connections`);
-    } else {
-      // Party is expanded - show individual PC edges (but not edges FROM/TO ghost faction nodes)
-      allEdges.forEach((e: any) => {
-        const sourceVisible = visibleNodeIds.has(e.source_node_id);
-        const targetVisible = visibleNodeIds.has(e.target_node_id);
-        const sourceIsGhost = expandedFactionNodeIds.has(e.source_node_id);
-        const targetIsGhost = expandedFactionNodeIds.has(e.target_node_id);
-
-        // Only show if both nodes visible AND neither is a ghost faction
-        if (sourceVisible && targetVisible && !sourceIsGhost && !targetIsGhost) {
-          visibleEdges.push(e);
-        }
-      });
     }
 
     // Convert to Cytoscape format with initial positions
@@ -219,8 +245,21 @@ const PoliticalWebPage: React.FC = () => {
       if (cyRef.current) {
         const existingNode = cyRef.current.getElementById(n.id);
         if (existingNode && existingNode.length > 0) {
-          // Node exists - preserve position but UPDATE opacity/label
+          // Node exists - preserve position but UPDATE all data including color
           position = existingNode.position();
+
+          // IMPORTANT: Explicitly update color in case it changed
+          const newColor = n.attributes?.color || '#6b7280';
+          setTimeout(() => {
+            if (cyRef.current) {
+              const node = cyRef.current.getElementById(n.id);
+              if (node && node.length > 0) {
+                node.data('color', newColor);
+                node.style('background-color', newColor);
+              }
+            }
+          }, 0);
+
           return {
             data: {
               id: n.id,
@@ -228,7 +267,7 @@ const PoliticalWebPage: React.FC = () => {
               nodeType: n.node_type,
               nodeData: n,
               faction,
-              color: n.attributes?.color || '#6b7280',
+              color: newColor, // Fresh color from database
               opacity: nodeOpacity, // Dynamic opacity
               isPC,
               isFaction,
@@ -260,9 +299,9 @@ const PoliticalWebPage: React.FC = () => {
         if (factionPositions[faction]) {
           position = factionPositions[faction];
         } else {
-          // Generate random position on first load - tightened by 2x
+          // Generate random position on first load - Ring 1 (150-200px)
           const angle = Math.random() * 2 * Math.PI;
-          const radius = 75 + Math.random() * 50; // 75-125px
+          const radius = 150 + Math.random() * 50; // 150-200px
           position = {
             x: Math.cos(angle) * radius,
             y: Math.sin(angle) * radius
@@ -309,16 +348,26 @@ const PoliticalWebPage: React.FC = () => {
       };
     });
 
-    const cyEdges = visibleEdges.map((e: any) => ({
-      data: {
-        id: e.id,
-        source: e.source_node_id,
-        target: e.target_node_id,
-        label: e.edge_type,
-        directed: e.directed,
-        is_aggregate: e.is_aggregate || false // For aggregated Party edges
-      }
-    }));
+    const cyEdges = visibleEdges.map((e: any) => {
+      // Get source and target node data to determine edge styling
+      const sourceNode = visibleNodes.find(n => n.id === e.source_node_id);
+      const targetNode = visibleNodes.find(n => n.id === e.target_node_id);
+
+      return {
+        data: {
+          id: e.id,
+          source: e.source_node_id,
+          target: e.target_node_id,
+          label: e.edge_type,
+          directed: e.directed,
+          is_aggregate: e.is_aggregate || false,
+          source_is_faction: sourceNode?.attributes?.is_faction_node || false,
+          target_is_faction: targetNode?.attributes?.is_faction_node || false,
+          source_is_pc: sourceNode?.node_type === 'PC',
+          target_is_pc: targetNode?.node_type === 'PC'
+        }
+      };
+    });
 
     console.log(`[VISIBILITY] Visible nodes: ${visibleNodes.length}, PCs: ${visibleNodes.filter(n => n.node_type === 'PC').length}, Factions: ${visibleNodes.filter(n => n.attributes?.is_faction_node).length}, NPCs: ${visibleNodes.filter(n => !n.attributes?.is_faction_node && n.node_type !== 'PC').length}`);
 
@@ -345,8 +394,8 @@ const PoliticalWebPage: React.FC = () => {
     });
     avgAngle /= memberNodes.length;
 
-    // Place faction in Ring 1 (75-125px) at average angle - tightened by 2x
-    const factionRadius = 100; // Mid-point of Ring 1
+    // Place faction in Ring 1 (150-200px) at average angle
+    const factionRadius = 175; // Mid-point of Ring 1
     const factionX = Math.cos(avgAngle) * factionRadius;
     const factionY = Math.sin(avgAngle) * factionRadius;
 
@@ -370,6 +419,35 @@ const PoliticalWebPage: React.FC = () => {
     }, 200);
   };
 
+  // Helper: Get CONSISTENT faction ordering for pie-slice allocation
+  // CRITICAL: Must use ALPHABETICAL sort to ensure same order every time
+  const getFactionPieSlices = () => {
+    if (!cyRef.current) return {};
+
+    const cy = cyRef.current;
+    const allFactionNodes = cy.nodes('[?isFaction]').filter((n: any) => n.data('faction') !== 'The Party');
+    // SORT ALPHABETICALLY for consistency
+    const factionNames = allFactionNodes.toArray()
+      .map((n: any) => n.data('faction'))
+      .sort(); // Alphabetical order
+
+    const pieSliceAngle = (2 * Math.PI) / Math.max(factionNames.length, 1);
+
+    const slices: Record<string, { start: number; end: number; center: number; index: number }> = {};
+    factionNames.forEach((name: string, index: number) => {
+      const sliceStart = index * pieSliceAngle;
+      const sliceEnd = sliceStart + pieSliceAngle;
+      const sliceCenter = sliceStart + (pieSliceAngle / 2);
+      slices[name] = { start: sliceStart, end: sliceEnd, center: sliceCenter, index };
+    });
+
+    console.log('Pie slices:', Object.entries(slices).map(([name, s]) =>
+      `${name}: ${Math.round(s.start * 180 / Math.PI)}°-${Math.round(s.end * 180 / Math.PI)}°`
+    ).join(', '));
+
+    return slices;
+  };
+
   const handleFactionExpand = (factionName: string, factionNodePosition: { x: number; y: number }) => {
     if (!cyRef.current) return;
 
@@ -388,52 +466,179 @@ const PoliticalWebPage: React.FC = () => {
 
       if (factionName === 'The Party') {
         console.log(`Party expanded - ${cy.nodes('[?isPC]').length} PCs in Ring 0`);
-        // PC edges will be drawn on canvas by renderFactionMetaballs
       } else {
-        // Other factions: Position NPCs by type (major vs minor)
+        // Get this faction's pie-slice allocation
+        const pieSlices = getFactionPieSlices();
+        const slice = pieSlices[factionName];
+
+        if (!slice) {
+          console.error(`No pie slice found for ${factionName}`);
+          return;
+        }
+
+        // Position NPCs using CENTERED TREE placement
         const memberNodes = cy.nodes(`[faction = "${factionName}"][!isFaction]`);
         const npcArray = memberNodes.toArray();
 
-        // Get faction angle for grouping
-        const factionAngle = Math.atan2(factionNodePosition.y, factionNodePosition.x);
+        // Separate by hierarchy
+        const leaders = npcArray.filter(n => n.data('nodeType') === 'NPC:leader');
+        const lieutenants = npcArray.filter(n => n.data('nodeType') === 'NPC:lieutenant');
+        const members = npcArray.filter(n =>
+          n.data('nodeType') !== 'NPC:leader' && n.data('nodeType') !== 'NPC:lieutenant'
+        );
 
-        npcArray.forEach((node, index) => {
-          // Sequential spiral from faction angle
-          const angle = factionAngle + (index * 0.17); // 0.17 radians ≈ 10° per NPC
+        const sliceCenter = slice.center;
 
-          // Determine ring based on node_type (3-tier hierarchy)
-          const nodeType = node.data('nodeType');
-          let innerRadius, outerRadius;
-
-          if (nodeType === 'NPC:leader' || nodeType === 'NPC:major') {
-            innerRadius = 125; // Leaders
-            outerRadius = 150;
-          } else if (nodeType === 'NPC:lieutenant') {
-            innerRadius = 150; // Lieutenants
-            outerRadius = 200;
+        // Leaders: Center if 1, spread if multiple (same as reset logic)
+        leaders.forEach((node, index) => {
+          let angle;
+          if (leaders.length === 1) {
+            angle = sliceCenter; // Single leader at exact center
           } else {
-            innerRadius = 200; // Members (minor or default)
-            outerRadius = 250;
+            // Multiple leaders (8 Writ holders): spread across 75% of pie
+            const usableForLeaders = (slice.end - slice.start) * 0.75;
+            const leaderStart = sliceCenter - usableForLeaders / 2;
+            angle = leaderStart + (index / (leaders.length - 1)) * usableForLeaders;
           }
-
-          const radius = innerRadius + Math.random() * (outerRadius - innerRadius);
-
-          node.position({
-            x: Math.cos(angle) * radius,
-            y: Math.sin(angle) * radius
-          });
+          const radius = 200 + (250 - 200) / 2; // Mid-point of Ring 2
+          node.position({ x: Math.cos(angle) * radius, y: Math.sin(angle) * radius });
         });
 
-        console.log(`Positioned ${memberNodes.length} NPCs by type for ${factionName} (spiral from faction angle)`);
+        // Lieutenants: Spread symmetrically around slice center
+        lieutenants.forEach((node, index) => {
+          const spreadAngle = sliceCenter + (index - (lieutenants.length - 1) / 2) * 0.22; // ~12.6° spacing
+          const radius = 250 + (325 - 250) / 2; // Mid-point of Ring 2.5
+          node.position({ x: Math.cos(spreadAngle) * radius, y: Math.sin(spreadAngle) * radius });
+        });
 
-        // Zoom to fit all visible nodes after expansion
-        setTimeout(() => {
-          if (cyRef.current) {
-            cyRef.current.fit(cyRef.current.nodes(), 50); // Tighter fit
-          }
-        }, 100);
+        // Members: Use 85% of pie slice (WIDER for 7+ NPCs)
+        members.forEach((node, index) => {
+          const usablePie = (slice.end - slice.start) * 0.85; // Increased from 60%
+          const memberStart = sliceCenter - usablePie / 2;
+          const spreadAngle = memberStart + (index / Math.max(members.length - 1, 1)) * usablePie;
+          const radius = 325 + (400 - 325) / 2; // Mid-point of Ring 3
+          node.position({ x: Math.cos(spreadAngle) * radius, y: Math.sin(spreadAngle) * radius });
+        });
+
+        console.log(`Positioned ${npcArray.length} NPCs in ${factionName} centered tree at ${Math.round(sliceCenter * 180 / Math.PI)}°`);
       }
+
+      // Auto-fit viewport to show all visible nodes after expansion
+      setTimeout(() => {
+        if (cyRef.current) {
+          cyRef.current.fit(cyRef.current.nodes(), 80); // Padding for breathing room
+        }
+      }, 200);
     }, 150);
+  };
+
+  const handleOpenNodeEditor = (node?: any) => {
+    setEditingNode(node || null);
+    setNodeEditorOpen(true);
+  };
+
+  const handleStartAddEdgeMode = () => {
+    setAddEdgeMode(true);
+    setSelectedNode(null); // Close details panel
+  };
+
+  const handleCancelAddEdgeMode = () => {
+    setAddEdgeMode(false);
+    setEdgeSourceNode(null);
+    setEdgeTargetNode(null);
+    setEdgeFormData({
+      edgeType: '',
+      customEdgeType: '',
+      directed: true,
+      metadata: { strength: '', context: '' }
+    });
+  };
+
+  const handleNodeClickForEdge = (nodeData: any) => {
+    if (!addEdgeMode) return false; // Not in edge mode
+
+    if (!edgeSourceNode) {
+      // First click: select source
+      setEdgeSourceNode(nodeData);
+      return true;
+    } else if (edgeSourceNode.id === nodeData.id) {
+      // Clicking same node: deselect
+      setEdgeSourceNode(null);
+      return true;
+    } else {
+      // Second click: select target and open modal
+      setEdgeTargetNode(nodeData);
+      setShowEdgeModal(true);
+      return true;
+    }
+  };
+
+  const handleSubmitEdge = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!campaignId || !graphId || !edgeSourceNode || !edgeTargetNode) return;
+
+    const finalEdgeType = edgeFormData.edgeType === 'custom' ? edgeFormData.customEdgeType : edgeFormData.edgeType;
+
+    if (!finalEdgeType.trim()) {
+      alert('Please select or enter a relationship type');
+      return;
+    }
+
+    try {
+      setEdgeSubmitting(true);
+
+      const metadata: any = {};
+      if (edgeFormData.metadata.strength) metadata.strength = edgeFormData.metadata.strength;
+      if (edgeFormData.metadata.context) metadata.context = edgeFormData.metadata.context;
+
+      const edgeData: any = {
+        source_node_id: edgeSourceNode.id,
+        target_node_id: edgeTargetNode.id,
+        edge_type: finalEdgeType.trim(),
+        directed: edgeFormData.directed, // Send boolean, backend converts
+        metadata: Object.keys(metadata).length > 0 ? metadata : null // Send object, backend stringifies
+      };
+
+      console.log('Creating edge:', edgeData);
+      const result = await graphService.createEdge(campaignId, graphId, edgeData);
+      console.log('Edge created:', result);
+      await loadPoliticalWebGraph(); // Refresh
+
+      // Close modal and reset
+      setShowEdgeModal(false);
+      handleCancelAddEdgeMode();
+    } catch (err: any) {
+      console.error('Failed to create edge:', err);
+      alert('Failed to create relationship: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setEdgeSubmitting(false);
+    }
+  };
+
+  const handleDeleteNode = async (nodeId: string) => {
+    if (!campaignId || !graphId) return;
+    if (!confirm('Delete this node and all its connections?')) return;
+
+    try {
+      await graphService.deleteNode(campaignId, graphId, nodeId);
+      loadPoliticalWebGraph(); // Refresh
+    } catch (err: any) {
+      console.error('Failed to delete node:', err);
+      alert('Failed to delete node: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
+  const handleDeleteEdge = async (edgeId: string) => {
+    if (!campaignId || !graphId) return;
+    if (!confirm('Delete this relationship?')) return;
+
+    try {
+      await graphService.deleteEdge(campaignId, graphId, edgeId);
+      loadPoliticalWebGraph(); // Refresh
+    } catch (err: any) {
+      console.error('Failed to delete edge:', err);
+      alert('Failed to delete edge: ' + (err.response?.data?.error || err.message));
+    }
   };
 
   const handleResetView = () => {
@@ -454,26 +659,36 @@ const PoliticalWebPage: React.FC = () => {
     // Ring 1: Factions at 150-250px
     // Ring 2: NPCs at 400-500px
 
-    // Define ring constants at function scope (tightened by 2x)
-    const FACTION_INNER = 75;
-    const FACTION_OUTER = 125;
-    const NPC_LEADER_INNER = 125; // Leaders - closest to faction
-    const NPC_LEADER_OUTER = 150;
-    const NPC_LIEUTENANT_INNER = 150; // Mid-level - lieutenants, advisors
-    const NPC_LIEUTENANT_OUTER = 200;
-    const NPC_MEMBER_INNER = 200; // Common members - furthest out
-    const NPC_MEMBER_OUTER = 250;
+    // Define ring constants (increased faction distance from party)
+    const FACTION_INNER = 150;  // Increased from 75 to give more breathing room
+    const FACTION_OUTER = 200;  // Increased from 125
+    const NPC_LEADER_INNER = 200;   // Leaders - Ring 2
+    const NPC_LEADER_OUTER = 250;
+    const NPC_LIEUTENANT_INNER = 250; // Lieutenants - Ring 2.5
+    const NPC_LIEUTENANT_OUTER = 325;
+    const NPC_MEMBER_INNER = 325;   // Members - Ring 3
+    const NPC_MEMBER_OUTER = 400;
 
     const factionNodes = cy.nodes('[?isFaction]').filter((n: any) => n.data('faction') !== 'The Party');
     const npcNodes = cy.nodes('[!isFaction][!isPC]');
     const pcNodes = cy.nodes('[?isPC]');
 
-    // RING 1: Factions evenly distributed at 150-250px
+    // RING 1: Factions centered in their pie slices
     const factionArray = factionNodes.toArray();
+    const allPieSlices = getFactionPieSlices(); // Renamed to avoid collision
 
-    factionArray.forEach((node: any, index: number) => {
-      const angle = (index / factionArray.length) * 2 * Math.PI;
-      const radius = FACTION_INNER + Math.random() * (FACTION_OUTER - FACTION_INNER);
+    factionArray.forEach((node: any) => {
+      const factionName = node.data('faction');
+      const slice = allPieSlices[factionName];
+
+      if (!slice) {
+        console.error(`No pie slice for faction: ${factionName}`);
+        return;
+      }
+
+      // Place faction at CENTER of its pie slice
+      const angle = slice.center;
+      const radius = FACTION_INNER + (FACTION_OUTER - FACTION_INNER) / 2; // Mid-point of Ring 1
 
       node.animate({
         position: {
@@ -483,9 +698,11 @@ const PoliticalWebPage: React.FC = () => {
         duration: 800,
         easing: 'ease-in-out'
       });
+
+      console.log(`Faction ${factionName} centered at ${Math.round(angle * 180 / Math.PI)}° in slice ${Math.round(slice.start * 180 / Math.PI)}°-${Math.round(slice.end * 180 / Math.PI)}°`);
     });
 
-    // RING 2/3: NPCs grouped by faction, placed sequentially
+    // RING 2/3: NPCs grouped by faction with PIE-SLICE allocation
     const npcArray = npcNodes.toArray();
 
     // Group NPCs by faction
@@ -498,76 +715,91 @@ const PoliticalWebPage: React.FC = () => {
       npcsByFaction[faction].push(node);
     });
 
-    // For each faction, place NPCs sequentially spiraling from faction angle
+    // Use SHARED pie-slice helper (already called above as allPieSlices)
     Object.entries(npcsByFaction).forEach(([factionName, npcs]) => {
-      // Get faction's angular position - try current Cytoscape position first, then saved position
-      const factionNode = cy.nodes('[?isFaction]').filter((n: any) => n.data('faction') === factionName);
-      let factionAngle = 0;
-
-      if (factionNode.length > 0) {
-        // Faction is visible (not expanded) - use current position
-        const pos = factionNode.position();
-        factionAngle = Math.atan2(pos.y, pos.x);
-      } else if (factionPositions[factionName]) {
-        // Faction is expanded - use last saved position from state
-        const pos = factionPositions[factionName];
-        factionAngle = Math.atan2(pos.y, pos.x);
-      } else {
-        // No faction data at all - use even distribution
-        const factionIndex = Object.keys(npcsByFaction).indexOf(factionName);
-        const totalFactions = Object.keys(npcsByFaction).length;
-        factionAngle = (factionIndex / totalFactions) * 2 * Math.PI;
+      const slice = allPieSlices[factionName];
+      if (!slice) {
+        console.error(`[RESET] No pie slice found for ${factionName}`);
+        return;
       }
 
-      // Place each NPC sequentially: factionAngle + (index × 0.17 radians)
-      npcs.forEach((node: any, index: number) => {
-        const angle = factionAngle + (index * 0.17); // 0.17 radians ≈ 10° per NPC
+      // Separate by hierarchy for TREE placement
+      const leaders = npcs.filter(n => n.data('nodeType') === 'NPC:leader');
+      const lieutenants = npcs.filter(n => n.data('nodeType') === 'NPC:lieutenant');
+      const members = npcs.filter(n =>
+        n.data('nodeType') !== 'NPC:leader' && n.data('nodeType') !== 'NPC:lieutenant'
+      );
 
-        // Determine ring based on node_type (3-tier hierarchy)
-        const nodeType = node.data('nodeType');
-        let innerRadius, outerRadius;
+      const sliceCenter = slice.center; // Center angle of this faction's pie
 
-        if (nodeType === 'NPC:leader' || nodeType === 'NPC:major') {
-          innerRadius = NPC_LEADER_INNER;
-          outerRadius = NPC_LEADER_OUTER;
-        } else if (nodeType === 'NPC:lieutenant') {
-          innerRadius = NPC_LIEUTENANT_INNER;
-          outerRadius = NPC_LIEUTENANT_OUTER;
+      // TREE PLACEMENT: Leaders at slice center, others radiate outward
+
+      // Leaders: Center if 1, spread if multiple (matches expansion logic)
+      leaders.forEach((node: any, index: number) => {
+        let angle;
+        if (leaders.length === 1) {
+          angle = sliceCenter; // Single leader at exact center
         } else {
-          // NPC:minor, NPC:member, or default
-          innerRadius = NPC_MEMBER_INNER;
-          outerRadius = NPC_MEMBER_OUTER;
+          // Multiple leaders (8 Writ holders): spread across 75% of pie slice
+          const usableForLeaders = (slice.end - slice.start) * 0.75;
+          const leaderStart = sliceCenter - usableForLeaders / 2;
+          angle = leaderStart + (index / (leaders.length - 1)) * usableForLeaders;
         }
-
-        const radius = innerRadius + Math.random() * (outerRadius - innerRadius);
-
-        console.log(`[RESET] ${node.data('label')}: type=${nodeType}, ring=${Math.round(innerRadius)}-${Math.round(outerRadius)}px, placing at ${Math.round(radius)}px, ${Math.round(angle * 180 / Math.PI)}°`);
-
+        const radius = NPC_LEADER_INNER + (NPC_LEADER_OUTER - NPC_LEADER_INNER) / 2;
         node.animate({
-          position: {
-            x: Math.cos(angle) * radius,
-            y: Math.sin(angle) * radius
-          },
+          position: { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius },
           duration: 800,
           easing: 'ease-in-out'
         });
       });
+
+      // Lieutenants: Spread symmetrically around slice center
+      lieutenants.forEach((node: any, index: number) => {
+        const spreadAngle = sliceCenter + (index - (lieutenants.length - 1) / 2) * 0.22; // ~12.6° spacing
+        const radius = NPC_LIEUTENANT_INNER + (NPC_LIEUTENANT_OUTER - NPC_LIEUTENANT_INNER) / 2;
+        node.animate({
+          position: { x: Math.cos(spreadAngle) * radius, y: Math.sin(spreadAngle) * radius },
+          duration: 800,
+          easing: 'ease-in-out'
+        });
+      });
+
+      // Members: Use MOST of pie slice (wider spread for 7+ NPCs)
+      members.forEach((node: any, index: number) => {
+        const usablePie = (slice.end - slice.start) * 0.85; // Increased from 60% to 85%
+        const memberStart = sliceCenter - usablePie / 2;
+        const spreadAngle = memberStart + (index / Math.max(members.length - 1, 1)) * usablePie;
+        const radius = NPC_MEMBER_INNER + (NPC_MEMBER_OUTER - NPC_MEMBER_INNER) / 2;
+        node.animate({
+          position: { x: Math.cos(spreadAngle) * radius, y: Math.sin(spreadAngle) * radius },
+          duration: 800,
+          easing: 'ease-in-out'
+        });
+      });
+
+      console.log(`[RESET] ${factionName}: ${leaders.length}L + ${lieutenants.length}Lt + ${members.length}M at pie center ${Math.round(sliceCenter * 180 / Math.PI)}°`);
     });
 
     // Wait for positioning animations to complete before collision enforcement
     setTimeout(() => {
       if (!cyRef.current) return;
 
-      // COLLISION ENFORCEMENT: 2D freedom with ring boundary checks
-      const MIN_DISTANCE_SAME_FACTION = 15; // Same faction NPCs tight clustering
-      const MIN_DISTANCE_DIFF_FACTION = 60; // Different factions need more space
-      const MIN_DISTANCE_TO_EDGE = 25; // Minimum distance from multileader paths
-      const MAX_ITERATIONS = 4; // Reduced to minimize jumping
+      // COLLISION ENFORCEMENT: Respect pie-slice boundaries
+      const MIN_DISTANCE_SAME_FACTION = 40; // Significantly increased for visibility
+      const MIN_DISTANCE_DIFF_FACTION = 100; // Strong separation between factions
+      const MAX_ITERATIONS = 8; // More iterations to resolve all collisions
       const cy = cyRef.current;
+
+      console.log(`Starting collision detection: MIN_SAME=${MIN_DISTANCE_SAME_FACTION}px, MIN_DIFF=${MIN_DISTANCE_DIFF_FACTION}px, iterations=${MAX_ITERATIONS}`);
+
+      // Use pie slices from parent scope (already calculated as allPieSlices)
+      const factionPieSlices = allPieSlices;
 
       for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
         let hadCollision = false;
         let collisionCount = 0;
+
+        console.log(`Iteration ${iteration + 1}...`);
 
         cy.nodes().forEach((node1: any) => {
           if (node1.locked()) return;
@@ -602,15 +834,15 @@ const PoliticalWebPage: React.FC = () => {
               if (isFaction2) {
                 minRadius = FACTION_INNER;
                 maxRadius = FACTION_OUTER;
-              } else if (nodeType2 === 'NPC:leader' || nodeType2 === 'NPC:major') {
-                minRadius = NPC_LEADER_INNER;
+              } else if (nodeType2 === 'NPC:leader') {
+                minRadius = NPC_LEADER_INNER;    // Ring 2
                 maxRadius = NPC_LEADER_OUTER;
               } else if (nodeType2 === 'NPC:lieutenant') {
-                minRadius = NPC_LIEUTENANT_INNER;
+                minRadius = NPC_LIEUTENANT_INNER; // Ring 2.5
                 maxRadius = NPC_LIEUTENANT_OUTER;
               } else {
-                // NPC:member, NPC:minor, or default
-                minRadius = NPC_MEMBER_INNER;
+                // NPC:minor, NPC:mentioned, or default
+                minRadius = NPC_MEMBER_INNER;     // Ring 3
                 maxRadius = NPC_MEMBER_OUTER;
               }
 
@@ -622,22 +854,42 @@ const PoliticalWebPage: React.FC = () => {
 
               const pushDirection = angleDiff > 0 ? 1 : -1;
 
-              // Test 3 candidates: prioritize angular (larger) over radial (smaller)
+              // Get node2's pie-slice boundaries
+              const faction2 = node2.data('faction');
+              const pieSlice = factionPieSlices[faction2];
+
+              // Test candidates with PIE-SLICE CLAMPING
               const candidates = [
-                { angle: angle2 + pushDirection * 0.08, radius: dist2 }, // Angular only (5°)
-                { angle: angle2 + pushDirection * 0.08, radius: dist2 + 2 }, // Angular + tiny out
-                { angle: angle2 + pushDirection * 0.08, radius: dist2 - 2 }  // Angular + tiny in
+                { angle: angle2 + pushDirection * 0.08, radius: dist2 },     // Angular push (5°)
+                { angle: angle2 + pushDirection * 0.12, radius: dist2 + 5 }, // More angular + radial out
+                { angle: angle2, radius: dist2 + 10 }                        // Radial only (push outward)
               ];
 
-              // Find best candidate that stays in ring
               let bestCandidate = candidates[0];
               let bestScore = -Infinity;
 
               candidates.forEach(candidate => {
                 // Clamp radius to ring boundaries
-                const clampedRadius = Math.max(minRadius, Math.min(candidate.radius, maxRadius));
-                const testX = Math.cos(candidate.angle) * clampedRadius;
-                const testY = Math.sin(candidate.angle) * clampedRadius;
+                let clampedRadius = Math.max(minRadius, Math.min(candidate.radius, maxRadius));
+                let clampedAngle = candidate.angle;
+
+                // ENFORCE PIE-SLICE BOUNDARIES (prevent escaping to opposite side)
+                if (pieSlice) {
+                  // Normalize angle to 0-2π
+                  while (clampedAngle < 0) clampedAngle += 2 * Math.PI;
+                  while (clampedAngle >= 2 * Math.PI) clampedAngle -= 2 * Math.PI;
+
+                  // Clamp to pie slice
+                  if (clampedAngle < pieSlice.start || clampedAngle > pieSlice.end) {
+                    // Outside slice - clamp to nearest boundary
+                    const distToStart = Math.abs(clampedAngle - pieSlice.start);
+                    const distToEnd = Math.abs(clampedAngle - pieSlice.end);
+                    clampedAngle = distToStart < distToEnd ? pieSlice.start : pieSlice.end;
+                  }
+                }
+
+                const testX = Math.cos(clampedAngle) * clampedRadius;
+                const testY = Math.sin(clampedAngle) * clampedRadius;
 
                 // Find 2 closest neighbors
                 const distances: number[] = [];
@@ -653,7 +905,7 @@ const PoliticalWebPage: React.FC = () => {
 
                 if (score > bestScore) {
                   bestScore = score;
-                  bestCandidate = { angle: candidate.angle, radius: clampedRadius };
+                  bestCandidate = { angle: clampedAngle, radius: clampedRadius };
                 }
               });
 
@@ -672,65 +924,7 @@ const PoliticalWebPage: React.FC = () => {
         }
       }
 
-      // MULTILEADER AVOIDANCE: Push nodes away from PC edge paths
-      const pcEdges = cy.edges().filter((e: any) => e.source().data('isPC'));
-      const edgePathSamples: { x: number, y: number }[] = [];
-
-      // Sample points along each PC edge path
-      pcEdges.forEach((edge: any) => {
-        const source = edge.source().position();
-        const target = edge.target().position();
-
-        // Sample 10 points along the line
-        for (let t = 0.1; t <= 0.9; t += 0.1) {
-          edgePathSamples.push({
-            x: source.x + (target.x - source.x) * t,
-            y: source.y + (target.y - source.y) * t
-          });
-        }
-      });
-
-      // Check all non-PC nodes against edge path samples
-      cy.nodes('[!isPC]').forEach((node: any) => {
-        if (node.locked()) return;
-        const pos = node.position();
-
-        // Find closest edge path point
-        let minDistToPath = Infinity;
-        let closestPathPoint = null;
-
-        edgePathSamples.forEach(sample => {
-          const d = Math.sqrt((pos.x - sample.x) ** 2 + (pos.y - sample.y) ** 2);
-          if (d < minDistToPath) {
-            minDistToPath = d;
-            closestPathPoint = sample;
-          }
-        });
-
-        // If too close to a path, push away
-        if (minDistToPath < MIN_DISTANCE_TO_EDGE && closestPathPoint) {
-          const dx = pos.x - closestPathPoint.x;
-          const dy = pos.y - closestPathPoint.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-
-          if (dist > 0) {
-            // Push away from path, maintaining ring radius
-            const currentRadius = Math.sqrt(pos.x * pos.x + pos.y * pos.y);
-            const currentAngle = Math.atan2(pos.y, pos.x);
-
-            // Rotate slightly away from path (±0.1 radians)
-            const pushAngle = dx > 0 ? 0.1 : -0.1;
-            const newAngle = currentAngle + pushAngle;
-
-            node.position({
-              x: Math.cos(newAngle) * currentRadius,
-              y: Math.sin(newAngle) * currentRadius
-            });
-          }
-        }
-      });
-
-      console.log('Ring enforcement complete with multileader avoidance: Factions Ring 1 (75-125px), NPCs Ring 2.5/3 (150-250px)');
+      console.log('Pie-slice enforcement complete: All NPCs constrained to faction territories');
     }, 850); // Wait for 800ms animations + 50ms buffer
 
     // Save faction positions
@@ -850,28 +1044,8 @@ const PoliticalWebPage: React.FC = () => {
     ctx.arc(centerX, centerY, toScreen(50), 0, Math.PI * 2);
     ctx.stroke();
 
-    // Ring 1: Factions (75-125px)
+    // Ring 1: Factions (150-200px)
     ctx.strokeStyle = 'rgba(96, 165, 250, 0.2)'; // Blue for factions
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, toScreen(75), 0, Math.PI * 2);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, toScreen(125), 0, Math.PI * 2);
-    ctx.stroke();
-
-    // Ring 2: NPC:leader (125-150px)
-    ctx.strokeStyle = 'rgba(239, 68, 68, 0.2)'; // Red for leaders
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, toScreen(125), 0, Math.PI * 2);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, toScreen(150), 0, Math.PI * 2);
-    ctx.stroke();
-
-    // Ring 2.5: NPC:lieutenant (150-200px)
-    ctx.strokeStyle = 'rgba(245, 158, 11, 0.2)'; // Orange for lieutenants
     ctx.beginPath();
     ctx.arc(centerX, centerY, toScreen(150), 0, Math.PI * 2);
     ctx.stroke();
@@ -880,14 +1054,34 @@ const PoliticalWebPage: React.FC = () => {
     ctx.arc(centerX, centerY, toScreen(200), 0, Math.PI * 2);
     ctx.stroke();
 
-    // Ring 3: NPC:member (200-250px)
-    ctx.strokeStyle = 'rgba(52, 211, 153, 0.2)'; // Green for members
+    // Ring 2: NPC:leader (200-250px)
+    ctx.strokeStyle = 'rgba(239, 68, 68, 0.2)'; // Red for leaders
     ctx.beginPath();
     ctx.arc(centerX, centerY, toScreen(200), 0, Math.PI * 2);
     ctx.stroke();
 
     ctx.beginPath();
     ctx.arc(centerX, centerY, toScreen(250), 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Ring 2.5: NPC:lieutenant (250-325px)
+    ctx.strokeStyle = 'rgba(245, 158, 11, 0.2)'; // Orange for lieutenants
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, toScreen(250), 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, toScreen(325), 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Ring 3: NPC:member (325-400px)
+    ctx.strokeStyle = 'rgba(52, 211, 153, 0.2)'; // Green for members
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, toScreen(325), 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, toScreen(400), 0, Math.PI * 2);
     ctx.stroke();
 
     // DEBUG MODE: Ring labels and pixel ruler
@@ -897,10 +1091,10 @@ const PoliticalWebPage: React.FC = () => {
 
       // Ring labels
       ctx.fillText('Ring 0: Party/PCs (0-50px)', centerX + 10, centerY - toScreen(50) - 10);
-      ctx.fillText('Ring 1: Factions (75-125px)', centerX + 10, centerY - toScreen(75) - 10);
-      ctx.fillText('Ring 2: Leaders (125-150px)', centerX + 10, centerY - toScreen(125) - 10);
-      ctx.fillText('Ring 2.5: Lieutenants (150-200px)', centerX + 10, centerY - toScreen(150) - 10);
-      ctx.fillText('Ring 3: Members (200-250px)', centerX + 10, centerY - toScreen(225) - 10);
+      ctx.fillText('Ring 1: Factions (150-200px)', centerX + 10, centerY - toScreen(150) - 10);
+      ctx.fillText('Ring 2: Leaders (200-250px)', centerX + 10, centerY - toScreen(200) - 10);
+      ctx.fillText('Ring 2.5: Lieutenants (250-325px)', centerX + 10, centerY - toScreen(250) - 10);
+      ctx.fillText('Ring 3: Members (325-400px)', centerX + 10, centerY - toScreen(325) - 10);
 
       // Pixel ruler from center
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
@@ -935,36 +1129,53 @@ const PoliticalWebPage: React.FC = () => {
 
     ctx.restore();
 
-    // Group NPCs by faction
-    const factionGroups: Record<string, any[]> = {};
-    cy.nodes('[!isPC][!isFaction]').forEach((node) => {
-      const faction = node.data('faction') || 'Unaffiliated';
-      if (!factionGroups[faction]) {
-        factionGroups[faction] = [];
-      }
-      factionGroups[faction].push(node);
-    });
+    // Draw PIE-SLICE shading for each faction's territory
+    // CRITICAL: Use getFactionPieSlices() to ensure same ordering
+    const pieSlices = getFactionPieSlices();
 
-    // Render metaballs for each faction
-    Object.entries(factionGroups).forEach(([factionName, nodes]) => {
-      if (nodes.length === 0) return;
+    Object.entries(pieSlices).forEach(([factionName, slice]) => {
+      const factionNode = cy.nodes(`[?isFaction][faction = "${factionName}"]`);
+      if (factionNode.length === 0) return;
 
-      // Get faction color from first node
-      const factionColor = nodes[0].data('color') || '#6b7280';
+      const factionColor = factionNode.data('color') || '#6b7280';
 
-      // Convert node positions to canvas coordinates
-      const points = nodes.map((node) => {
-        const pos = node.position();
-        const renderedPos = node.renderedPosition();
-        return {
-          x: renderedPos.x,
-          y: renderedPos.y,
-          radius: 30 // AOE radius around each NPC
-        };
-      });
+      // Only draw pie if faction is expanded (has visible NPCs)
+      const memberNodes = cy.nodes(`[faction = "${factionName}"][!isFaction]`);
+      if (memberNodes.length === 0) return; // Skip empty factions
 
-      // Draw metaball effect using field strength algorithm
-      drawMetaballAOE(ctx, points, factionColor, factionName);
+      // Use slice boundaries from shared helper
+      const sliceStart = slice.start;
+      const sliceEnd = slice.end;
+
+      // Draw pie slice as ANNULUS (donut) - exclude Ring 0 (party area)
+      ctx.save();
+      ctx.fillStyle = `${factionColor}38`; // 22% opacity
+
+      // Create path for annulus (outer arc - inner arc)
+      ctx.beginPath();
+      // Outer arc (Ring 3 outer edge)
+      ctx.arc(centerX, centerY, toScreen(400), sliceStart, sliceEnd, false);
+      // Inner arc (Ring 1 inner edge) - reverse direction
+      ctx.arc(centerX, centerY, toScreen(150), sliceEnd, sliceStart, true);
+      ctx.closePath();
+      ctx.fill();
+
+      // Draw radial borders (from Ring 1 to Ring 3)
+      ctx.strokeStyle = `${factionColor}AA`; // 67% opacity
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(centerX + Math.cos(sliceStart) * toScreen(150), centerY + Math.sin(sliceStart) * toScreen(150));
+      ctx.lineTo(centerX + Math.cos(sliceStart) * toScreen(400), centerY + Math.sin(sliceStart) * toScreen(400));
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(centerX + Math.cos(sliceEnd) * toScreen(150), centerY + Math.sin(sliceEnd) * toScreen(150));
+      ctx.lineTo(centerX + Math.cos(sliceEnd) * toScreen(400), centerY + Math.sin(sliceEnd) * toScreen(400));
+      ctx.stroke();
+
+      ctx.restore();
+
+      console.log(`Drew pie slice for ${factionName}: ${Math.round(sliceStart * 180 / Math.PI)}° - ${Math.round(sliceEnd * 180 / Math.PI)}°`);
     });
 
     // Draw bundled PC edges (multi-leader style)
@@ -1262,6 +1473,7 @@ const PoliticalWebPage: React.FC = () => {
         'label': 'data(label)',
         'shape': 'ellipse', // Default: circles for NPCs
         'opacity': 'data(opacity)', // Use data property for dynamic opacity
+        'min-zoomed-font-size': 8, // Always show labels when zoomed in
         'width': (ele: any) => {
           const isPC = ele.data('isPC');
           const isFaction = ele.data('isFaction');
@@ -1359,7 +1571,7 @@ const PoliticalWebPage: React.FC = () => {
     },
     // Faction-to-faction edges - ALWAYS visible (low opacity)
     {
-      selector: 'edge[[source.isFaction = true]]',
+      selector: 'edge[source_is_faction]',
       style: {
         'line-color': '#64748b',
         'target-arrow-color': '#64748b',
@@ -1379,14 +1591,14 @@ const PoliticalWebPage: React.FC = () => {
         'line-dash-pattern': [6, 3]
       }
     },
-    // PC edges - ALWAYS visible (solid)
+    // PC edges - visible (solid)
     {
-      selector: 'edge[[source.isPC = true]], edge[[target.isPC = true]]',
+      selector: 'edge[source_is_pc], edge[target_is_pc]',
       style: {
         'line-color': '#10b981',
         'target-arrow-color': '#10b981',
         'width': 2,
-        'opacity': 0.5 // Always visible for PCs
+        'opacity': 0.5
       }
     },
     // Highlighted edges - show with labels
@@ -1454,8 +1666,53 @@ const PoliticalWebPage: React.FC = () => {
           <button className="action-button" onClick={handleResetView}>
             <RotateCcw size={16} /> Reset View
           </button>
+          <button className="action-button" onClick={() => handleOpenNodeEditor()} style={{ background: '#10b981' }}>
+            <Plus size={16} /> Add Node
+          </button>
+          {addEdgeMode ? (
+            <button
+              className="action-button"
+              onClick={handleCancelAddEdgeMode}
+              style={{ background: '#dc2626' }}
+            >
+              Cancel Relationship Mode
+            </button>
+          ) : (
+            <button
+              className="action-button"
+              onClick={handleStartAddEdgeMode}
+              style={{ background: '#a855f7' }}
+            >
+              <Plus size={16} /> Add Relationship
+            </button>
+          )}
         </div>
       </header>
+
+      {/* Visual Indicator for Edge Creation Mode */}
+      {addEdgeMode && (
+        <div style={{
+          position: 'absolute',
+          top: '80px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 1000,
+          background: 'linear-gradient(135deg, #a855f7 0%, #9333ea 100%)',
+          padding: '1rem 2rem',
+          borderRadius: '12px',
+          boxShadow: '0 8px 32px rgba(168, 85, 247, 0.4)',
+          border: '2px solid #c084fc',
+          color: '#ffffff',
+          fontWeight: '600',
+          textAlign: 'center'
+        }}>
+          {!edgeSourceNode ? (
+            <p>Click on a node to select the source</p>
+          ) : (
+            <p>Source: <strong>{edgeSourceNode.label}</strong> → Now click the target node</p>
+          )}
+        </div>
+      )}
 
       {showInfo && (
         <div className="info-overlay">
@@ -1492,11 +1749,81 @@ const PoliticalWebPage: React.FC = () => {
         </div>
       )}
 
+      {/* Edge Details Panel */}
+      {/* Faction Color Legend */}
+      <div className="faction-legend">
+        <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.875rem', color: '#94a3b8' }}>Factions</h4>
+        {allNodes
+          .filter(n => n.attributes?.is_faction_node && n.attributes?.faction !== 'The Party')
+          .map(faction => (
+            <div key={faction.id} className="faction-legend-item">
+              <div
+                className="faction-color-box"
+                style={{ backgroundColor: faction.attributes?.color || '#6b7280' }}
+              />
+              <span className="faction-name">{faction.name}</span>
+              <span className="faction-count">({faction.attributes?.member_count || 0})</span>
+            </div>
+          ))}
+      </div>
+
+      {selectedEdge && (
+        <div className="node-details-panel" style={{ bottom: selectedNode ? '22rem' : '2rem' }}>
+          <div className="node-details-header">
+            <h3>Relationship</h3>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                className="button-icon button-danger"
+                onClick={() => handleDeleteEdge(selectedEdge.id)}
+                title="Delete relationship"
+              >
+                <Trash2 size={16} />
+              </button>
+              <button className="close-details" onClick={() => setSelectedEdge(null)}>×</button>
+            </div>
+          </div>
+          <div className="node-details-content">
+            <div className="detail-row">
+              <span className="detail-label">Type:</span>
+              <span className="detail-value">{selectedEdge.label}</span>
+            </div>
+            <div className="detail-row">
+              <span className="detail-label">From:</span>
+              <span className="detail-value">{selectedEdge.sourceName}</span>
+            </div>
+            <div className="detail-row">
+              <span className="detail-label">To:</span>
+              <span className="detail-value">{selectedEdge.targetName}</span>
+            </div>
+            <div className="detail-row">
+              <span className="detail-label">Direction:</span>
+              <span className="detail-value">{selectedEdge.directed ? '→ Directed' : '↔ Bidirectional'}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {selectedNode && (
         <div className="node-details-panel">
           <div className="node-details-header">
             <h3>{selectedNode.label}</h3>
-            <button className="close-details" onClick={() => setSelectedNode(null)}>×</button>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                className="button-icon"
+                onClick={() => handleOpenNodeEditor(selectedNode.nodeData)}
+                title="Edit node"
+              >
+                <Edit3 size={16} />
+              </button>
+              <button
+                className="button-icon button-danger"
+                onClick={() => handleDeleteNode(selectedNode.id)}
+                title="Delete node"
+              >
+                <Trash2 size={16} />
+              </button>
+              <button className="close-details" onClick={() => setSelectedNode(null)}>×</button>
+            </div>
           </div>
           <div className="node-details-content">
             <div className="detail-row">
@@ -1558,8 +1885,8 @@ const PoliticalWebPage: React.FC = () => {
           cy={(cy) => {
             cyRef.current = cy;
 
-            // Set initial viewport BEFORE layout runs
-            cy.zoom(1.25);
+            // Set initial viewport BEFORE layout runs - tighter zoom when few nodes
+            cy.zoom(0.8); // Reduced from 1.25 for wider view
             cy.pan({ x: cy.width() / 2, y: cy.height() / 2 });
 
             // Remove any existing listeners to prevent duplicates
@@ -1568,6 +1895,13 @@ const PoliticalWebPage: React.FC = () => {
             // Set up event listeners
             cy.on('tap', 'node', (evt) => {
               const node = evt.target;
+              const nodeData = node.data();
+
+              // Check if in edge creation mode first
+              if (addEdgeMode) {
+                const handled = handleNodeClickForEdge(nodeData);
+                if (handled) return; // Don't do normal click behavior
+              }
 
               if (node.data('isFaction')) {
                 // Single-click faction: show details + highlight
@@ -1608,10 +1942,29 @@ const PoliticalWebPage: React.FC = () => {
               handleFactionExpand(factionName, position);
             });
 
+            // Edge click handler
+            cy.on('tap', 'edge', (evt) => {
+              const edge = evt.target;
+              const edgeData = edge.data();
+
+              // Find source and target nodes for display
+              const sourceNode = allNodes.find(n => n.id === edgeData.source);
+              const targetNode = allNodes.find(n => n.id === edgeData.target);
+
+              setSelectedEdge({
+                ...edgeData,
+                sourceName: sourceNode?.name || 'Unknown',
+                targetName: targetNode?.name || 'Unknown',
+                edgeObject: allEdges.find(e => e.id === edgeData.id)
+              });
+              setSelectedNode(null); // Close node panel
+            });
+
             cy.on('tap', (evt) => {
               if (evt.target === cy) {
                 // Clear selections and restore viewport
                 setSelectedNode(null);
+                setSelectedEdge(null);
                 cy.elements().removeClass('dimmed highlighted-edge highlighted');
 
                 // Restore saved viewport if exists
@@ -1666,6 +2019,207 @@ const PoliticalWebPage: React.FC = () => {
           } as any}
         />
       </div>
+
+      {/* Node Editor Dialog */}
+      {graphId && (
+        <GraphNodeEditorDialog
+          open={nodeEditorOpen}
+          onClose={() => {
+            setNodeEditorOpen(false);
+            setEditingNode(null);
+          }}
+          campaignId={campaignId!}
+          graphId={graphId}
+          graphType="Political-Web"
+          node={editingNode}
+          onSave={loadPoliticalWebGraph}
+        />
+      )}
+
+      {/* Edge Creation Modal (Rich Form) */}
+      {showEdgeModal && edgeSourceNode && edgeTargetNode && (
+        <div className="modal-overlay" onClick={() => setShowEdgeModal(false)}>
+          <div className="dialog-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+            <h2 className="dialog-title">Create Relationship</h2>
+            <p className="dialog-description">
+              Connect <strong>{edgeSourceNode.label}</strong> to <strong>{edgeTargetNode.label}</strong>
+            </p>
+
+            <form onSubmit={handleSubmitEdge} className="graph-edge-form">
+              {/* Relationship Type */}
+              <div className="form-field">
+                <label htmlFor="edgeType">
+                  Relationship Type <span className="required">*</span>
+                </label>
+                <select
+                  id="edgeType"
+                  value={edgeFormData.edgeType}
+                  onChange={(e) => setEdgeFormData({ ...edgeFormData, edgeType: e.target.value })}
+                  required
+                  className="select-input"
+                >
+                  <option value="">Select relationship...</option>
+                  <optgroup label="Hierarchy Relations (Directed)">
+                    <option value="commands">commands</option>
+                    <option value="reports to">reports to</option>
+                    <option value="member of">member of</option>
+                    <option value="contains member">contains member</option>
+                    <option value="leads">leads</option>
+                  </optgroup>
+                  <optgroup label="Alliance Relations (Bidirectional)">
+                    <option value="allied with">allied with</option>
+                    <option value="supports">supports</option>
+                    <option value="trades with">trades with</option>
+                    <option value="opposes">opposes</option>
+                  </optgroup>
+                  <optgroup label="Power Relations (Directed)">
+                    <option value="controls">controls</option>
+                    <option value="governs">governs</option>
+                    <option value="employs">employs</option>
+                    <option value="bound by pact">bound by pact</option>
+                  </optgroup>
+                  <optgroup label="Knowledge Relations (Directed)">
+                    <option value="knows about">knows about</option>
+                    <option value="expert on">expert on</option>
+                    <option value="taught by">taught by</option>
+                    <option value="unaware of">unaware of</option>
+                    <option value="spies on">spies on</option>
+                  </optgroup>
+                  <optgroup label="Emotional Relations (Directed)">
+                    <option value="trusts">trusts</option>
+                    <option value="distrusts">distrusts</option>
+                    <option value="seeks vengeance against">seeks vengeance against</option>
+                    <option value="indebted to">indebted to</option>
+                    <option value="sworn enemy of">sworn enemy of</option>
+                  </optgroup>
+                  <optgroup label="PC Faction Membership">
+                    <option value="part of">part of (special PC membership)</option>
+                  </optgroup>
+                  <option value="custom">➕ Custom relationship...</option>
+                </select>
+
+                {edgeFormData.edgeType === 'custom' && (
+                  <input
+                    type="text"
+                    value={edgeFormData.customEdgeType}
+                    onChange={(e) => setEdgeFormData({ ...edgeFormData, customEdgeType: e.target.value })}
+                    className="text-input"
+                    placeholder="Enter custom relationship type..."
+                    style={{ marginTop: '0.5rem' }}
+                    autoFocus
+                  />
+                )}
+              </div>
+
+              {/* Directed Toggle */}
+              <div className="form-field">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={edgeFormData.directed}
+                    onChange={(e) => setEdgeFormData({ ...edgeFormData, directed: e.target.checked })}
+                  />
+                  <span>Directed relationship (one-way arrow)</span>
+                </label>
+                <small className="field-hint">
+                  {edgeFormData.directed
+                    ? `→ ${edgeSourceNode.label} influences ${edgeTargetNode.label} (one direction)`
+                    : `↔ Mutual relationship (bidirectional)`
+                  }
+                </small>
+              </div>
+
+              {/* Metadata: Relationship Strength (optional) */}
+              <div className="form-field">
+                <label htmlFor="strength">Relationship Strength (optional)</label>
+                <select
+                  id="strength"
+                  value={edgeFormData.metadata.strength}
+                  onChange={(e) => setEdgeFormData({
+                    ...edgeFormData,
+                    metadata: { ...edgeFormData.metadata, strength: e.target.value }
+                  })}
+                  className="select-input"
+                >
+                  <option value="">None specified</option>
+                  <option value="weak">Weak</option>
+                  <option value="moderate">Moderate</option>
+                  <option value="strong">Strong</option>
+                </select>
+                <small className="field-hint">
+                  How strong is this relationship? (affects AI interpretation)
+                </small>
+              </div>
+
+              {/* Metadata: Context (optional) */}
+              <div className="form-field">
+                <label htmlFor="context">Additional Context (optional)</label>
+                <textarea
+                  id="context"
+                  value={edgeFormData.metadata.context}
+                  onChange={(e) => setEdgeFormData({
+                    ...edgeFormData,
+                    metadata: { ...edgeFormData.metadata, context: e.target.value }
+                  })}
+                  className="textarea-input"
+                  rows={2}
+                  placeholder="e.g., 'Secret alliance formed in Session 12' or 'Discovered by party'"
+                />
+              </div>
+
+              <details style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#9ca3af' }}>
+                <summary style={{ cursor: 'pointer' }}>
+                  <Info size={14} style={{ display: 'inline', marginRight: '0.25rem' }} />
+                  Relationship Guide
+                </summary>
+                <div style={{ marginTop: '0.5rem', lineHeight: '1.6' }}>
+                  <p><strong>Hierarchy:</strong> commands, reports to, member of, leads (usually directed)</p>
+                  <p><strong>Alliance:</strong> allied with (bidirectional), supports, opposes</p>
+                  <p><strong>Power:</strong> controls, governs, employs (directed)</p>
+                  <p><strong>Knowledge:</strong> knows about, expert on, unaware of (directed)</p>
+                  <p><strong>Emotional:</strong> trusts, seeks vengeance against, indebted to (directed)</p>
+                </div>
+              </details>
+
+              {/* Action Buttons */}
+              <div className="dialog-actions">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEdgeModal(false);
+                    setEdgeFormData({
+                      edgeType: '',
+                      customEdgeType: '',
+                      directed: true,
+                      metadata: { strength: '', context: '' }
+                    });
+                  }}
+                  className="button-secondary"
+                  disabled={edgeSubmitting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="button-primary"
+                  disabled={edgeSubmitting || (!edgeFormData.edgeType || (edgeFormData.edgeType === 'custom' && !edgeFormData.customEdgeType.trim()))}
+                  style={{ background: '#a855f7' }}
+                >
+                  {edgeSubmitting ? 'Creating...' : 'Create Relationship'}
+                </button>
+              </div>
+            </form>
+
+            <button
+              className="dialog-close"
+              onClick={() => setShowEdgeModal(false)}
+              aria-label="Close"
+            >
+              <X size={20} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

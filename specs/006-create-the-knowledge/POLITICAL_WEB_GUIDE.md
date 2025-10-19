@@ -19,6 +19,33 @@ Without Political-Web, you're flipping through notes trying to remember:
 
 With Political-Web, you visualize the **entire social network** at a glance and trace connection paths from your party to any NPC.
 
+---
+
+## Ring System (Party-Centric Layout)
+
+Political-Web uses a **security ring model** where your party is at the center and entities are positioned in concentric rings based on their hierarchical importance:
+
+| Ring | Radius | Entities | Color Guide | Purpose |
+|------|--------|----------|-------------|---------|
+| **Ring 0** | 0-50px | Party/PCs | 🟡 Gold (Party Green #10b981) | Party members locked at center - the reference frame |
+| **Ring 1** | 75-125px | Faction Nodes | 🔵 Blue (varies by faction) | Collapsed factions - click to expand members |
+| **Ring 2** | 125-150px | Leadership | 🔴 Red indicators | Faction leaders, BBEGs (NPC:leader) |
+| **Ring 2.5** | 150-200px | Lieutenants | 🟠 Orange indicators | Second-in-command, advisors (NPC:lieutenant) |
+| **Ring 3** | 200-250px | Members | 🟢 Green indicators | Common faction members (NPC:member, NPC:minor) |
+
+**Node Type Hierarchy** (determines ring placement):
+- `PC` → Ring 0 (locked, always visible when Party expanded)
+- `NPC:leader` → Ring 2 (125-150px, closest to faction core)
+- `NPC:lieutenant` → Ring 2.5 (150-200px, mid-level command)
+- `NPC:member` → Ring 3 (200-250px, common members)
+- `NPC:minor` → Ring 3 (200-250px, one-off NPCs)
+- `NPC:mentioned` → Ring 3 (200-250px, not yet met)
+
+**Special Cases**:
+- **Tanner (PC + Writ Holder)**: Stays in Ring 0, gains metaball overlay when Nine Writs expanded
+- **Unaffiliated NPCs**: Grouped under "Unaffiliated" faction for visibility
+- **Standard Template Members (NPC:STM)**: Generated members using faction template
+
 ### Use Cases
 
 **1. Intrigue-Heavy Campaigns**
@@ -207,22 +234,37 @@ Status Anchors:
 
 **Solution:** Use colon-separated hierarchical types
 
-**Taxonomy:**
+**Taxonomy (Updated for Ring System)**:
 ```
-NPC:major
-  - Recurring characters (Writ holders, Ascendants, quest givers across multiple sessions)
-  - High-level NPCs (above level 10)
-  - Campaign-critical figures (BBEG lieutenants, key allies)
+NPC:leader
+  - Faction leaders, BBEGs, ruling figures
+  - Ring 2 placement (125-150px, closest to faction)
+  - Examples: Chrome Bishop, Lycara Tyrenthiel (High Mage)
+
+NPC:lieutenant
+  - Second-in-command, advisors, senior members
+  - Ring 2.5 placement (150-200px, mid-level)
+  - Examples: Altus (Mechanist Ascendant), City Watch Captain
+
+NPC:member
+  - Common faction members, active participants
+  - Ring 3 placement (200-250px, outer ring)
+  - Examples: Regular Writ holders, guild members
 
 NPC:minor
-  - One-off quest givers (Jessa Coalbright - escort mission)
-  - Shopkeepers met once (Verrum Thrynn - clockwork shop)
-  - Low-level contacts (informants, messengers)
+  - One-off quest givers, shopkeepers met once
+  - Ring 3 placement (200-250px, outer ring)
+  - Examples: Jessa Coalbright (escort mission), merchants
 
 NPC:mentioned
-  - Name-dropped but never met ("The Crimson Duke")
-  - Historical figures referenced in lore
-  - Pending introductions ("They work for someone called Shadewing")
+  - Name-dropped but never met
+  - Ring 3 placement (200-250px, furthest out)
+  - Examples: "The Crimson Duke", historical figures
+
+NPC:STM (Standard Template Member)
+  - Generated from faction template (for unnamed encounters)
+  - Ring 3 placement (200-250px, outer ring)
+  - Uses faction's standard member archetype
 
 Organization:hierarchy
   - Formal command structures (Mechanist Order, Sablemarrow Council)
@@ -715,237 +757,6 @@ Before finalizing your Political-Web, run these checks:
 
 ---
 
-## Implementation: Our Campaign Example
-
-### Entities We're Creating
-
-**Player Characters (5 - Center Anchors):**
-1. Carp (Fighter) - Tank, leader
-2. Lucifer (Warlock) - Soul magic specialist
-3. Poggoo (Bard) - Face, information gatherer
-4. Tanner (Ranger) - Scout, marked by mutation
-5. Pathik (Rogue) - Thief, opportunist
-
-**NPCs from Notion Import (52 total):**
-- Shopkeepers (Verrum, Grelka, Luther, Yasmine, Karson, Fenwick) - Faction: Sablemarrow Merchants
-- Council Members (Myra, Edrin, Jared, Brina, Alric) - Faction: Sablemarrow Council
-- Writ Holders (Galik, Varzai, Lycara, Salinth, Sythra, Xevrin, Cindrel, Malvek) - Faction: Nine Arcane Writs
-- Mechanists (Chrome Bishop, Altus, Harmonic, Xi0, Casimir, Elira, Kephras, Jason, Amor, Revel) - Faction: Mechanist Order
-- Salt's End NPCs (Elora, Darius, Mother Gilda, Jessa) - Faction: Saltborn
-- Dragons (Orphaned Source, Zerithas, Lyrianna) - Faction: Ancient Dragons
-- Others (Jeffrey, Marthin, Ralvus, Sister Veyla, Lurtzic, Olwen, Veylith) - Faction: Unaffiliated
-
-**Factions We're Creating (with AOE colors):**
-1. **The Party** (Green) - 5 PCs
-2. **Mechanist Order** (Chrome Silver) - 10+ NPCs, led by Chrome Bishop
-3. **Nine Arcane Writs** (Purple) - 8 NPCs, led by Lycara
-4. **Sablemarrow Council** (Steel Blue) - 5 NPCs, led by Alric
-5. **Sablemarrow Merchants** (Gold) - 6 NPCs, no formal leader
-6. **Saltborn** (Ocean Blue) - 4 NPCs, formerly led by Darius (dead)
-7. **Ancient Dragons** (Prismatic) - 3 NPCs, led by Orphaned Source
-8. **Druidic Resistance** (Forest Green) - 1 NPC (Sythra), pending expansion
-9. **Unaffiliated** (Gray) - Orphaned NPCs, neutral contacts
-
-**Why These Factions:**
-- **Mechanist Order:** Primary antagonist faction, tech-supremacist
-- **Nine Writs:** Magical oligarchy, political power in Veilshard
-- **Sablemarrow Council:** City government, tech-aligned, anti-magic
-- **Saltborn:** Independent pirates/traders, power vacuum after Darius
-- **Ancient Dragons:** Cosmic-scale entities, ancient knowledge holders
-- **Druidic Resistance:** Nature magic, opposes industrialization
-- **The Party:** Center of the web, relationship anchor point
-- **Unaffiliated:** Catch-all for neutral/orphaned NPCs
-
-### Relationship Examples (Based on Your Data)
-
-**Party → NPC Relationships:**
-
-**Carp-Specific:**
-```python
-# Carp has interacted with most NPCs (appears in many "Met by Party" lists)
-Carp → allied with → Councilor Myra (she's moderate, party-friendly)
-Carp → knows about → Most Sablemarrow NPCs
-Carp → won gamble from → The Man Who Gambled Against Time
-```
-
-**Lucifer-Specific:**
-```python
-# Lucifer has soul magic and warlock background
-Lucifer → bound by pact → Unknown Patron (could be devil entity)
-Lucifer → conflicted about → Varzai the Soulforger (necromancy parallels)
-Lucifer → interests → Seraphina (both seek forbidden knowledge)
-```
-
-**Pathik-Specific:**
-```python
-# Pathik is a thief and risk-taker
-Pathik → attempted theft from → The Man Who Gambled (forced to roll dice)
-Pathik → trades with → Fenwick Calloway (black market goods)
-Pathik → recruited → Jeffrey Trimbley (for Basilica heist)
-```
-
-**Whole Party Relationships:**
-```python
-# Everyone has met these NPCs
-All Party → allied with → Jessa Coalbright (escort quest)
-All Party → opposed by → Chrome Bishop Proxies
-All Party → freed → Seraphina Vitalys (acid pit rescue)
-All Party → knows about → Kephras (defector they spared)
-All Party → killed → Zhaerith, Captain Darius (boss fights)
-```
-
-**Faction-Level Relationships:**
-```python
-# Organizations relating to each other
-Mechanist Order → opposes → Nine Arcane Writs (tech vs magic)
-Sablemarrow Council → allied with → Mechanist Order (shared ideology)
-Nine Writs → governs → Veilshard city-state
-Druidic Resistance → opposes → Sablemarrow Council (nature vs industry)
-Saltborn → trades with → Merchant's Guild
-Ancient Dragons → unaware of → The Party (cosmic entities, party insignificant)
-```
-
-**NPC Hierarchies:**
-```python
-# Mechanist Order command structure
-Chrome Bishop → commands → [Altus, Harmonic, Xi0, "—"]
-Altus → commands → [Casimir, Elira] (Executors)
-Casimir → commands → Iron-Basilica guards
-Revel Smith → interprets communications from → Chrome Bishop
-
-# Nine Writs hierarchy
-Lycara Tyrenthiel → leads → Nine Arcane Writs
-Each Writ Holder → governs → Their district
-Galik → governs → Ironhollow
-Sythra → governs → Green districts
-Xevrin → governs → Layer Deep (underground farms)
-```
-
----
-
-## Visualization Design: Party-Centric Layout
-
-### Node Placement Rules
-
-**1. Party Center (Fixed Positions):**
-```
-5 PCs evenly distributed in small circle (radius 100px)
-
-    Carp (12 o'clock)
-       |
-Pathik --- Lucifer
-(9)         (3)
-       |
-   Poggoo --- Tanner
-   (7)        (5)
-```
-
-**2. NPC Proximity Algorithm:**
-```python
-def calculate_npc_distance_from_party(npc):
-    """NPCs closer to party = stronger relationship"""
-
-    base_distance = 300  # Default for met NPCs
-
-    # Modifiers
-    if has_edge(npc, "allied with", Party):
-        distance = 200  # Close allies
-    elif has_edge(npc, "opposes", Party):
-        distance = 250  # Known enemies (still close - active conflict)
-    elif has_edge(npc, "employed by", Party):
-        distance = 180  # Quest givers/hirelings
-    elif has_edge(npc, "knows about", Party):
-        distance = 350  # Aware but not directly involved
-    elif npc.met_party == False:
-        distance = 500  # Unmet NPCs toward periphery
-
-    # Faction membership pulls NPCs toward faction cluster
-    if npc.faction:
-        # NPCs pulled toward their faction's centroid
-        # Distance from party balanced with faction cohesion
-        pass
-
-    return distance
-```
-
-**3. Faction Metaball AOE:**
-```python
-# Similar to World-Foundations but with different rules
-
-Faction AOE radius = base_radius + (member_count * 15)
-
-Mechanist Order (10 members):
-  radius = 60 + (10 * 15) = 210px
-
-Nine Arcane Writs (8 members):
-  radius = 60 + (8 * 15) = 180px
-
-Unaffiliated (30 members):
-  radius = 60 + (30 * 15) = 510px  # Large blob of neutral NPCs
-```
-
-**4. Node Sizing:**
-```python
-PC nodes:
-  size = 40px (larger than NPCs)
-  always show name
-  fixed position (locked)
-
-NPC nodes (connection-based like World-Foundations):
-  size = 20 + (connection_count * 3)
-  max size = 60px
-  no name until highlighted
-
-Faction nodes (if we show them):
-  size = Based on member count
-  show name always
-  clickable for zoom/filter
-```
-
-**5. Edge Rendering:**
-```python
-Party edges (show always):
-  Party ─[allied with]→ NPC (green line)
-  Party ─[opposes]→ NPC (red line)
-  Party ─[employed]→ NPC (gold dashed)
-
-NPC-to-NPC edges (show on selection):
-  commands (thick arrow)
-  member of (dashed line toward faction)
-  allied with (solid line, bidirectional)
-  conflicts with (red zigzag)
-```
-
-### Physics Rules (Different from World-Foundations)
-
-**Constraints:**
-1. **PCs are FIXED** (locked in center, never move)
-2. **NPCs pulled toward:**
-   - Party center (base attraction)
-   - Faction centroid (if member)
-   - Connected NPCs (edge springs)
-3. **Faction cohesion:**
-   - Same-faction NPCs have short ideal edge length
-   - Cross-faction edges are longer
-4. **Collision:**
-   - Same-faction NPCs can overlap slightly
-   - Different-faction NPCs maintain distance
-5. **Reset View:**
-   - Re-center on party
-   - Pull rogue NPCs back to faction groups
-   - No category separation like World-Foundations
-
-**Visual Clarity Focus:**
-```
-GOAL: Show party's influence sphere
-
-Center = Party (what players control)
-Near = Allies/Enemies (active relationships)
-Mid = Known NPCs (met but neutral)
-Far = Distant NPCs (unmet, mentioned only)
-Edge = Faction leaders/power brokers (future encounters)
-```
-
 ---
 
 ## User Guide: Creating Your Own Political-Web
@@ -969,7 +780,7 @@ Edge = Faction leaders/power brokers (future encounters)
 
 **Sample Entities:**
 ```
-Lord Valerian (NPC:major)
+Lord Valerian (NPC:leader)
   → member of → House Valerian
   → opposes → House Darkmore
   → employs → City Watch Captain
@@ -1004,7 +815,7 @@ Party Rogue (PC)
 
 **Sample Entities:**
 ```
-Corpo Executive (NPC:major)
+Corpo Executive (NPC:leader)
   → leads → Arasaka West Coast Division
   → at war with → Militech
   → blackmails → NUSA Senator
@@ -1041,7 +852,7 @@ Party Netrunner (PC)
 
 **Sample Entities:**
 ```
-Queen Regent (NPC:major)
+Queen Regent (NPC:leader)
   → leads → Northern Kingdom
   → allied with → The Faith
   → owes debt to → Merchant Princes
@@ -1136,12 +947,12 @@ Trinity of Light (Faction:religious)
 
   Observations:
     "Pantheon of three gods worshipped across Geux"
-    "TODO: Add worshipper NPCs as campaign progresses"
+    "TODO: Add Gods. Add worshipper NPCs as campaign progresses"
 ```
 
 ### Faction Leader Root Node
 
-**Concept:** Faction entity can exist without leader, prompting creation
+**Concept:** Faction entity can exist without leader, prompting creation of NPC or observation clarifying organizational structure (collective, decentralized network, meritocracy, etc.)
 
 **Workflow:**
 ```
@@ -1159,117 +970,31 @@ UI shows:
           Name: [Guild Master___]
           Role: Leader of Thieves' Guild
           Faction: Thieves' Guild
+    3. → Opens NPC form select: [Decentralized]
        → After creation:
-          Thieves' Guild ─[led by]→ Guild Master
-          Guild Master ─[leads]→ Thieves' Guild
+          Thieves' Guild ─[led by]→ Decentralized Network
+          [thieves guild NPCs] ─[together make-up]→ Thieves' Guild
+           
+     
+
+The only thing to note about selecting decentralized is there will need to be organizational clarifiers in metadata or NPCs within the faction must all connect to the faction node directly with an active relationship that describes their involvement or job within. (refine further TODO)
+
 ```
 
 ---
 
-## Info Panel Content (For "?" Icon on Page)
-
-### What to Show Users
-
-**Panel Title: "Political-Web Memory Guide"**
-
-**Section 1: What is this?**
-```
-Political-Web tracks relationships, alliances, and power dynamics.
-
-Use it to answer:
-  • Who knows who?
-  • How do we reach influential NPCs?
-  • Which factions are allied or opposed?
-  • Who has leverage over whom?
-```
-
-**Section 2: Party-Centric Layout**
-```
-Your party is at the CENTER.
-
-Distance from center = Relationship importance:
-  • Close: Direct allies, active enemies
-  • Medium: Known contacts, neutral NPCs
-  • Far: Unmet NPCs, distant power brokers
-
-Colored bubbles = Factions
-  • Click faction bubble to zoom and filter
-  • Helps visualize organizational membership
-```
-
-**Section 3: Creating Entities**
-```
-Entity Types:
-  • NPC:major - Recurring characters, key figures
-  • NPC:minor - One-off quest givers, shopkeepers
-  • NPC:mentioned - Name-dropped but never met
-  • Faction - Organizations, alliances, movements
-
-Every entity needs connections:
-  • At least 1 relationship edge
-  • OR mark as "pending_relations" for future
-```
-
-**Section 4: Relationship Types**
-```
-Hierarchy: commands, reports to, member of
-Alliance: allied with, supports, trades with
-Conflict: opposes, seeks vengeance, at war with
-Knowledge: knows about, expert on, unaware of
-Emotional: trusts, distrusts, indebted to
-```
-
-**Section 5: Best Practices**
+**Best Practices**
 ```
 ✓ Add NPCs as you meet them (don't pre-plan everything)
 ✓ Create factions when you have 3+ members
 ✓ Use explicit edges instead of text descriptions
 ✓ Link to other memories with text anchors
+✓ Create Standard Member Templates that describe the lowest ranking or least important unnamed NPC faction members to have ready when you need a random person from X faction
 
-✗ Don't add every random NPC (only recurring ones)
+✗ Don't add every random NPC (only recurring ones) (Use Standard Member Template to assist)
 ✗ Don't create factions with 0-1 members (use Unaffiliated)
 ✗ Don't add plot events here (use Campaign-Story)
 ```
-
----
-
-## Implementation Plan: Our Build
-
-### Phase 1: Data Import & Deduplication
-1. Load 30 entities from pol-web-memory.db
-2. Load 52 NPCs from Notion CSV (already in npcs table)
-3. Deduplicate: Merge pol-web entities with matching npcs table entries
-4. Load 5 PCs from player_characters table
-
-### Phase 2: Faction System
-1. Auto-detect factions from pol-web "member of" relations
-2. Extract additional organizations (Mechanist Order, Merchant's Guild)
-3. Create faction categories for metaball rendering
-4. Assign colors to each faction
-5. Calculate faction centroids based on member positions
-
-### Phase 3: Relationship Mapping
-1. Import 25 relations from pol-web-memory
-2. Create Party-to-NPC edges based on "Met by Party" field
-3. Assign specific PC relationships:
-   - Pathik → recruited → Jeffrey (heist)
-   - Lucifer → interests → Seraphina (soul magic)
-   - Carp → allied with → Myra (moderate councilor)
-4. Create NPC-to-NPC edges (hierarchies, conflicts)
-
-### Phase 4: Political-Web Page (Frontend)
-1. Copy World-Foundations structure
-2. Modify layout: Fixed PC positions in center
-3. NPC sizing: Smaller nodes, no text until highlight
-4. Faction metaballs with different physics
-5. Party-centric "All Fit" view
-6. Info panel with usage guide
-
-### Phase 5: Testing & Refinement
-1. Stress test: 80+ nodes on canvas
-2. Verify faction grouping works
-3. Test relationship traversal
-4. Refine physics for clarity
 
 ---
 
@@ -1277,20 +1002,18 @@ Emotional: trusts, distrusts, indebted to
 
 **You'll know Political-Web is working when:**
 
-✅ You can visually identify party allies vs enemies at a glance
+✅ You can visually identify party allies vs enemies at a glance [need to color code relationships by type, poor to good gradiant relationship color or key table with faction colors labels and arrow types labeled.]
 ✅ Clicking an NPC shows their faction affiliation clearly
 ✅ You can trace connection paths: "Party → Ally → Ally's contact → Target NPC"
 ✅ Faction bubbles help you see organizational membership
 ✅ Adding a new NPC with faction assignment is intuitive
-✅ The graph scales gracefully to 50+ NPCs without chaos
+✅ The graph scales gracefully to 50+ NPCs without chaos [almost there tbh]
 
 ---
 
 ## Next Steps
 
-1. **Review this guide** - Does it capture your vision?
-2. **Refine faction list** - Are these the right 9 factions?
-3. **Approve PC relationship assignments** - Should I proceed with Pathik→Jeffrey, Lucifer→Seraphina, etc.?
-4. **Begin implementation** - Build the Political-Web page
-
-Ready to proceed when you are!
+1. **Review this guide**
+2. **Refine faction list** 
+3. **Approve PC relationship assignments** 
+4. **Begin implementation** 

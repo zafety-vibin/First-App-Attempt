@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS campaign_settings (
   theme TEXT NOT NULL CHECK (theme IN ('high_fantasy', 'cyberpunk', 'sci_fi', 'modern', 'custom')),
   category_labels TEXT NOT NULL, -- JSON object mapping internal→display names
   enabled_categories TEXT NOT NULL, -- JSON array of enabled category internal names
+  wizard_answers TEXT, -- JSON array of World-Foundations questionnaire answers (preserved for later graph population)
   created_at INTEGER NOT NULL DEFAULT (unixepoch()),
   updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
   FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE

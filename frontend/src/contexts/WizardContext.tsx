@@ -66,6 +66,7 @@ const initialState: WizardState = {
       'npcs', 'locations', 'factions', 'planar_forces', 'items',
       'lore', 'world_rules', 'session_prep', 'session_recaps',
       'quests', 'player_characters', 'custom_mechanics'
+      // NOTE: 'creatures' NOT included - disabled by default per spec
     ]), // 12 categories (Creatures disabled by default)
     isValid: true
   },

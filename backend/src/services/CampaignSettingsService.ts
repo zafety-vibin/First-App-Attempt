@@ -224,16 +224,17 @@ export class CampaignSettingsService {
 
     // Atomic transaction
     const transaction = db.transaction(() => {
-      // 1. Insert campaign settings
+      // 1. Insert campaign settings (with questionnaire answers for later reference)
       const settingsResult = db.prepare(`
-        INSERT INTO campaign_settings (campaign_id, theme, category_labels, enabled_categories, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO campaign_settings (campaign_id, theme, category_labels, enabled_categories, wizard_answers, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
         RETURNING *
       `).get(
         campaignId,
         data.theme,
         JSON.stringify(categoryLabels),
         JSON.stringify(data.enabledCategories),
+        data.worldFoundationsAnswers ? JSON.stringify(data.worldFoundationsAnswers) : null,
         now,
         now
       ) as any;

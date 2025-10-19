@@ -89,6 +89,8 @@ const WorldFoundationsPage: React.FC = () => {
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [selectedCluster, setSelectedCluster] = useState<string | null>(null);
   const [hoverTooltip, setHoverTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
+  const [nodeTooltip, setNodeTooltip] = useState<{ name: string; type: string; x: number; y: number } | null>(null);
+  const [edgeTooltip, setEdgeTooltip] = useState<{ edge: string; source: string; target: string; x: number; y: number } | null>(null);
   const previousViewportRef = useRef<{ zoom: number; pan: { x: number; y: number } } | null>(null);
   const [showDebugInfo, setShowDebugInfo] = useState(false);
   const [isZoomedToCategory, setIsZoomedToCategory] = useState(false); // Track if we're in zoomed state
@@ -495,7 +497,7 @@ const WorldFoundationsPage: React.FC = () => {
   const METABALL_BASE_RADIUS = 80; // Base influence radius (scaled by zoom)
   const METABALL_THRESHOLD = 0.6; // Raised threshold for harder boundaries
   const METABALL_MIN_RADIUS = 60; // Minimum protected zone around each node (same for all nodes)
-  const GRID_SIZE = 2; // Marching squares grid resolution (lower = faster, higher = smoother) - reduced to 2 for smooth rendering
+  const GRID_SIZE = 3.5; // Marching squares grid resolution - larger = faster, less precise (was 2)
 
   // Calculate metaball field strength at a point for a set of nodes with individual radii
   // Small nodes have strong, solid edges. Large nodes have soft, fluid edges.
@@ -1794,6 +1796,49 @@ const WorldFoundationsPage: React.FC = () => {
                 // Node/cluster click handler
                 cy.on('tap', 'node', handleNodeClick);
 
+                // Hover tooltips for nodes
+                cy.on('mouseover', 'node', (evt: any) => {
+                  const node = evt.target;
+                  const nodeData = node.data('nodeData');
+                  const renderedPos = node.renderedPosition();
+
+                  setNodeTooltip({
+                    name: nodeData?.name || 'Unknown',
+                    type: nodeData?.node_type || nodeData?.type || 'Unknown',
+                    x: renderedPos.x,
+                    y: renderedPos.y - 5
+                  });
+                });
+
+                cy.on('mouseout', 'node', () => {
+                  setNodeTooltip(null);
+                });
+
+                // Hover tooltips for edges
+                cy.on('mouseover', 'edge', (evt: any) => {
+                  const edge = evt.target;
+                  const sourceNode = edge.source();
+                  const targetNode = edge.target();
+                  const edgeData = edge.data();
+
+                  const sourcePos = sourceNode.renderedPosition();
+                  const targetPos = targetNode.renderedPosition();
+                  const midX = (sourcePos.x + targetPos.x) / 2;
+                  const midY = (sourcePos.y + targetPos.y) / 2;
+
+                  setEdgeTooltip({
+                    edge: edgeData.label || edgeData.edge_type || 'connected to',
+                    source: sourceNode.data('nodeData')?.name || 'Unknown',
+                    target: targetNode.data('nodeData')?.name || 'Unknown',
+                    x: midX,
+                    y: midY - 10 // Close to edge (was -20)
+                  });
+                });
+
+                cy.on('mouseout', 'edge', () => {
+                  setEdgeTooltip(null);
+                });
+
                 // Click on empty background - clear selections
                 cy.on('tap', (event: any) => {
                   if (event.target === cy) {
@@ -2034,21 +2079,21 @@ const WorldFoundationsPage: React.FC = () => {
         {hoverTooltip && (
           <div style={{
             position: 'fixed',
-            left: hoverTooltip.x,
-            top: hoverTooltip.y,
-            transform: 'translate(-50%, -100%)',
+            left: `${Math.max(400, Math.min(hoverTooltip.x, window.innerWidth - 200))}px`,
+            top: `${Math.max(220, Math.min(hoverTooltip.y, window.innerHeight - 120))}px`,
+            transform: 'translate(-50%, -105%)',
             background: 'rgba(0, 0, 0, 0.95)',
             border: '1px solid rgba(251, 191, 36, 0.5)',
             borderRadius: '6px',
             padding: '0.5rem 0.75rem',
             color: '#ffffff',
-            fontSize: '0.875rem',
+            fontSize: '0.75rem',
             fontWeight: '400',
             pointerEvents: 'none',
             zIndex: 1000,
             whiteSpace: 'pre-wrap',
-            maxWidth: '450px',
-            maxHeight: '200px',
+            maxWidth: '300px',
+            maxHeight: '150px',
             overflow: 'hidden',
             boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
             lineHeight: '1.4'
@@ -2350,6 +2395,57 @@ const WorldFoundationsPage: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Node Hover Tooltip */}
+      {nodeTooltip && cyRef.current && (
+        <div style={{
+          position: 'fixed',
+          left: `${Math.max(400, Math.min(nodeTooltip.x, window.innerWidth - 200))}px`,
+          top: `${Math.max(220, Math.min(nodeTooltip.y, window.innerHeight - 100))}px`,
+          transform: 'translate(-50%, -105%)',
+          background: 'rgba(0, 0, 0, 0.95)',
+          color: '#fff',
+          padding: '0.4rem 0.6rem',
+          borderRadius: '6px',
+          fontSize: '0.75rem',
+          pointerEvents: 'none',
+          zIndex: 1001,
+          whiteSpace: 'nowrap',
+          border: '1px solid rgba(255, 255, 255, 0.3)',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
+          maxWidth: '200px',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis'
+        }}>
+          <div style={{ fontWeight: '600', fontSize: '0.75rem' }}>{nodeTooltip.name}</div>
+          <div style={{ fontSize: '0.625rem', color: '#94a3b8', marginTop: '0.125rem' }}>{nodeTooltip.type}</div>
+        </div>
+      )}
+
+      {/* Edge Hover Tooltip */}
+      {edgeTooltip && (
+        <div style={{
+          position: 'fixed',
+          left: `${Math.max(400, Math.min(edgeTooltip.x, window.innerWidth - 200))}px`,
+          top: `${Math.max(220, Math.min(edgeTooltip.y, window.innerHeight - 100))}px`,
+          transform: 'translate(-50%, -105%)',
+          background: 'rgba(168, 85, 247, 0.95)',
+          color: '#fff',
+          padding: '0.5rem 0.75rem',
+          borderRadius: '6px',
+          fontSize: '0.688rem',
+          pointerEvents: 'none',
+          zIndex: 1001,
+          whiteSpace: 'nowrap',
+          border: '1px solid rgba(192, 132, 252, 0.5)',
+          boxShadow: '0 4px 12px rgba(168, 85, 247, 0.4)'
+        }}>
+          <div style={{ fontWeight: '600' }}>{edgeTooltip.edge}</div>
+          <div style={{ fontSize: '0.625rem', color: '#e9d5ff', marginTop: '0.25rem' }}>
+            {edgeTooltip.source} → {edgeTooltip.target}
           </div>
         </div>
       )}

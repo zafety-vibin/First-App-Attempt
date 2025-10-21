@@ -159,6 +159,28 @@ export function runMigrations(): void {
     }
   });
 
+  // Migration 16: Feature 016 - Campaign Setup Wizard
+  runMigration(16, () => {
+    const migrationsDir = path.join(__dirname, '../db/migrations');
+    const filePath = path.join(migrationsDir, '016-campaign-settings.sql');
+    if (fs.existsSync(filePath)) {
+      const sql = fs.readFileSync(filePath, 'utf-8');
+      db.exec(sql);
+      console.log(`  ✓ Applied 016-campaign-settings.sql`);
+    }
+  });
+
+  // Migration 18: Feature 018 - External API Audit Logging
+  runMigration(18, () => {
+    const migrationsDir = path.join(__dirname, '../db/migrations');
+    const filePath = path.join(migrationsDir, '018-api-requests.sql');
+    if (fs.existsSync(filePath)) {
+      const sql = fs.readFileSync(filePath, 'utf-8');
+      db.exec(sql);
+      console.log(`  ✓ Applied 018-api-requests.sql`);
+    }
+  });
+
   console.log('✓ Database initialized');
   logDatabaseInfo();
 }

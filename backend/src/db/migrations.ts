@@ -56,6 +56,16 @@ export const migrations: Migration[] = [
       console.log('Migration 16: Campaign settings table created');
     },
   },
+  {
+    version: 18,
+    description: 'Feature 018 - API audit logging table for external API operations',
+    up: (db) => {
+      const migrationPath = path.join(__dirname, 'migrations', '018-api-requests.sql');
+      const sql = fs.readFileSync(migrationPath, 'utf8');
+      db.exec(sql);
+      console.log('Migration 18: API requests audit table created');
+    },
+  },
 ];
 
 /**

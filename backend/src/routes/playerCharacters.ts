@@ -1,267 +1,125 @@
 /**
- * Player Character Routes
+ * Player Characters REST API Routes (standardized)
  * Feature: 014-create-the-database
- *
- * Handles 4 dm_* fields:
- * - dm_secrets: Hidden character secrets
- * - dm_plot_threads: DM's plot thread tracking
- * - dm_true_motivation: Character's actual motivations
- * - dm_consequences: DM notes on consequences
- *
- * Applies:
- * - protect: Authentication middleware (all routes)
- * - extractViewMode: X-View-Mode header parsing
- * - applyInformationFilter: Automatic dm_* field stripping in player_view mode
  */
 
 import express, { Request, Response } from 'express';
 import { PlayerCharacterService } from '../services/PlayerCharacterService';
 import { protect } from '../middleware/auth';
 import { extractViewMode, applyInformationFilter } from '../middleware/informationFilter';
+import { db } from '../services/DatabaseService';
 
 const router = express.Router();
-const service = new PlayerCharacterService();
 
-// Apply authentication, view mode extraction, and information filtering to all routes
+const pcService = new PlayerCharacterService(db);
+
 router.use(protect);
 router.use(extractViewMode);
 router.use(applyInformationFilter);
 
-/**
- * POST /api/player-characters
- * Create new player character
- *
- * Body: {
- *   campaign_id: string,
- *   name: string,
- *   description?: string,
- *   core_status?: 'active' | 'archived' | 'draft' | 'hidden',
- *   player_knowledge?: string,
- *   tags?: string[],
- *   custom_fields?: Record<string, any>,
- *   player_name?: string,
- *   class?: string[],
- *   level?: number,
- *   race?: string,
- *   background?: string,
- *   personality?: string,
- *   goals?: string,
- *   backstory?: string,
- *   art?: string,
- *   faction_affiliations?: string[],
- *   allied_npcs?: string[],
- *   dm_secrets?: string,
- *   dm_plot_threads?: string,
- *   dm_true_motivation?: string,
- *   dm_consequences?: string
- * }
- */
-router.post('/', async (req: Request, res: Response) => {
+router.get('/', (req: Request, res: Response) => {
+  try {
+    const { campaign_id, limit = '50', offset = '0' } = req.query;
+    const userId = req.user!.id;
+
+    if (!campaign_id || typeof campaign_id !== 'string') {
+      res.status(400).json({ error: 'campaign_id query parameter is required' });
+      return;
+    }
+
+    const campaign = db.prepare('SELECT * FROM campaigns WHERE id = ? AND owner_id = ?').get(campaign_id, userId);
+    if (!campaign) {
+      res.status(403).json({ error: 'Campaign not found or access denied' });
+      return;
+    }
+
+    const result = pcService.list({ campaign_id }, { limit: parseInt(limit as string), offset: parseInt(offset as string) });
+    res.status(200).json({ data: result.data, pagination: { limit: parseInt(limit as string), offset: parseInt(offset as string), total: result.total } });
+  } catch (error: any) {
+    console.error('List player characters error:', error);
+    res.status(500).json({ error: 'Failed to list player characters' });
+  }
+});
+
+router.post('/', (req: Request, res: Response) => {
   try {
     const userId = req.user!.id;
-    const data = req.body;
 
-    // Validate required fields
-    if (!data.campaign_id || !data.name) {
+    if (!req.body.campaign_id || !req.body.name) {
       res.status(400).json({ error: 'Missing required fields: campaign_id, name' });
       return;
     }
 
-    // Create player character
-    const pc = await service.createPlayerCharacter(data, userId);
-
+    const pc = pcService.create(req.body, { ownerId: userId });
     res.status(201).json(pc);
   } catch (error: any) {
+    if (error.message.includes('access denied')) {
+      res.status(403).json({ error: error.message });
+      return;
+    }
+
     console.error('Create player character error:', error);
-
-    if (error.message.includes('not found') || error.message.includes('access denied')) {
-      res.status(403).json({ error: error.message });
-      return;
-    }
-
-    res.status(500).json({ error: 'Failed to create player character', details: error.message });
+    res.status(500).json({ error: 'Failed to create player character' });
   }
 });
 
-/**
- * GET /api/player-characters
- * List all player characters for a campaign
- *
- * Query params:
- * - campaign_id: string (required)
- * - core_status?: 'active' | 'archived' | 'draft' | 'hidden'
- * - search?: string (search by name or player_name)
- *
- * Headers:
- * - X-View-Mode: 'dm_view' | 'player_view' (optional, defaults to dm_view)
- */
-router.get('/', async (req: Request, res: Response) => {
+router.get('/:id', (req: Request, res: Response) => {
   try {
-    const userId = req.user!.id;
-    const viewMode = req.categoryViewMode || 'dm_view';
-    const { campaign_id, core_status, search } = req.query;
-
-    // Validate required query params
-    if (!campaign_id || typeof campaign_id !== 'string') {
-      res.status(400).json({ error: 'Missing required query parameter: campaign_id' });
-      return;
-    }
-
-    let characters;
-
-    // Handle different query types
-    if (search && typeof search === 'string') {
-      characters = await service.searchPlayerCharacters(campaign_id, search, userId);
-    } else if (core_status && typeof core_status === 'string') {
-      if (!['active', 'archived', 'draft', 'hidden'].includes(core_status)) {
-        res.status(400).json({ error: 'Invalid core_status. Must be: active, archived, draft, or hidden' });
-        return;
-      }
-      characters = await service.getPlayerCharactersByStatus(campaign_id, core_status as any, userId);
-    } else {
-      characters = await service.getPlayerCharactersByCampaign(campaign_id, userId);
-    }
-
-    // Apply player knowledge filtering for player_view
-    if (viewMode === 'player_view') {
-      characters = characters.filter(pc => {
-        const pk = pc.player_knowledge;
-        return pk === 'common_knowledge' || pk === 'player_knowledge' || pk === null;
-      });
-    }
-
-    // Note: dm_* field stripping is handled by applyInformationFilter middleware
-
-    res.status(200).json(characters);
-  } catch (error: any) {
-    console.error('List player characters error:', error);
-
-    if (error.message.includes('not found') || error.message.includes('access denied')) {
-      res.status(403).json({ error: error.message });
-      return;
-    }
-
-    res.status(500).json({ error: 'Failed to fetch player characters', details: error.message });
-  }
-});
-
-/**
- * GET /api/player-characters/:id
- * Get single player character by ID
- *
- * Headers:
- * - X-View-Mode: 'dm_view' | 'player_view' (optional, defaults to dm_view)
- */
-router.get('/:id', async (req: Request, res: Response) => {
-  try {
-    const userId = req.user!.id;
-    const viewMode = req.categoryViewMode || 'dm_view';
     const { id } = req.params;
+    const userId = req.user!.id;
 
-    const pc = await service.getPlayerCharacterById(id, userId);
-
+    const pc = pcService.findById(id);
     if (!pc) {
       res.status(404).json({ error: 'Player character not found' });
       return;
     }
 
-    // Apply player knowledge filtering for player_view
-    if (viewMode === 'player_view') {
-      const pk = pc.player_knowledge;
-      if (pk !== 'common_knowledge' && pk !== 'player_knowledge' && pk !== null) {
-        // Return 404 instead of 403 to not reveal existence
-        res.status(404).json({ error: 'Player character not found' });
-        return;
-      }
+    const campaign = db.prepare('SELECT * FROM campaigns WHERE id = ? AND owner_id = ?').get(pc.campaign_id, userId);
+    if (!campaign) {
+      res.status(403).json({ error: 'Access denied' });
+      return;
     }
-
-    // Note: dm_* field stripping is handled by applyInformationFilter middleware
 
     res.status(200).json(pc);
   } catch (error: any) {
     console.error('Get player character error:', error);
-    res.status(500).json({ error: 'Failed to fetch player character', details: error.message });
+    res.status(500).json({ error: 'Failed to fetch player character' });
   }
 });
 
-/**
- * PUT /api/player-characters/:id
- * Update player character
- *
- * Body: {
- *   name?: string,
- *   description?: string,
- *   core_status?: 'active' | 'archived' | 'draft' | 'hidden',
- *   player_knowledge?: string,
- *   tags?: string[],
- *   custom_fields?: Record<string, any>,
- *   player_name?: string,
- *   class?: string[],
- *   level?: number,
- *   race?: string,
- *   background?: string,
- *   personality?: string,
- *   goals?: string,
- *   backstory?: string,
- *   art?: string,
- *   faction_affiliations?: string[],
- *   allied_npcs?: string[],
- *   dm_secrets?: string,
- *   dm_plot_threads?: string,
- *   dm_true_motivation?: string,
- *   dm_consequences?: string
- * }
- */
-router.put('/:id', async (req: Request, res: Response) => {
+router.put('/:id', (req: Request, res: Response) => {
   try {
-    const userId = req.user!.id;
     const { id } = req.params;
-    const data = req.body;
+    const userId = req.user!.id;
 
-    // Update player character
-    const updated = await service.updatePlayerCharacter(id, data, userId);
-
-    res.status(200).json(updated);
+    const pc = pcService.update(id, req.body, { ownerId: userId });
+    res.status(200).json(pc);
   } catch (error: any) {
+    if (error.message.includes('not found') || error.message.includes('access denied')) {
+      res.status(404).json({ error: error.message });
+      return;
+    }
+
     console.error('Update player character error:', error);
-
-    if (error.message.includes('not found') || error.message.includes('access denied')) {
-      res.status(404).json({ error: error.message });
-      return;
-    }
-
-    res.status(500).json({ error: 'Failed to update player character', details: error.message });
+    res.status(500).json({ error: 'Failed to update player character' });
   }
 });
 
-/**
- * DELETE /api/player-characters/:id
- * Delete player character
- *
- * Will fail if character is referenced by items (owner_pc_id foreign key)
- */
-router.delete('/:id', async (req: Request, res: Response) => {
+router.delete('/:id', (req: Request, res: Response) => {
   try {
-    const userId = req.user!.id;
     const { id } = req.params;
+    const userId = req.user!.id;
 
-    await service.deletePlayerCharacter(id, userId);
-
-    res.status(200).json({ message: 'Player character deleted successfully' });
+    pcService.delete(id, { ownerId: userId });
+    res.status(204).send();
   } catch (error: any) {
-    console.error('Delete player character error:', error);
-
     if (error.message.includes('not found') || error.message.includes('access denied')) {
       res.status(404).json({ error: error.message });
       return;
     }
 
-    if (error.message.includes('referenced')) {
-      res.status(409).json({ error: error.message });
-      return;
-    }
-
-    res.status(500).json({ error: 'Failed to delete player character', details: error.message });
+    console.error('Delete player character error:', error);
+    res.status(500).json({ error: 'Failed to delete player character' });
   }
 });
 

@@ -13,17 +13,14 @@ export interface SessionRecap {
   custom_fields: Record<string, any>;
 
   // Category-specific fields
+  session_number: number; // Session number in campaign sequence
   session_date: number | null;
   in_game_date_start: string | null;
   in_game_date_end: string | null;
   time_passed: string | null;
   summary: string | null;
-  key_events: string[] | null;  // JSON array
-  player_decisions: string[] | null;  // JSON array
-
-  // Canonical markers
-  is_canon: 1;  // Always 1
-  canonical_status: 'canon';  // Always 'canon'
+  key_events: string | null;
+  player_decisions: string | null;
 
   // Many-to-many connections
   npcs_encountered: string[];

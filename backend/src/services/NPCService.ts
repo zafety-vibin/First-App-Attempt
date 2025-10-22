@@ -118,7 +118,8 @@ export class NPCService extends BaseCategoryService<NPC> {
       'name', 'description', 'core_status', 'player_knowledge', 'tags',
       'custom_fields', 'race', 'class', 'level', 'alignment', 'appearance',
       'personality_traits', 'motivation', 'relationship_to_party', 'met_party',
-      'art', 'faction_id', 'superior_npc_id', 'locations', 'dm_secrets', 'dm_plot_relevance'
+      'art', 'faction_id', 'superior_npc_id', 'locations', 'dm_secrets', 'dm_plot_relevance',
+      'updated_at' // CRITICAL: Include updated_at to ensure timestamp refresh
     ];
 
     for (const field of updatableFields) {

@@ -181,6 +181,17 @@ export function runMigrations(): void {
     }
   });
 
+  // Migration 19: Fix - Add missing session_number column
+  runMigration(19, () => {
+    const migrationsDir = path.join(__dirname, '../db/migrations');
+    const filePath = path.join(migrationsDir, '019-add-session-number.sql');
+    if (fs.existsSync(filePath)) {
+      const sql = fs.readFileSync(filePath, 'utf-8');
+      db.exec(sql);
+      console.log(`  ✓ Applied 019-add-session-number.sql`);
+    }
+  });
+
   console.log('✓ Database initialized');
   logDatabaseInfo();
 }

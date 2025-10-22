@@ -144,11 +144,11 @@ export abstract class BaseCategoryService<T extends UniversalFields> {
       throw new Error('Invalid core_status value. Must be: active, archived, draft, or hidden');
     }
 
-    // Auto-refresh updated_at
+    // Auto-refresh updated_at (ensure it's always updated, even for partial updates)
     const updatedData = {
       ...data,
       updated_at: Math.floor(Date.now() / 1000),
-    };
+    } as Partial<T>;
 
     // Category-specific validation and update
     this.validateCategoryFields(updatedData as T, options);

@@ -63,6 +63,20 @@ router.get('/campaigns/:campaignId/database/:category', async (req: Request, res
       });
     }
 
+    // Validate campaign exists
+    if (!ExternalAPIService.validateCampaign(campaignId)) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Campaign not found',
+          details: { campaignId },
+          suggestion: 'Verify the campaign ID is correct',
+        },
+        operation_id: res.getHeader('X-Operation-ID'),
+      });
+    }
+
     // Parse query parameters
     const page = parseInt(req.query.page as string) || 1;
     const limit = Math.min(parseInt(req.query.limit as string) || 100, 100);
@@ -164,15 +178,34 @@ router.post('/campaigns/:campaignId/database/:category', async (req: Request, re
       operation_id: res.getHeader('X-Operation-ID'),
     });
   } catch (error: any) {
-    // Check for constraint violations
-    if (error.message.includes('FOREIGN KEY constraint')) {
+    // Check for validation errors (FK constraints, required fields)
+    if (
+      error.message.includes('FOREIGN KEY constraint') ||
+      error.message.includes('references non-existent') ||
+      error.message.includes('not found in this campaign') ||
+      error.message.includes('required')
+    ) {
       return res.status(400).json({
         success: false,
         error: {
           code: 'CONSTRAINT_VIOLATION',
-          message: 'Foreign key constraint violation',
+          message: error.message,
           details: { error: error.message },
-          suggestion: 'Ensure all referenced entities exist before creating this entry',
+          suggestion: 'Ensure all referenced entities exist and required fields are provided',
+        },
+        operation_id: res.getHeader('X-Operation-ID'),
+      });
+    }
+
+    // Check for campaign not found
+    if (error.message.includes('Campaign not found') || error.message.includes('access denied')) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Campaign not found',
+          details: {},
+          suggestion: 'Verify the campaign ID is correct',
         },
         operation_id: res.getHeader('X-Operation-ID'),
       });
@@ -242,12 +275,16 @@ router.patch('/campaigns/:campaignId/database/:category/:entryId', async (req: R
     }
 
     // Check for constraint violations
-    if (error.message.includes('FOREIGN KEY constraint')) {
+    if (
+      error.message.includes('FOREIGN KEY constraint') ||
+      error.message.includes('references non-existent') ||
+      error.message.includes('not found in this campaign')
+    ) {
       return res.status(400).json({
         success: false,
         error: {
           code: 'CONSTRAINT_VIOLATION',
-          message: 'Foreign key constraint violation',
+          message: error.message,
           details: { error: error.message },
           suggestion: 'Ensure all referenced entities exist',
         },
@@ -437,27 +474,36 @@ router.get('/campaigns/:campaignId/database/:category/:entryId/children', async 
 router.get('/campaigns/:campaignId/recaps', async (req: Request, res: Response): Promise<any> => {
   try {
     const { campaignId } = req.params;
+
+    // Validate campaign exists
+    if (!ExternalAPIService.validateCampaign(campaignId)) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Campaign not found',
+          details: { campaignId },
+          suggestion: 'Verify the campaign ID is correct',
+        },
+        operation_id: res.getHeader('X-Operation-ID'),
+      });
+    }
+
     const start_session = parseInt(req.query.start_session as string);
     const end_session = parseInt(req.query.end_session as string);
     const search = req.query.search as string;
     const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
-    const sort = (req.query.sort as string) || '-session_number';
 
-    // Mock implementation - would integrate with Feature 014 SessionRecapService
-    const startTime = Date.now();
-
-    const data: any[] = []; // Would query session_recaps table
-    const execution_time_ms = Date.now() - startTime;
+    const result = await ExternalAPIService.queryRecaps(campaignId, {
+      start_session,
+      end_session,
+      search,
+      limit,
+    });
 
     return res.status(200).json({
-      success: true,
-      data,
-      pagination: {
-        limit,
-        total: data.length,
-      },
+      ...result,
       operation_id: res.getHeader('X-Operation-ID'),
-      execution_time_ms,
     });
   } catch (error: any) {
     return res.status(500).json({
@@ -480,6 +526,21 @@ router.get('/campaigns/:campaignId/recaps', async (req: Request, res: Response):
 router.get('/campaigns/:campaignId/graphs', async (req: Request, res: Response): Promise<any> => {
   try {
     const { campaignId } = req.params;
+
+    // Validate campaign exists
+    if (!ExternalAPIService.validateCampaign(campaignId)) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Campaign not found',
+          details: { campaignId },
+          suggestion: 'Verify the campaign ID is correct',
+        },
+        operation_id: res.getHeader('X-Operation-ID'),
+      });
+    }
+
     const graph_type = req.query.graph_type as string;
     const node_type = req.query.node_type as string;
     const include_edges = req.query.include_edges !== 'false';

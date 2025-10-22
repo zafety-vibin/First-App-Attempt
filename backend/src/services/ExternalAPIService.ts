@@ -228,8 +228,33 @@ export class ExternalAPIService {
 
   static async queryRecaps(campaignId: string, filters?: any): Promise<any> {
     const startTime = Date.now();
-    const data = db.prepare('SELECT * FROM session_recaps WHERE campaign_id = ? ORDER BY session_number DESC LIMIT 10').all(campaignId);
-    return { success: true, data, pagination: { limit: 10, total: (data as any[]).length }, execution_time_ms: Date.now() - startTime };
+    const limit = filters?.limit || 10;
+
+    let query = 'SELECT * FROM session_recaps WHERE campaign_id = ?';
+    const params: any[] = [campaignId];
+
+    if (filters?.start_session) {
+      query += ' AND session_number >= ?';
+      params.push(filters.start_session);
+    }
+
+    if (filters?.end_session) {
+      query += ' AND session_number <= ?';
+      params.push(filters.end_session);
+    }
+
+    if (filters?.search) {
+      query += ' AND (summary LIKE ? OR name LIKE ?)';
+      const searchPattern = `%${filters.search}%`;
+      params.push(searchPattern, searchPattern);
+    }
+
+    query += ' ORDER BY session_number DESC LIMIT ?';
+    params.push(limit);
+
+    const data = db.prepare(query).all(...params);
+
+    return { success: true, data, pagination: { limit, total: (data as any[]).length }, execution_time_ms: Date.now() - startTime };
   }
 
   static cleanupExpiredConfirmations(): void {

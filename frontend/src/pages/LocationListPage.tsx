@@ -26,12 +26,50 @@ export const LocationListPage: React.FC = () => {
       header: 'Name',
       cell: (info) => info.getValue(),
       size: 200,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
+    },
+    {
+      accessorKey: 'player_knowledge',
+      header: 'Visibility',
+      cell: (info) => {
+        const value = info.getValue() as string;
+        const labelMap: Record<string, string> = {
+          system: 'System',
+          common_knowledge: 'Common',
+          player_knowledge: 'Player',
+          dm_only: 'DM Only',
+        };
+        return labelMap[value] || value || 'Common';
+      },
+      size: 120,
+      meta: {
+        editable: true,
+        editableType: 'player_knowledge',
+      },
     },
     {
       accessorKey: 'location_type',
       header: 'Type',
       cell: (info) => info.getValue() || '-',
       size: 120,
+      meta: {
+        editable: true,
+        editableType: 'dropdown',
+        dropdownOptions: [
+          { value: 'City', label: 'City' },
+          { value: 'Town', label: 'Town' },
+          { value: 'Village', label: 'Village' },
+          { value: 'Dungeon', label: 'Dungeon' },
+          { value: 'Wilderness', label: 'Wilderness' },
+          { value: 'Plane', label: 'Plane' },
+          { value: 'Building', label: 'Building' },
+          { value: 'Region', label: 'Region' },
+          { value: 'Other', label: 'Other' },
+        ],
+      },
     },
     {
       accessorKey: 'population',
@@ -41,6 +79,10 @@ export const LocationListPage: React.FC = () => {
         return value ? String(value) : '-';
       },
       size: 100,
+      meta: {
+        editable: true,
+        editableType: 'number',
+      },
     },
     {
       accessorKey: 'description',
@@ -86,6 +128,10 @@ export const LocationListPage: React.FC = () => {
         return tags && tags.length > 0 ? tags.join(', ') : '-';
       },
       size: 150,
+      meta: {
+        editable: true,
+        editableType: 'tags',
+      },
     },
     {
       accessorKey: 'dm_secrets',

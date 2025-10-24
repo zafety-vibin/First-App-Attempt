@@ -25,7 +25,7 @@ export const SessionRecapListPage: React.FC = () => {
       accessorKey: 'name',
       header: 'Name',
       cell: (info) => info.getValue(),
-      size: 200,
+      size: 350,
       meta: {
         editable: true,
         editableType: 'text',
@@ -43,7 +43,7 @@ export const SessionRecapListPage: React.FC = () => {
           return String(value);
         }
       },
-      size: 120,
+      size: 180,
       meta: {
         editable: true,
         editableType: 'text',
@@ -53,7 +53,7 @@ export const SessionRecapListPage: React.FC = () => {
       accessorKey: 'in_game_date_start',
       header: 'In-Game Date',
       cell: (info) => info.getValue() || '-',
-      size: 130,
+      size: 200,
       meta: {
         editable: true,
         editableType: 'text',
@@ -63,7 +63,7 @@ export const SessionRecapListPage: React.FC = () => {
       accessorKey: 'time_passed',
       header: 'Time Passed',
       cell: (info) => info.getValue() || '-',
-      size: 120,
+      size: 180,
       meta: {
         editable: true,
         editableType: 'text',
@@ -76,7 +76,7 @@ export const SessionRecapListPage: React.FC = () => {
         const summary = info.getValue() as string;
         return summary ? (summary.length > 120 ? summary.substring(0, 120) + '...' : summary) : '-';
       },
-      size: 350,
+      size: 500,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -89,7 +89,7 @@ export const SessionRecapListPage: React.FC = () => {
         const events = info.getValue() as string[];
         return events && events.length > 0 ? `${events.length} events` : '-';
       },
-      size: 100,
+      size: 150,
       meta: {
         editable: true,
         editableType: 'tags',
@@ -102,7 +102,7 @@ export const SessionRecapListPage: React.FC = () => {
         const npcs = info.getValue() as string[];
         return npcs && npcs.length > 0 ? `${npcs.length} NPCs` : '-';
       },
-      size: 100,
+      size: 150,
       meta: {
         editable: true,
         editableType: 'tags',
@@ -121,7 +121,7 @@ export const SessionRecapListPage: React.FC = () => {
           return String(value);
         }
       },
-      size: 110,
+      size: 180,
       meta: {
         editable: true,
         editableType: 'tags',
@@ -134,7 +134,7 @@ export const SessionRecapListPage: React.FC = () => {
         const tags = info.getValue() as string[];
         return tags && tags.length > 0 ? tags.join(', ') : '-';
       },
-      size: 150,
+      size: 250,
       meta: {
         editable: true,
         editableType: 'tags',
@@ -147,7 +147,7 @@ export const SessionRecapListPage: React.FC = () => {
         const consequences = info.getValue() as string;
         return consequences ? <TruncatedText text={consequences} maxLength={100} /> : '-';
       },
-      size: 250,
+      size: 400,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -160,7 +160,7 @@ export const SessionRecapListPage: React.FC = () => {
         const behindScenes = info.getValue() as string;
         return behindScenes ? <TruncatedText text={behindScenes} maxLength={100} /> : '-';
       },
-      size: 250,
+      size: 400,
       meta: {
         editable: true,
         editableType: 'textarea',

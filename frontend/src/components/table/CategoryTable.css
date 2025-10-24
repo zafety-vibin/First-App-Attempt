@@ -13,9 +13,11 @@
 }
 
 .category-table {
-  width: 100%;
+  min-width: 100%;
+  width: auto;
   border-collapse: collapse;
   border-spacing: 0;
+  table-layout: auto;
 }
 
 .category-table-header {
@@ -33,6 +35,7 @@
   font-size: 0.875rem;
   color: var(--text-secondary, #6b7280);
   white-space: nowrap;
+  min-width: fit-content;
 }
 
 .category-table-header-cell:first-child {
@@ -75,10 +78,42 @@
   }
 }
 
+/* Column resizer handle */
+.column-resizer {
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  width: 5px;
+  background: transparent;
+  cursor: col-resize;
+  user-select: none;
+  touch-action: none;
+  z-index: 1;
+}
+
+.column-resizer:hover {
+  background: #3b82f6;
+}
+
+.column-resizer.isResizing {
+  background: #2563eb;
+  width: 3px;
+}
+
+/* Make header cells position relative for resize handle */
+.category-table-header-cell {
+  position: relative;
+}
+
+.sortable-header {
+  position: relative;
+}
+
 /* Scrollbar styling */
 .category-table-wrapper::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 12px;
+  height: 12px;
 }
 
 .category-table-wrapper::-webkit-scrollbar-track {
@@ -87,7 +122,7 @@
 
 .category-table-wrapper::-webkit-scrollbar-thumb {
   background-color: var(--border-hover, #d1d5db);
-  border-radius: 4px;
+  border-radius: 6px;
 }
 
 .category-table-wrapper::-webkit-scrollbar-thumb:hover {

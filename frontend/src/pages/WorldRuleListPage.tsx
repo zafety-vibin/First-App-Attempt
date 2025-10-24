@@ -15,7 +15,7 @@ export const WorldRuleListPage: React.FC = () => {
       accessorKey: 'name',
       header: 'Name',
       cell: (info) => info.getValue(),
-      size: 200,
+      size: 350,
       meta: {
         editable: true,
         editableType: 'text',
@@ -34,7 +34,7 @@ export const WorldRuleListPage: React.FC = () => {
         };
         return labelMap[value] || value || 'Common';
       },
-      size: 120,
+      size: 180,
       meta: {
         editable: true,
         editableType: 'player_knowledge',
@@ -44,7 +44,7 @@ export const WorldRuleListPage: React.FC = () => {
       accessorKey: 'rule_type',
       header: 'Type',
       cell: (info) => info.getValue() || '-',
-      size: 130,
+      size: 220,
       meta: {
         editable: true,
         editableType: 'dropdown',
@@ -65,7 +65,7 @@ export const WorldRuleListPage: React.FC = () => {
         const desc = info.getValue() as string;
         return desc ? (desc.length > 150 ? desc.substring(0, 150) + '...' : desc) : '-';
       },
-      size: 400,
+      size: 600,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -78,7 +78,7 @@ export const WorldRuleListPage: React.FC = () => {
         const exc = info.getValue() as string;
         return exc ? (exc.length > 80 ? exc.substring(0, 80) + '...' : exc) : '-';
       },
-      size: 250,
+      size: 400,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -91,7 +91,7 @@ export const WorldRuleListPage: React.FC = () => {
         const rules = info.getValue() as string[];
         return rules && rules.length > 0 ? `${rules.length} rules` : '-';
       },
-      size: 120,
+      size: 200,
       meta: {
         editable: true,
         editableType: 'tags',
@@ -104,7 +104,7 @@ export const WorldRuleListPage: React.FC = () => {
         const tags = info.getValue() as string[];
         return tags && tags.length > 0 ? tags.join(', ') : '-';
       },
-      size: 150,
+      size: 250,
       meta: {
         editable: true,
         editableType: 'tags',

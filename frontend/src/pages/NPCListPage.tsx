@@ -25,7 +25,7 @@ export const NPCListPage: React.FC = () => {
       accessorKey: 'name',
       header: 'Name',
       cell: (info) => info.getValue(),
-      size: 180,
+      size: 250,
       meta: {
         editable: true,
         editableType: 'text',
@@ -44,7 +44,7 @@ export const NPCListPage: React.FC = () => {
         };
         return labelMap[value] || value || 'Common';
       },
-      size: 120,
+      size: 180,
       meta: {
         editable: true,
         editableType: 'player_knowledge',
@@ -54,7 +54,7 @@ export const NPCListPage: React.FC = () => {
       accessorKey: 'race',
       header: 'Race',
       cell: (info) => info.getValue() || '-',
-      size: 120,
+      size: 200,
       meta: {
         editable: true,
         editableType: 'text',
@@ -73,7 +73,7 @@ export const NPCListPage: React.FC = () => {
           return String(value);
         }
       },
-      size: 150,
+      size: 250,
       meta: {
         editable: true,
         editableType: 'tags', // Array of classes
@@ -86,7 +86,7 @@ export const NPCListPage: React.FC = () => {
         const value = info.getValue();
         return value ? String(value) : '-';
       },
-      size: 80,
+      size: 100,
       meta: {
         editable: true,
         editableType: 'number',
@@ -96,7 +96,7 @@ export const NPCListPage: React.FC = () => {
       accessorKey: 'alignment',
       header: 'Alignment',
       cell: (info) => info.getValue() || '-',
-      size: 100,
+      size: 180,
       meta: {
         editable: true,
         editableType: 'dropdown',
@@ -117,7 +117,7 @@ export const NPCListPage: React.FC = () => {
       accessorKey: 'relationship_to_party',
       header: 'Party Relation',
       cell: (info) => info.getValue() || '-',
-      size: 130,
+      size: 200,
       meta: {
         editable: true,
         editableType: 'dropdown',
@@ -138,7 +138,7 @@ export const NPCListPage: React.FC = () => {
         const app = info.getValue() as string;
         return app ? <TruncatedText text={app} maxLength={80} /> : '-';
       },
-      size: 250,
+      size: 400,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -151,7 +151,7 @@ export const NPCListPage: React.FC = () => {
         const traits = info.getValue() as string;
         return traits ? <TruncatedText text={traits} maxLength={60} /> : '-';
       },
-      size: 200,
+      size: 350,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -164,7 +164,7 @@ export const NPCListPage: React.FC = () => {
         const mot = info.getValue() as string;
         return mot ? <TruncatedText text={mot} maxLength={60} /> : '-';
       },
-      size: 200,
+      size: 350,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -177,7 +177,7 @@ export const NPCListPage: React.FC = () => {
         const tags = info.getValue() as string[];
         return tags && tags.length > 0 ? tags.join(', ') : '-';
       },
-      size: 150,
+      size: 250,
       meta: {
         editable: true,
         editableType: 'tags',
@@ -190,7 +190,7 @@ export const NPCListPage: React.FC = () => {
         const secrets = info.getValue() as string;
         return secrets ? <TruncatedText text={secrets} maxLength={100} /> : '-';
       },
-      size: 300,
+      size: 450,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -203,7 +203,7 @@ export const NPCListPage: React.FC = () => {
         const relevance = info.getValue() as string;
         return relevance ? <TruncatedText text={relevance} maxLength={100} /> : '-';
       },
-      size: 300,
+      size: 450,
       meta: {
         editable: true,
         editableType: 'textarea',

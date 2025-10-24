@@ -8,6 +8,8 @@ export interface SortableTableHeaderProps {
   currentSortColumn: string | null;
   currentSortDirection: SortDirection;
   onSort: (column: string) => void;
+  width?: number;
+  resizeHandle?: React.ReactNode;
   className?: string;
 }
 
@@ -21,6 +23,8 @@ export const SortableTableHeader: React.FC<SortableTableHeaderProps> = ({
   currentSortColumn,
   currentSortDirection,
   onSort,
+  width,
+  resizeHandle,
   className = '',
 }) => {
   const isSorted = currentSortColumn === sortKey;
@@ -60,6 +64,7 @@ export const SortableTableHeader: React.FC<SortableTableHeaderProps> = ({
       onClick={() => onSort(sortKey)}
       aria-sort={ariaSort}
       role="columnheader"
+      style={{ width: width ? `${width}px` : undefined, position: 'relative' }}
     >
       <button
         type="button"
@@ -69,6 +74,7 @@ export const SortableTableHeader: React.FC<SortableTableHeaderProps> = ({
         <span className="sortable-header-label">{label}</span>
         {getSortIcon()}
       </button>
+      {resizeHandle}
     </th>
   );
 };

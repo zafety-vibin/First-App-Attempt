@@ -25,7 +25,7 @@ export const QuestListPage: React.FC = () => {
       accessorKey: 'name',
       header: 'Name',
       cell: (info) => info.getValue(),
-      size: 200,
+      size: 350,
       meta: {
         editable: true,
         editableType: 'text',
@@ -44,7 +44,7 @@ export const QuestListPage: React.FC = () => {
         };
         return labelMap[value] || value || 'Common';
       },
-      size: 120,
+      size: 180,
       meta: {
         editable: true,
         editableType: 'player_knowledge',
@@ -57,7 +57,7 @@ export const QuestListPage: React.FC = () => {
         const status = info.getValue() as string;
         return status ? status.replace('_', ' ').toUpperCase() : '-';
       },
-      size: 120,
+      size: 180,
       meta: {
         editable: true,
         editableType: 'dropdown',
@@ -76,7 +76,7 @@ export const QuestListPage: React.FC = () => {
         const desc = info.getValue() as string;
         return desc ? <TruncatedText text={desc} maxLength={100} /> : '-';
       },
-      size: 300,
+      size: 450,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -89,7 +89,7 @@ export const QuestListPage: React.FC = () => {
         const objectives = info.getValue() as string[];
         return objectives && objectives.length > 0 ? `${objectives.length} objectives` : '-';
       },
-      size: 110,
+      size: 180,
       meta: {
         editable: true,
         editableType: 'tags',
@@ -102,7 +102,7 @@ export const QuestListPage: React.FC = () => {
         const rewards = info.getValue() as string;
         return rewards ? <TruncatedText text={rewards} maxLength={60} /> : '-';
       },
-      size: 200,
+      size: 350,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -115,7 +115,7 @@ export const QuestListPage: React.FC = () => {
         const npcs = info.getValue() as string[];
         return npcs && npcs.length > 0 ? `${npcs.length} NPCs` : '-';
       },
-      size: 120,
+      size: 180,
       meta: {
         editable: true,
         editableType: 'tags',
@@ -128,7 +128,7 @@ export const QuestListPage: React.FC = () => {
         const locs = info.getValue() as string[];
         return locs && locs.length > 0 ? `${locs.length} locations` : '-';
       },
-      size: 110,
+      size: 180,
       meta: {
         editable: true,
         editableType: 'tags',
@@ -141,7 +141,7 @@ export const QuestListPage: React.FC = () => {
         const tags = info.getValue() as string[];
         return tags && tags.length > 0 ? tags.join(', ') : '-';
       },
-      size: 150,
+      size: 250,
       meta: {
         editable: true,
         editableType: 'tags',
@@ -154,7 +154,7 @@ export const QuestListPage: React.FC = () => {
         const dmObj = info.getValue() as string;
         return dmObj ? <TruncatedText text={dmObj} maxLength={80} /> : '-';
       },
-      size: 250,
+      size: 400,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -167,7 +167,7 @@ export const QuestListPage: React.FC = () => {
         const dmConseq = info.getValue() as string;
         return dmConseq ? <TruncatedText text={dmConseq} maxLength={80} /> : '-';
       },
-      size: 250,
+      size: 400,
       meta: {
         editable: true,
         editableType: 'textarea',

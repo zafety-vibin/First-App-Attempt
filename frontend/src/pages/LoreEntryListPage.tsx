@@ -15,7 +15,7 @@ export const LoreEntryListPage: React.FC = () => {
       accessorKey: 'name',
       header: 'Name',
       cell: (info) => info.getValue(),
-      size: 200,
+      size: 350,
       meta: {
         editable: true,
         editableType: 'text',
@@ -34,7 +34,7 @@ export const LoreEntryListPage: React.FC = () => {
         };
         return labelMap[value] || value || 'Common';
       },
-      size: 120,
+      size: 180,
       meta: {
         editable: true,
         editableType: 'player_knowledge',
@@ -44,7 +44,7 @@ export const LoreEntryListPage: React.FC = () => {
       accessorKey: 'category',
       header: 'Category',
       cell: (info) => info.getValue() || '-',
-      size: 150,
+      size: 250,
       meta: {
         editable: true,
         editableType: 'dropdown',
@@ -64,7 +64,7 @@ export const LoreEntryListPage: React.FC = () => {
       accessorKey: 'era_period',
       header: 'Era/Period',
       cell: (info) => info.getValue() || '-',
-      size: 130,
+      size: 200,
       meta: {
         editable: true,
         editableType: 'text',
@@ -74,7 +74,7 @@ export const LoreEntryListPage: React.FC = () => {
       accessorKey: 'in_game_date',
       header: 'In-Game Date',
       cell: (info) => info.getValue() || '-',
-      size: 130,
+      size: 200,
       meta: {
         editable: true,
         editableType: 'text',
@@ -84,7 +84,7 @@ export const LoreEntryListPage: React.FC = () => {
       accessorKey: 'historical_accuracy',
       header: 'Accuracy',
       cell: (info) => info.getValue() || '-',
-      size: 110,
+      size: 180,
       meta: {
         editable: true,
         editableType: 'dropdown',
@@ -104,7 +104,7 @@ export const LoreEntryListPage: React.FC = () => {
         const desc = info.getValue() as string;
         return desc ? (desc.length > 120 ? desc.substring(0, 120) + '...' : desc) : '-';
       },
-      size: 350,
+      size: 500,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -117,7 +117,7 @@ export const LoreEntryListPage: React.FC = () => {
         const npcs = info.getValue() as string[];
         return npcs && npcs.length > 0 ? `${npcs.length} NPCs` : '-';
       },
-      size: 100,
+      size: 150,
       meta: {
         editable: true,
         editableType: 'tags',
@@ -130,7 +130,7 @@ export const LoreEntryListPage: React.FC = () => {
         const factions = info.getValue() as string[];
         return factions && factions.length > 0 ? `${factions.length} factions` : '-';
       },
-      size: 110,
+      size: 180,
       meta: {
         editable: true,
         editableType: 'tags',
@@ -143,7 +143,7 @@ export const LoreEntryListPage: React.FC = () => {
         const tags = info.getValue() as string[];
         return tags && tags.length > 0 ? tags.join(', ') : '-';
       },
-      size: 150,
+      size: 250,
       meta: {
         editable: true,
         editableType: 'tags',

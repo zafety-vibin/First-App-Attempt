@@ -1,5 +1,5 @@
-import React from 'react';
-import { useReactTable, getCoreRowModel, ColumnDef } from '@tanstack/react-table';
+import React, { useState } from 'react';
+import { useReactTable, getCoreRowModel, ColumnDef, ColumnResizeMode } from '@tanstack/react-table';
 import { SortableTableHeader } from './SortableTableHeader';
 import { TableRow } from './TableRow';
 import { LoadingSpinner } from '../common/LoadingSpinner';
@@ -38,11 +38,19 @@ export function CategoryTable<T = any>({
   emptyMessage = 'No items found',
   className = '',
 }: CategoryTableProps<T>) {
+  const [columnSizing, setColumnSizing] = useState({});
+
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
     manualSorting: true, // Sorting handled via API
+    columnResizeMode: 'onChange' as ColumnResizeMode,
+    state: {
+      columnSizing,
+    },
+    onColumnSizingChange: setColumnSizing,
+    enableColumnResizing: true,
   });
 
   // Error state
@@ -114,24 +122,43 @@ export function CategoryTable<T = any>({
                 // Check if column is sortable (has enableSorting !== false)
                 const isSortable = columnDef.enableSorting !== false && onSort;
 
-                if (isSortable) {
-                  return (
-                    <SortableTableHeader
-                      key={header.id}
-                      label={headerLabel}
-                      sortKey={sortKey}
-                      currentSortColumn={sortColumn}
-                      currentSortDirection={sortDirection}
-                      onSort={onSort!}
-                    />
-                  );
-                }
+                const resizeHandle = header.column.getCanResize() ? (
+                  <div
+                    onMouseDown={header.getResizeHandler()}
+                    onTouchStart={header.getResizeHandler()}
+                    className={`column-resizer ${header.column.getIsResizing() ? 'isResizing' : ''}`}
+                  />
+                ) : null;
 
-                return (
-                  <th key={header.id} className="category-table-header-cell">
+                const headerCell = isSortable ? (
+                  <SortableTableHeader
+                    key={header.id}
+                    label={headerLabel}
+                    sortKey={sortKey}
+                    currentSortColumn={sortColumn}
+                    currentSortDirection={sortDirection}
+                    onSort={onSort!}
+                    width={header.getSize()}
+                    resizeHandle={resizeHandle}
+                  />
+                ) : (
+                  <th
+                    key={header.id}
+                    className="category-table-header-cell"
+                    style={{ width: header.getSize() }}
+                  >
                     {headerLabel}
+                    {header.column.getCanResize() && (
+                      <div
+                        onMouseDown={header.getResizeHandler()}
+                        onTouchStart={header.getResizeHandler()}
+                        className={`column-resizer ${header.column.getIsResizing() ? 'isResizing' : ''}`}
+                      />
+                    )}
                   </th>
                 );
+
+                return headerCell;
               })}
             </tr>
           </thead>

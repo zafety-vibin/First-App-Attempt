@@ -25,7 +25,7 @@ export const LocationListPage: React.FC = () => {
       accessorKey: 'name',
       header: 'Name',
       cell: (info) => info.getValue(),
-      size: 200,
+      size: 300,
       meta: {
         editable: true,
         editableType: 'text',
@@ -44,7 +44,7 @@ export const LocationListPage: React.FC = () => {
         };
         return labelMap[value] || value || 'Common';
       },
-      size: 120,
+      size: 180,
       meta: {
         editable: true,
         editableType: 'player_knowledge',
@@ -54,7 +54,7 @@ export const LocationListPage: React.FC = () => {
       accessorKey: 'location_type',
       header: 'Type',
       cell: (info) => info.getValue() || '-',
-      size: 120,
+      size: 200,
       meta: {
         editable: true,
         editableType: 'dropdown',
@@ -78,7 +78,7 @@ export const LocationListPage: React.FC = () => {
         const value = info.getValue();
         return value ? String(value) : '-';
       },
-      size: 100,
+      size: 150,
       meta: {
         editable: true,
         editableType: 'number',
@@ -91,7 +91,7 @@ export const LocationListPage: React.FC = () => {
         const desc = info.getValue() as string;
         return desc ? <TruncatedText text={desc} maxLength={100} /> : '-';
       },
-      size: 300,
+      size: 450,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -104,7 +104,7 @@ export const LocationListPage: React.FC = () => {
         const culture = info.getValue() as string;
         return culture ? <TruncatedText text={culture} maxLength={80} /> : '-';
       },
-      size: 250,
+      size: 400,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -117,7 +117,7 @@ export const LocationListPage: React.FC = () => {
         const npcs = info.getValue() as string[];
         return npcs && npcs.length > 0 ? `${npcs.length} NPCs` : '-';
       },
-      size: 120,
+      size: 200,
       meta: {
         editable: true,
         editableType: 'tags',
@@ -130,7 +130,7 @@ export const LocationListPage: React.FC = () => {
         const factions = info.getValue() as string[];
         return factions && factions.length > 0 ? `${factions.length} factions` : '-';
       },
-      size: 120,
+      size: 200,
       meta: {
         editable: true,
         editableType: 'tags',
@@ -143,7 +143,7 @@ export const LocationListPage: React.FC = () => {
         const tags = info.getValue() as string[];
         return tags && tags.length > 0 ? tags.join(', ') : '-';
       },
-      size: 150,
+      size: 250,
       meta: {
         editable: true,
         editableType: 'tags',
@@ -156,7 +156,7 @@ export const LocationListPage: React.FC = () => {
         const secrets = info.getValue() as string;
         return secrets ? <TruncatedText text={secrets} maxLength={100} /> : '-';
       },
-      size: 300,
+      size: 450,
       meta: {
         editable: true,
         editableType: 'textarea',

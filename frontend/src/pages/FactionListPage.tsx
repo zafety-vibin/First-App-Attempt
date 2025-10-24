@@ -25,7 +25,7 @@ export const FactionListPage: React.FC = () => {
       accessorKey: 'name',
       header: 'Name',
       cell: (info) => info.getValue(),
-      size: 200,
+      size: 300,
       meta: {
         editable: true,
         editableType: 'text',
@@ -44,7 +44,7 @@ export const FactionListPage: React.FC = () => {
         };
         return labelMap[value] || value || 'Common';
       },
-      size: 120,
+      size: 180,
       meta: {
         editable: true,
         editableType: 'player_knowledge',
@@ -54,7 +54,7 @@ export const FactionListPage: React.FC = () => {
       accessorKey: 'faction_type',
       header: 'Type',
       cell: (info) => info.getValue() || '-',
-      size: 120,
+      size: 200,
       meta: {
         editable: true,
         editableType: 'dropdown',
@@ -73,7 +73,7 @@ export const FactionListPage: React.FC = () => {
       accessorKey: 'power_level',
       header: 'Power',
       cell: (info) => info.getValue() || '-',
-      size: 100,
+      size: 150,
       meta: {
         editable: true,
         editableType: 'dropdown',
@@ -91,7 +91,7 @@ export const FactionListPage: React.FC = () => {
         const desc = info.getValue() as string;
         return desc ? <TruncatedText text={desc} maxLength={100} /> : '-';
       },
-      size: 300,
+      size: 450,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -104,7 +104,7 @@ export const FactionListPage: React.FC = () => {
         const goals = info.getValue() as string;
         return goals ? <TruncatedText text={goals} maxLength={80} /> : '-';
       },
-      size: 250,
+      size: 400,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -117,7 +117,7 @@ export const FactionListPage: React.FC = () => {
         const res = info.getValue() as string;
         return res ? <TruncatedText text={res} maxLength={60} /> : '-';
       },
-      size: 200,
+      size: 350,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -130,7 +130,7 @@ export const FactionListPage: React.FC = () => {
         const tags = info.getValue() as string[];
         return tags && tags.length > 0 ? tags.join(', ') : '-';
       },
-      size: 150,
+      size: 250,
       meta: {
         editable: true,
         editableType: 'tags',
@@ -143,7 +143,7 @@ export const FactionListPage: React.FC = () => {
         const agenda = info.getValue() as string;
         return agenda ? <TruncatedText text={agenda} maxLength={100} /> : '-';
       },
-      size: 300,
+      size: 450,
       meta: {
         editable: true,
         editableType: 'textarea',

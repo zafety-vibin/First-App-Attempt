@@ -16,7 +16,7 @@ export const ItemListPage: React.FC = () => {
       accessorKey: 'name',
       header: 'Name',
       cell: (info) => info.getValue(),
-      size: 200,
+      size: 350,
       meta: {
         editable: true,
         editableType: 'text',
@@ -35,7 +35,7 @@ export const ItemListPage: React.FC = () => {
         };
         return labelMap[value] || value || 'Common';
       },
-      size: 120,
+      size: 180,
       meta: {
         editable: true,
         editableType: 'player_knowledge',
@@ -45,7 +45,7 @@ export const ItemListPage: React.FC = () => {
       accessorKey: 'item_type',
       header: 'Type',
       cell: (info) => info.getValue() || '-',
-      size: 120,
+      size: 180,
       meta: {
         editable: true,
         editableType: 'dropdown',
@@ -68,7 +68,7 @@ export const ItemListPage: React.FC = () => {
       accessorKey: 'rarity',
       header: 'Rarity',
       cell: (info) => info.getValue() || '-',
-      size: 100,
+      size: 150,
       meta: {
         editable: true,
         editableType: 'dropdown',
@@ -86,7 +86,7 @@ export const ItemListPage: React.FC = () => {
       accessorKey: 'value',
       header: 'Value',
       cell: (info) => info.getValue() || '-',
-      size: 100,
+      size: 150,
       meta: {
         editable: true,
         editableType: 'text',
@@ -99,7 +99,7 @@ export const ItemListPage: React.FC = () => {
         const desc = info.getValue() as string;
         return desc ? (desc.length > 100 ? desc.substring(0, 100) + '...' : desc) : '-';
       },
-      size: 300,
+      size: 450,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -112,7 +112,7 @@ export const ItemListPage: React.FC = () => {
         const props = info.getValue() as string;
         return props ? (props.length > 80 ? props.substring(0, 80) + '...' : props) : '-';
       },
-      size: 250,
+      size: 400,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -125,7 +125,7 @@ export const ItemListPage: React.FC = () => {
         const value = info.getValue();
         return value ? 'NPC' : '-';
       },
-      size: 100,
+      size: 150,
     },
     {
       accessorKey: 'owner_pc_id',
@@ -134,7 +134,7 @@ export const ItemListPage: React.FC = () => {
         const value = info.getValue();
         return value ? 'PC' : '-';
       },
-      size: 100,
+      size: 150,
     },
     {
       accessorKey: 'location_id',
@@ -143,7 +143,7 @@ export const ItemListPage: React.FC = () => {
         const value = info.getValue();
         return value ? 'Yes' : '-';
       },
-      size: 100,
+      size: 150,
     },
     {
       accessorKey: 'tags',
@@ -152,7 +152,7 @@ export const ItemListPage: React.FC = () => {
         const tags = info.getValue() as string[];
         return tags && tags.length > 0 ? tags.join(', ') : '-';
       },
-      size: 150,
+      size: 250,
       meta: {
         editable: true,
         editableType: 'tags',
@@ -165,7 +165,7 @@ export const ItemListPage: React.FC = () => {
         const secretProps = info.getValue() as string;
         return secretProps ? <TruncatedText text={secretProps} maxLength={100} /> : '-';
       },
-      size: 250,
+      size: 400,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -178,7 +178,7 @@ export const ItemListPage: React.FC = () => {
         const trueNature = info.getValue() as string;
         return trueNature ? <TruncatedText text={trueNature} maxLength={100} /> : '-';
       },
-      size: 250,
+      size: 400,
       meta: {
         editable: true,
         editableType: 'textarea',

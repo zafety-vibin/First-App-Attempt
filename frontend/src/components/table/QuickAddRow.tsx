@@ -18,6 +18,7 @@ export interface QuickAddRowProps {
  * Shows minimal required fields (name + visibility by default)
  */
 export const QuickAddRow: React.FC<QuickAddRowProps> = ({ onAdd, columns }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
   const [values, setValues] = useState<Record<string, any>>({});
   const [isAdding, setIsAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,6 +59,22 @@ export const QuickAddRow: React.FC<QuickAddRowProps> = ({ onAdd, columns }) => {
     }
   };
 
+  const handleExpand = () => {
+    setIsExpanded(true);
+    // Focus first input after expand
+    setTimeout(() => {
+      if (firstInputRef.current) {
+        firstInputRef.current.focus();
+      }
+    }, 0);
+  };
+
+  const handleCollapse = () => {
+    setIsExpanded(false);
+    setValues({});
+    setError(null);
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent, isLastField: boolean) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -65,13 +82,31 @@ export const QuickAddRow: React.FC<QuickAddRowProps> = ({ onAdd, columns }) => {
         handleAdd();
       }
     } else if (e.key === 'Escape') {
-      setValues({});
-      setError(null);
+      handleCollapse();
     }
   };
 
+  // Collapsed state: Just a subtle "Add below..." button
+  if (!isExpanded) {
+    return (
+      <tr className="quick-add-row quick-add-row-collapsed">
+        <td colSpan={100} className="quick-add-cell-collapsed">
+          <button
+            className="quick-add-expand-button"
+            onClick={handleExpand}
+            title="Click to add a new entry"
+          >
+            <span className="quick-add-plus">+</span>
+            <span className="quick-add-expand-text">Add below...</span>
+          </button>
+        </td>
+      </tr>
+    );
+  }
+
+  // Expanded state: Show input fields
   return (
-    <tr className="quick-add-row">
+    <tr className="quick-add-row quick-add-row-expanded">
       {columns.map((column, index) => {
         const isFirstField = index === 0;
         const isLastField = index === columns.length - 1;
@@ -140,6 +175,14 @@ export const QuickAddRow: React.FC<QuickAddRowProps> = ({ onAdd, columns }) => {
           title="Add (or press Enter in last field)"
         >
           {isAdding ? 'Adding...' : '+ Add'}
+        </button>
+        <button
+          className="quick-add-cancel-button"
+          onClick={handleCollapse}
+          disabled={isAdding}
+          title="Cancel (Esc)"
+        >
+          Cancel
         </button>
         {error && <span className="quick-add-error">{error}</span>}
       </td>

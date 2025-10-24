@@ -6,222 +6,53 @@ Auto-generated from feature plans. Last updated: 2025-10-22
 
 Wrldbldr MCP Manager is a TTRPG campaign management webapp that solves the "plan twice" problem for Game Masters. Built as a fully local prototype on localhost using Docker.
 
-## Active Technologies
-- Backend: Node.js 20 LTS + TypeScript 5.0+, Frontend: React 18 + TypeScript 5.0+ + Backend: Express 4.x, Better-SQLite3, crypto (Node.js built-in for random IDs), Frontend: React Router v6, TipTap 2.x (reuse from Feature 003), existing card components (010-create-public-campaign)
-- SQLite3 with Better-SQLite3 (extend campaigns table with public sharing config, add draft/published versions table) (010-create-public-campaign)
-- TypeScript 5.0+ (Node.js 20 LTS) + @modelcontextprotocol/sdk (official Anthropic MCP SDK), Better-SQLite3 (existing), zod (schema validation) (011-create-model-context)
-- SQLite3 (existing database, mcp_tool_logs table added) (011-create-model-context)
+## Core Technology Stack
 
-**Infrastructure** (002-create-the-authentication):
+**Infrastructure**:
 - Docker Compose 2.x for service orchestration
-- Keycloak official image (Quay.io) for OAuth 2.0 authentication
+- Keycloak (Quay.io) for OAuth 2.0 authentication
 - SQLite3 with Better-SQLite3 library (WAL mode enabled)
 
-**Frontend** (002-create-the-authentication):
-- React 18 + TypeScript 5.0+
-- Vite for dev server and build
-- React Router v6 for routing
-- Keycloak-js for OAuth 2.0 client
-- Axios for HTTP client with token injection
+**Frontend**:
+- React 18 + TypeScript 5.0+, Vite, React Router v6
+- Auth: Keycloak-js, Axios with token injection
+- UI Components: TipTap 2.x (rich text), Radix UI (dialogs/dropdowns/tabs), Konva.js + react-konva (interactive maps), react-grid-layout 1.3.4 (dashboard canvas), TanStack Table v8 (database tables), React Beautiful DnD (kanban boards), react-color (color picker), react-window (virtualization), Lucide React (icons)
+- State Management: Context API (AuthContext, InformationLevelContext, ViewModeContext, AITabContext, BYOLLMContext)
+- File Handling: PDF/DOCX/TXT/MD uploads (multipart/form-data)
 
-**Frontend** (003-create-a-notion):
-- TipTap 2.x for rich text editing (ProseMirror-based)
-- @dnd-kit for drag-and-drop tree reordering
-- cmdk (Vercel's command menu) for slash commands
-- TanStack Table v8 for database table views
-- React Beautiful DnD for kanban boards
-- Lucide React for icons + emoji picker
+**Backend**:
+- Node.js 20 LTS + TypeScript 5.0+, Express 4.x, Better-SQLite3
+- Auth: Keycloak Connect for token validation, CORS middleware
+- AI: OpenAI SDK, Anthropic SDK, Server-Sent Events (SSE) streaming, pdf-parse, mammoth (DOCX), Levenshtein distance (deduplication threshold 0.7)
+- MCP: @modelcontextprotocol/sdk (⚠️ needs v0.5.0 refactoring), Zod schemas, stdio transport (JSON-RPC)
+- Logging: Winston with daily-rotate-file (Feature 018)
+- Crypto: Node.js crypto (AES-256-GCM encryption, random IDs), jose (JWT handling)
+- **BaseCategoryService** (Feature 014): Abstract base class enforcing uniform CRUD interface across all 13 category services (NPCService, FactionService, LocationService, SessionRecapService, QuestService, PlayerCharacterService, LoreEntryService, WorldRuleService, PlanarForceService, SessionPrepService, CustomMechanicService, ItemService, CreatureService). Standard interface: `create(data, options?)`, `update(id, data, options?)`, `delete(id, options?)`, `findById(id)`, `list(filters, pagination, sort?, order?)`. Optional ownership validation via OperationOptions. 60-70% code reduction per service (-7,110 lines total).
 
-**Frontend** (004-create-a-tagging):
-- React Context API for InformationLevelContext and ViewModeContext
-- localStorage for view mode persistence with cross-tab sync via storage event
-- TipTap custom node decorations for secret visual indicators
-- Radix UI Dropdown Menu for accessible view mode toggle
-- react-window for virtualizing large filtered card lists
-
-**Frontend** (005-create-the-ai):
-- Radix UI Dialog for pull-down tab UI (Import AI and Planning AI tabs)
-- React Context API for AITabContext (Import/Planning state management)
-- EventSource for Server-Sent Events (SSE) streaming from LLM
-- File upload components for PDF, DOCX, TXT, MD (multipart/form-data)
-- Knowledge graph visualization (Political-Web active filtering)
-
-**Frontend** (007-create-the-interactive):
-- Konva.js + react-konva for interactive map canvas (zoom, pan, drag-drop pins)
-- react-color for zone color picker
-- Radix UI Tabs for multi-map switching
-- Canvas-based rendering for 500+ pins with 60fps performance
-
-**Frontend** (008-create-byollm-configuration):
-- Radix UI Dropdown Menu for provider selection (OpenAI, Anthropic, Custom Endpoint)
-- axios for OAuth flow initiation and API requests
-- EventSource for real-time retry notifications during rate limit handling
-- React Context API for BYOLLMContext (active configuration, credits, connection status)
-- Masked input components for API key entry (security)
-- 11 new components: BYOLLMSettings, ProviderSelector, OAuthButton, APIKeyInput, CreditsDisplay, ModelSelector, CustomEndpointConfig, ConnectionTest, CustomSystemPrompt, ScopeSelector, PrivacyNotice, BYOLLMBlockingError
-
-**Backend** (002-create-the-authentication):
-- Node.js 20 LTS + TypeScript 5.0+
-- Express 4.x for REST API
-- Keycloak Connect for token validation
-- Better-SQLite3 for database operations
-- CORS middleware for localhost:3000 ↔ localhost:3001
-
-**Backend** (003-create-a-notion):
-- SQLite JSON1 extension for JSONB columns (rich text, database schemas)
+**Database Architecture**:
+- SQLite JSON1 extension for JSONB columns (rich text, graph storage, database schemas)
 - Adjacency list + materialized path for card hierarchy
-- ProseMirror JSON format for rich text storage
-
-**Backend** (004-create-a-tagging):
-- Express middleware pattern for X-View-Mode header filtering
-- SQLite indexes on information_level_id and hierarchical flag
-- Server-side view mode validation before API responses
-
-**Backend** (005-create-the-ai):
-- OpenAI SDK for GPT-3.5/GPT-4 streaming (user-provided credentials)
-- Anthropic SDK for Claude streaming (user-provided credentials)
-- pdf-parse for PDF file parsing
-- mammoth for DOCX file parsing
-- multer for multipart/form-data file uploads
-- Server-Sent Events (SSE) for LLM streaming responses
-- Levenshtein distance algorithm for entity deduplication (fuzzy matching threshold 0.7)
-- SQLite JSON1 extension for graph JSONB storage (nodes, edges, chat history)
-- Active filtering: hybrid time-based (last 5 sessions) + tag-based for Political-Web/Campaign-Story graphs
-
-**Backend** (007-create-the-interactive):
-- multer for map image uploads (multipart/form-data, 10MB limit)
-- SQLite BLOB storage for map images with client-side compression
-- Extends cards table with map_enabled flag and pin/zone/layer columns
-- New table: map_images with BLOB image_data
-- Absolute pixel coordinates (x, y integers) for pins and zone vertices
-
-**Backend** (008-create-byollm-configuration):
-- Node.js crypto module for AES-256-GCM encryption (prototype-level, local credentials only)
-- axios for provider API calls (OpenAI, Anthropic, Custom Endpoint)
-- jose for JWT handling during OAuth 2.0 flows
-- OAuth 2.0 Authorization Code Flow + PKCE (Proof Key for Code Exchange) for OpenAI and Anthropic
-- 3 new tables: byollm_configs (encrypted credentials, model config, custom prompts), provider_credits (cached balance, org name, 5min TTL), oauth_sessions (state, code_verifier, 10min TTL)
-- New services: BYOLLMConfigService (CRUD, scope resolution global/campaign), OAuthFlowService (initiate, callback, token exchange), ProviderClientService (credits, models, connection test), EncryptionService (AES-256-GCM encrypt/decrypt), MCPConfigService (automatic streaming, timeout, retry)
-- Rate limit handling: exponential backoff with jitter, respect Retry-After header, max 3 retries, user notification
-- Credentials NEVER transmitted to Wrldbldr MCP Manager servers (direct user → provider API calls only)
-
-**Backend** (011-create-model-context):
-- @modelcontextprotocol/sdk for structured AI tool calls (⚠️ needs API refactoring to v0.5.0 patterns)
-- Zod for runtime schema validation (29 tools across 8 categories)
-- stdio transport for JSON-RPC communication (no network exposure)
-- 3 middleware layers: permissions (campaign ownership + information level filtering), transactions (10s timeout with automatic rollback), logging (mcp_tool_logs audit trail)
-- New table: mcp_tool_logs (tool_name, campaign_id, user_id, parameters, result_status, error_message, execution_time_ms, created_at)
-- Reuses existing services: CardService, KnowledgeGraphService, InformationLevelService (no duplication)
-- 29 tools: 6 card operations, 5 hierarchy navigation, 4 knowledge graph operations, 2 session recap queries, 2 information level discovery, 3 database card operations, 2 map card operations, 3 resources, 2 prompts
-
-**Backend** (014-create-the-database - STANDARDIZED 2025-10-22):
-- **BaseCategoryService**: Abstract base class enforcing uniform CRUD interface across all 13 categories
-- All 13 category services extend base: NPCService, FactionService, LocationService, SessionRecapService, QuestService, PlayerCharacterService, LoreEntryService, WorldRuleService, PlanarForceService, SessionPrepService, CustomMechanicService, ItemService, CreatureService
-- Standard interface: `create(data, options?)`, `update(id, data, options?)`, `delete(id, options?)`, `findById(id)`, `list(filters, pagination, sort?, order?)`
-- Optional ownership validation via OperationOptions `{ ownerId?: string, skipValidation?: boolean }`
-- Universal field handling: 10 shared fields auto-populated (id, campaign_id, name, description, core_status, player_knowledge, tags, created_at, updated_at, custom_fields)
-- JSON field parsing utilities for tags, custom_fields, and category-specific arrays
-- Code reduction: 60-70% less code per service (**-7,110 lines total!**)
-- Better-SQLite3 with 14 tables: 13 category tables + custom_field_definitions
-- Information filtering middleware: extractViewMode (X-View-Mode header), stripDmFields (player_view response filtering), getPlayerKnowledgeFilter (SQL WHERE clause generation)
-- Foreign key relationships: explicit FK columns with CASCADE (campaign_id) and SET NULL (faction_id, superior_npc_id, parent_location_id, quest_giver_id, etc.)
-- Self-referential FKs with circular reference detection: superior_npc_id, parent_location_id, related_rules
-- JSON arrays for many-to-many: locations[], key_members[], allied_factions[], npcs_to_prep[], etc. (no junction tables in v1)
-- Session prep one-way linking: npcs_to_prep/locations_to_prep reference canonical entities without reverse lookups
-- Canonical enforcement: SessionRecap always is_canon=1/canonical_status='canon', SessionPrep always is_canon=0/canonical_status='hypothetical'/player_knowledge='dm_only'
+- Foreign keys enforced (`PRAGMA foreign_keys = ON`) with CASCADE (campaign_id) and SET NULL (faction_id, superior_npc_id, etc.)
+- Self-referential FKs with circular reference detection
+- JSON arrays for many-to-many relationships (no junction tables in v1)
+- Universal Fields (Feature 014): All 13 categories share 10 common fields (id, campaign_id, name, description, core_status, player_knowledge, tags, created_at, updated_at, custom_fields)
+- Information filtering middleware: extractViewMode (X-View-Mode header), stripDmFields (player_view filtering), getPlayerKnowledgeFilter (SQL WHERE clause generation)
 - Performance targets: <100ms single entity read, <500ms list queries (100 results)
 
-**Frontend** (015-create-the-dashboard):
-- react-grid-layout 1.3.4 + react-resizable 3.0.4 for drag-drop canvas (12-column grid, 10px rows, responsive breakpoints lg/md/sm)
-- TipTap 2.x for category landing page rich text editor (reuse from Feature 003)
-- 7 widget components with size-adaptive rendering (compact 1x1/2x2, detailed 3x3+)
-- ViewModeToggle with eye icon (open=DM, closed=Player) for information filtering integration
-- useDashboardCanvas and useCategoryLandingCanvas hooks for canvas state management with 500ms debounced auto-save
-- WidgetRegistry with 7 widgets: NPCSummaryWidget, LocationExplorerWidget, FactionPowerWidget, QuestTrackerWidget, SessionTimelineWidget, PlayerCharactersWidget, RecentActivityWidget
-- BaseWidget wrapper component with drag handle and remove button
-- WidgetPicker modal for adding widgets to canvas
-- CategoryLandingCanvas and CategoryLandingTextEditor components for 13 category pages
-
-**Backend** (015-create-the-dashboard):
-- Better-SQLite3 with 2 new tables: dashboard_configs (dashboard layouts), category_landing_configs (category canvas + rich text descriptions)
-- JSONB layout format for react-grid-layout configuration persistence
-- 8 REST API routes: GET/POST/PUT/DELETE for dashboard configs and category landing configs
-- Per-user per-campaign layout persistence with CASCADE delete on campaign_id and user_id foreign keys
-- DashboardConfigService and CategoryLandingConfigService for CRUD operations
-- widgetDataService with 7 API integrations fetching from Feature 014 category tables
-- Migration 015-dashboard-canvas.sql creating both tables with proper indexes and unique constraints
-
-**Backend** (018-create-an-external - NEW):
-- **Express 4.x on port 3002** (separate from main app on 3001)
-- **Winston** for JSON logging with daily rotation (logs/external-api/YYYY-MM-DD.log)
-- **Dual audit logging**: Winston files + api_requests SQLite table (30-day retention)
-- **8 API endpoint groups**: Health, Database Query, Database Create, Database Update, Database Delete (two-phase confirmation), Hierarchy Navigation, Session Recap Timeline, Knowledge Graphs
-- **ExternalAPIService**: Orchestrates all 13 category services with uniform interface
-- **AuditLogService**: Async fire-and-forget logging (doesn't block responses)
-- **Middleware**: externalApiCors (localhost wildcard origins), auditLogger (operation tracking with X-Operation-ID header)
-- **Information level filtering**: X-View-Mode header (dm_view vs player_view)
-- **Two-phase delete confirmation**: 60s token expiry prevents accidental deletions
-- **Campaign isolation**: Automatic filtering by campaign_id
-- **AI-friendly errors**: Structured error responses with codes and suggestions (VALIDATION_ERROR, NOT_FOUND, CONSTRAINT_VIOLATION, etc.)
-- **Performance**: <100ms queries, <200ms writes, <300ms hierarchy navigation
-- **Testing**: 49/49 contract tests passing, 8 integration tests, 2 unit tests
-- **Access**: http://localhost:3002/api/v1/external/health
-
-**Testing** (002-create-the-authentication):
-- Vitest + React Testing Library (frontend unit tests)
-- Playwright (frontend E2E tests)
-- Vitest + Supertest (backend contract tests)
-
-**Testing** (003-create-a-notion):
-- Frontend: Vitest + React Testing Library (card components, slash commands)
-- Backend: Vitest + Supertest (card CRUD, hierarchy validation, circular ref detection)
-- E2E: Playwright (create card → nest → database CRUD → view switching → drag reorder)
-
-**Testing** (004-create-a-tagging):
-- Frontend: Vitest (InformationLevelContext, ViewModeContext, useFilteredCards hook)
-- Backend: Vitest + Supertest (information levels CRUD, view mode filtering, partial visibility)
-- E2E: Playwright (create custom level → assign to card → toggle view mode → verify filtering → database partial visibility → delete level)
-
-**Testing** (005-create-the-ai):
-- Frontend: Vitest (AITabContext, SSE streaming hooks, file upload components)
-- Backend: Vitest + Supertest (import/planning sessions, approval summary, batch revert, active filtering)
-- E2E: Playwright (import session recap → upload file → chat with AI → approve → verify graph nodes → revert batch → planning session → verify immediate updates)
-
-**Testing** (007-create-the-interactive):
-- Frontend: Vitest (MapCanvas, PinEditor, ZoneEditor, LayerManager, MapTabs components)
-- Backend: Vitest + Supertest (map image upload, pin/zone/layer CRUD, orphaned pin detection)
-- E2E: Playwright (enable map → upload image → add pins → draw zones → toggle layers → nested navigation → information filtering)
-
-**Testing** (008-create-byollm-configuration):
-- Frontend: Vitest (BYOLLMSettings, ProviderSelector, OAuthButton, APIKeyInput, CreditsDisplay, ModelSelector, CustomEndpointConfig, ConnectionTest, BYOLLMBlockingError components)
-- Backend: Vitest + Supertest (BYOLLM config CRUD, OAuth flow initiate/callback, provider API calls, encryption/decryption, connection test, rate limit retry)
-- E2E: Playwright (blocking error → Settings → OAuth flow → authorize → view credits → select model → test connection → save → verify Import AI accessible)
-
-**Testing** (011-create-model-context):
-- Backend: Vitest + Supertest (7 contract tests for tool categories, 3 integration tests for atomic operations/permissions/concurrency)
-- 10 test files created, cannot run until MCP SDK API corrections applied
-- See specs/011-create-model-context/IMPLEMENTATION_NOTES.md for refactoring guide
-
-**Testing** (014-create-the-database):
-- Backend: Vitest + Supertest (14 contract tests for category CRUD operations with information filtering, pagination, foreign key validation, circular reference detection)
-- Unit tests: information filter middleware (extractViewMode, stripDmFields, stripDmFieldsFromArray, getPlayerKnowledgeFilter, buildWhereClause)
-- Integration tests: informationFiltering (X-View-Mode header filtering, dm_* field stripping), foreignKeyConnections (NPC→Faction, NPC→NPC, Location→Location, Quest→NPC/SessionRecap, Campaign CASCADE), sessionPrepOneWay (one-way references, stale IDs acceptable, hypothetical marker enforcement), performance (100 entities per category, <100ms single read, <500ms list)
-- Performance validation: All 13 categories tested for single entity read (<100ms) and list queries (<500ms for 100 results)
-- No E2E tests (backend-only feature, UI integration deferred to future features)
-
-**Testing** (018-create-an-external):
-- Backend: Vitest + Supertest (49/49 contract tests passing - 100% coverage!)
-- Contract tests: 8 endpoint groups (health, query, create, update, delete, hierarchy, recaps, graphs), error handling, audit logging
-- Integration tests: 8 scenarios (conversational query, create, update, hierarchy navigation, timeline queries, delete confirmation, bulk filtering, audit logging)
-- Unit tests: ExternalAPIService, AuditLogService
-- Manual testing: cURL verification at localhost:3002
+**Feature-Specific Technologies**:
+- 003: ProseMirror JSON format (rich text storage), @dnd-kit (tree reordering), cmdk (slash commands)
+- 005: Hybrid active filtering (last 5 sessions + tag-based for Political-Web/Campaign-Story graphs)
+- 007: BLOB storage for map images (10MB limit, client-side compression), absolute pixel coordinates
+- 008: OAuth 2.0 Authorization Code Flow + PKCE, API key alternative, custom endpoint support (Ollama, LM Studio)
+- 011: 29 MCP tools across 8 categories (card, hierarchy, graph, recap, info-level, database, map), 3 resources, 2 prompts, 3 middleware layers (permissions, transactions with 10s timeout, logging to mcp_tool_logs)
+- 015: 7 dashboard widgets with size-adaptive rendering (compact 1x1/2x2, detailed 3x3+), 500ms debounced auto-save
+- 018: Express on port 3002 (separate from main app on 3001), dual audit logging (Winston + api_requests SQLite table, 30-day retention), two-phase delete confirmation (60s token expiry), ExternalAPIService orchestrating all 13 category services
 
 ## Project Structure
 
 ```
 wrldbldr-mcp-manager/
-├── docker-compose.yml          # Orchestrates 3 services: keycloak, backend, frontend
-│                               # Backend exposes ports 3001 (main) and 3002 (external API)
+├── docker-compose.yml          # 3 services: keycloak, backend (ports 3001/3002), frontend
 ├── data/                       # SQLite database (bind mount, persists)
 │   └── wrldbldr-mcp-manager.db
 ├── logs/                       # Feature 018: Winston audit logs
@@ -232,42 +63,37 @@ wrldbldr-mcp-manager/
 ├── backend/
 │   ├── Dockerfile
 │   ├── src/
-│   │   ├── models/             # User, Campaign, Session, Setting, Card, InformationLevel, ImportSession, PlanningSession, KnowledgeGraph, GraphNode, GraphEdge, ImportBatch, NPC, Location, Faction, SessionRecap, Quest, PlayerCharacter, LoreEntry, WorldRule, PlanarForce, SessionPrep, CustomMechanic, Item, Creature, CustomFieldDefinition, APIRequest (Feature 018)
-│   │   ├── services/           # BaseCategoryService (Feature 014 standardization), AuthService, CampaignService, DatabaseService, CardService, SettingService, InformationLevelService, ViewModeService, ImportService, PlanningService, KnowledgeGraphService, LLMService (OpenAI/Anthropic), EntityExtractionService, FileParserService, NPCService, LocationService, FactionService, SessionRecapService, QuestService, PlayerCharacterService, LoreEntryService, WorldRuleService, PlanarForceService, SessionPrepService, CustomMechanicService, ItemService, CreatureService, CustomFieldDefinitionService, ExternalAPIService (Feature 018), AuditLogService (Feature 018)
+│   │   ├── models/             # 27 models: User, Campaign, Session, Setting, Card, InformationLevel, 13 categories (NPC, Location, Faction, SessionRecap, Quest, PlayerCharacter, LoreEntry, WorldRule, PlanarForce, SessionPrep, CustomMechanic, Item, Creature), ImportSession, PlanningSession, KnowledgeGraph, GraphNode, GraphEdge, ImportBatch, CustomFieldDefinition, APIRequest
+│   │   ├── services/           # BaseCategoryService + 13 category services + AuthService, CampaignService, DatabaseService, CardService, SettingService, InformationLevelService, ViewModeService, ImportService, PlanningService, KnowledgeGraphService, LLMService, EntityExtractionService, FileParserService, CustomFieldDefinitionService, ExternalAPIService, AuditLogService, BYOLLMConfigService, OAuthFlowService, ProviderClientService, EncryptionService, MCPConfigService
 │   │   ├── middleware/         # keycloak.ts, cors.ts, errorHandler.ts, viewModeFilter.ts, multer.ts, informationFilter.ts, externalApiCors.ts (Feature 018), auditLogger.ts (Feature 018)
-│   │   ├── routes/             # auth.ts, campaigns.ts, sessions.ts, cards.ts, settings.ts, database-cards.ts, information-levels.ts, view-mode.ts, import.ts, planning.ts, graphs.ts, health.ts, npcs.ts, locations.ts, factions.ts, sessionRecaps.ts, quests.ts, playerCharacters.ts, loreEntries.ts, worldRules.ts, planarForces.ts, sessionPrep.ts, customMechanics.ts, items.ts, creatures.ts, customFieldDefinitions.ts, external-api.ts (Feature 018 - 8 endpoint groups)
-│   │   ├── mcp/                # Model Context Protocol server (Feature 011 - ⚠️ needs API refactoring)
-│   │   │   ├── server.ts       # MCP server entry point (stdio transport, JSON-RPC)
-│   │   │   ├── schemas/        # Zod schemas for 29 tools (card, hierarchy, graph, recap, info-level, database, map)
-│   │   │   ├── tools/          # 29 tool implementations across 8 categories
+│   │   ├── routes/             # 13 category routes (npcs.ts, locations.ts, factions.ts, sessionRecaps.ts, quests.ts, playerCharacters.ts, loreEntries.ts, worldRules.ts, planarForces.ts, sessionPrep.ts, customMechanics.ts, items.ts, creatures.ts) + auth.ts, campaigns.ts, sessions.ts, cards.ts, settings.ts, database-cards.ts, information-levels.ts, view-mode.ts, import.ts, planning.ts, graphs.ts, health.ts, customFieldDefinitions.ts, external-api.ts (Feature 018 - 8 endpoint groups)
+│   │   ├── mcp/                # MCP server (Feature 011 - ⚠️ needs API refactoring)
+│   │   │   ├── server.ts       # MCP entry point (stdio transport, JSON-RPC)
+│   │   │   ├── schemas/        # Zod schemas for 29 tools
+│   │   │   ├── tools/          # 29 implementations (card, hierarchy, graph, recap, info-level, database, map, category)
 │   │   │   ├── resources/      # 3 browsable resources (campaign://cards, recaps, graphs)
 │   │   │   ├── prompts/        # 2 AI prompt templates (import_workflow, planning_workflow)
-│   │   │   └── middleware/     # permissions.ts, transactions.ts (10s timeout), logging.ts (mcp_tool_logs audit)
+│   │   │   └── middleware/     # permissions.ts, transactions.ts (10s timeout), logging.ts
 │   │   └── db/
-│   │       ├── schema.sql      # CREATE TABLE statements (users, campaigns, sessions, settings, cards, information_levels, import_sessions, planning_sessions, knowledge_graphs, graph_nodes, graph_edges, import_batches, mcp_tool_logs, factions, npcs, locations, session_recaps, quests, player_characters, lore_entries, world_rules, planar_forces, session_prep, custom_mechanics, items, creatures, custom_field_definitions)
-│   │       └── migrations/
-│   │           ├── migrations.ts   # Version tracking
-│   │           ├── 011-mcp-tool-logs.sql  # Tool call audit logging table
-│   │           ├── 014-category-tables.sql  # 13 category tables + custom_field_definitions table
-│   │           ├── 018-api-requests.sql  # Feature 018: External API audit table
-│   │           └── 019-add-session-number.sql  # Fix: Add missing session_number column
+│   │       ├── schema.sql      # Base schema
+│   │       └── migrations/     # 19 migrations (003-019): cards, information levels, AI sessions, graphs, BYOLLM, MCP logs, 13 categories, dashboard, campaign settings, external API audit, session_number fix
 │   └── tests/
-│       ├── contract/           # API contract tests (auth, campaigns, cards, settings, database-cards, information-levels, view-mode, import, planning, graphs, mcp tools, npcs, locations, factions, sessionRecaps, quests, playerCharacters, loreEntries, worldRules, planarForces, sessionPrep, customMechanics, items, creatures, customFieldDefinitions, external-api [49/49 passing])
-│       ├── integration/        # Auth flow, card hierarchy validation, view mode filtering, import approval workflow, batch revert, planning immediate updates, active filtering, mcp atomic operations/permissions/concurrency, informationFiltering, foreignKeyConnections, sessionPrepOneWay, performance, conversational-query, conversational-create, conversational-update, hierarchy-navigation, session-recap-timeline, conversational-delete, bulk-query-filtering, audit-logging (Feature 018)
-│       └── unit/               # Service tests, circular reference detection, partial visibility logic, entity deduplication (Levenshtein), timeline conflict detection, informationFilter middleware, ExternalAPIService, AuditLogService (Feature 018)
+│       ├── contract/           # 30+ contract tests (auth, campaigns, cards, settings, database-cards, information-levels, view-mode, import, planning, graphs, MCP tools, 13 categories, external-api [49/49 passing])
+│       ├── integration/        # Auth flow, hierarchy validation, view mode filtering, AI workflows, MCP operations, information filtering, foreign keys, session prep, performance, Feature 018 scenarios (8 tests)
+│       └── unit/               # Services, circular refs, deduplication, timeline conflicts, informationFilter middleware, ExternalAPIService, AuditLogService
 └── frontend/
     ├── Dockerfile
     ├── src/
-    │   ├── components/         # PublicLanding, CampaignManagement, CampaignHomepage, CardTree, CardEditor, SlashCommandPalette, DatabaseView (Table/List/Gallery/Kanban), PaintersEaselPalette, ViewModeToggle, SettingsInformationLevels, ImportAITab, PlanningAITab, KnowledgeGraphViewer, AIApprovalSummaryView, GraphNodeEditor, ActiveFilterToggle
-    │   ├── pages/              # LandingPage, CampaignsPage, CampaignPage, CardPage, SettingsPage
+    │   ├── components/         # PublicLanding, CampaignManagement, CampaignHomepage, CardTree, CardEditor, SlashCommandPalette, DatabaseView (Table/List/Gallery/Kanban), PaintersEaselPalette, ViewModeToggle, SettingsInformationLevels, ImportAITab, PlanningAITab, KnowledgeGraphViewer, AIApprovalSummaryView, GraphNodeEditor, ActiveFilterToggle, DashboardPage, CategoryLandingPage, WidgetRegistry (7 widgets), BaseWidget, WidgetPicker, CategoryLandingCanvas, CategoryLandingTextEditor
+    │   ├── pages/              # LandingPage, CampaignsPage, CampaignPage, CardPage, SettingsPage, 13 CategoryListPages, CategoryCreatePage, CategoryEditPage, CategoryDetailPage
     │   ├── services/           # keycloakService, apiClient, campaignService, cardService, settingService, databaseService, informationLevelService, importService, planningService, knowledgeGraphService
-    │   ├── hooks/              # useAuth, useCampaigns, useKeycloak, useCards, useCardHierarchy, useDatabaseSchema, useSlashCommands, useInformationLevel, useViewMode, useFilteredCards, useImportSession, usePlanningSession, useSSEStream, useKnowledgeGraph, useActiveFilter
-    │   ├── contexts/           # AuthContext, CardContext, InformationLevelContext, ViewModeContext, AITabContext
-    │   ├── routes/             # AppRoutes with protected routes
+    │   ├── hooks/              # useAuth, useCampaigns, useKeycloak, useCards, useCardHierarchy, useDatabaseSchema, useSlashCommands, useInformationLevel, useViewMode, useFilteredCards, useImportSession, usePlanningSession, useSSEStream, useKnowledgeGraph, useActiveFilter, useDashboardCanvas, useCategoryLandingCanvas
+    │   ├── contexts/           # AuthContext, CardContext, InformationLevelContext, ViewModeContext, AITabContext, BYOLLMContext
+    │   ├── routes/             # AppRoutes with protected routes (28 routes total)
     │   └── config/             # keycloak.ts, tiptap.ts
     └── tests/
-        ├── components/         # Component unit tests (CardTree, DatabaseView, SlashCommandPalette, PaintersEaselPalette, ViewModeToggle, ImportAITab, PlanningAITab, GraphNodeEditor)
-        └── e2e/                # Playwright auth flow, card hierarchy, database CRUD, view mode filtering, import session workflow, planning session workflow, knowledge graph inspection tests
+        ├── components/         # Component unit tests (CardTree, DatabaseView, SlashCommandPalette, PaintersEaselPalette, ViewModeToggle, AI tabs, GraphNodeEditor, widgets)
+        └── e2e/                # Playwright tests (auth, card hierarchy, database CRUD, view mode, AI workflows, graph inspection)
 ```
 
 ## Commands
@@ -370,25 +196,23 @@ npm test:e2e                # E2E tests (Playwright)
 
 ## Recent Changes
 
-- **018-create-an-external** (2025-10-22): ✅ **COMPLETE** - External API for Conversational Database Operations. Backend-only REST API on localhost:3002 for AI tools like Claude Desktop. 8 endpoint groups: health check, database query/create/update/delete operations across 13 categories, hierarchy navigation (locations/NPCs), session recap timeline queries, knowledge graph operations. Two-phase delete confirmation with 60s token expiry prevents accidental data loss. Dual audit logging: Winston JSON files (daily rotation, 30-day retention) + api_requests SQLite table for queryable analytics. Information level filtering via X-View-Mode header (dm_view returns all, player_view filters dm_only entities and strips dm_* fields). ExternalAPIService orchestrates all 13 standardized category services. AuditLogService provides async fire-and-forget logging (doesn't block API responses). AI-friendly error responses with structured codes (VALIDATION_ERROR, NOT_FOUND, CONSTRAINT_VIOLATION, INTERNAL_ERROR) and actionable suggestions. Campaign isolation via automatic filtering. Performance: <100ms queries, <200ms writes, <300ms hierarchy traversal. Technologies: Express 4.x, Winston with daily-rotate-file, Better-SQLite3, uuid, crypto. Testing: 49/49 contract tests passing (100%), 8 integration tests, 2 unit tests. Manual verification: curl http://localhost:3002/api/v1/external/health. Status: T001-T021 complete (22 tasks), ready for Claude Desktop integration.
+- **018-create-an-external** (2025-10-22): ✅ **COMPLETE** - External API on localhost:3002 for AI tools (Claude Desktop). 8 endpoint groups: health, database query/create/update/delete across 13 categories, hierarchy navigation, session recap timeline, knowledge graphs. Two-phase delete confirmation (60s token expiry), dual audit logging (Winston + SQLite, 30-day retention), information level filtering (X-View-Mode header), campaign isolation. ExternalAPIService orchestrates all 13 standardized category services. AI-friendly error responses (VALIDATION_ERROR, NOT_FOUND, CONSTRAINT_VIOLATION, INTERNAL_ERROR). Performance: <100ms queries, <200ms writes, <300ms hierarchy. Testing: 49/49 contract tests (100%), 8 integration, 2 unit. Technologies: Express 4.x, Winston, Better-SQLite3, uuid, crypto. Status: T001-T021 complete, ready for Claude Desktop. [See spec](specs/018-create-an-external/)
 
-- **014-create-the-database** (2025-10-22): ✅ **STANDARDIZED** - Service layer refactoring for consistency. Created BaseCategoryService abstract base class enforcing uniform CRUD interface across all 13 category services. All services now extend base with standard methods: create(data, options?), update(id, data, options?), delete(id, options?), findById(id), list(filters, pagination, sort?, order?). Optional ownership validation via OperationOptions { ownerId?: string, skipValidation?: boolean }. Universal field handling: 10 shared fields auto-populated (id, campaign_id, name, description, core_status, player_knowledge, tags, created_at, updated_at, custom_fields). JSON field parsing utilities for tags, custom_fields, and category-specific arrays. Removed async/await where unnecessary (FactionService). Converted static methods to instance methods (LocationService). Updated all 13 route files to use standardized service calls. Fixed models: added session_number to SessionRecap, added faction_id to Quest. Migration 019: ALTER TABLE session_recaps ADD COLUMN session_number. Code reduction: **-7,110 lines** (60-70% per service). Impact: enables consistent tool usage for Feature 018 external API, Feature 011 MCP tools, and future in-line editing features. All existing functionality preserved, Feature 014 tests still pass.
+- **014-create-the-database** (2025-10-22): ✅ **STANDARDIZED** - Service layer refactoring for consistency. Created BaseCategoryService abstract base class enforcing uniform CRUD interface across all 13 category services. Standard methods: create(data, options?), update(id, data, options?), delete(id, options?), findById(id), list(filters, pagination, sort?, order?). Optional ownership validation via OperationOptions. Universal field handling: 10 shared fields auto-populated. JSON field parsing utilities. Removed async/await where unnecessary. Converted static methods to instance methods. Updated all 13 route files. Fixed models: session_number (SessionRecap), faction_id (Quest). Migration 019 created. Code reduction: **-7,110 lines** (60-70% per service). Impact: enables Feature 018 external API, Feature 011 MCP tools, future in-line editing. [See spec](specs/014-create-the-database/)
 
-- **016-create-a-campaign** (2025-10-19): ✅ **CORE COMPLETE** - 4-Step Campaign Setup Wizard. Backend: campaign_settings table (theme, category_labels JSON), atomic transaction service (settings + graph + world_rules), 3 wizard endpoints (status, themes, complete). Frontend: WizardContext (React useReducer), 10 wizard components (Radix UI Dialog/Switch/Tooltip), theme constants (High Fantasy, Cyberpunk, Sci-Fi, Modern, Custom), useWizardStatus/useWizardCompletion hooks, integrated into DashboardPage. Wizard applies themed category naming (e.g., "Corporations" for Cyberpunk factions), creates World-Foundations graph with starter world rules from questionnaire. Race condition fix: Dashboard/category landing auto-creation handles 400 "already exists" with refetch retry. Test skeletons created (T029-T041), full test implementation deferred. Technologies: Radix UI primitives, React Hook Form + Zod validation (client + server), SQLite JSON1 extension, atomic transactions.
+- **016-create-a-campaign** (2025-10-19): ✅ **CORE COMPLETE** - 4-Step Campaign Setup Wizard. Backend: campaign_settings table (theme, category_labels JSON), atomic transaction service, 3 wizard endpoints. Frontend: WizardContext (useReducer), 10 wizard components (Radix UI), theme constants (High Fantasy, Cyberpunk, Sci-Fi, Modern, Custom), hooks. Themed category naming (e.g., "Corporations" for Cyberpunk factions), World-Foundations graph with starter world rules from questionnaire. Race condition fix: Dashboard/category auto-creation handles 400 "already exists". Test skeletons created (T029-T041), full implementation deferred. Technologies: Radix UI, React Hook Form + Zod, SQLite JSON1, atomic transactions. [See spec](specs/016-create-a-campaign/)
 
-- **015-create-the-dashboard** (2025-10-14): ✅ **COMPLETE** - Interactive Dashboard Canvas System with full CRUD routing. Full-stack feature with drag-and-drop widget canvas for campaign dashboard and 13 category landing pages. **Backend**: 2 tables (dashboard_configs, category_landing_configs with JSONB layouts), 8 API routes (GET/POST/PUT/DELETE), DashboardConfigService, CategoryLandingConfigService, widgetDataService with 7 API integrations to Feature 014 tables, migration 015-dashboard-canvas.sql. **Frontend**: DashboardPage with react-grid-layout (12-col grid, 10px rows, responsive lg/md/sm), 13 CategoryLandingPage components with CategoryLandingCanvas + CategoryLandingTextEditor (TipTap), WidgetRegistry with 7 functional widgets (NPC Summary, Location Explorer, Faction Power, Quest Tracker, Session Timeline, Player Characters, Recent Activity), BaseWidget wrapper with drag handle/remove button, WidgetPicker modal, size-adaptive rendering (compact 1x1/2x2, detailed 3x3+), auto-save with 500ms debounce, ViewModeToggle with eye icon (open=DM, closed=Player), information filtering integration. **Routing** (28 total): Dashboard (/campaigns/:id/dashboard), 13 category landings (/campaigns/:id/:category), 13 table views (/campaigns/:id/:category/database via GenericCategoryListView), entity create (/campaigns/:id/:category/create via CategoryCreatePageRoute), entity edit (/campaigns/:id/:category/:entityId/edit via CategoryEditPageRoute), entity detail (/campaigns/:id/:category/:entityId via GenericCategoryDetailView). **Canvas Features**: drag-drop reordering, resize 1x1 to 12x50, delete widgets, per-user-campaign persistence (localStorage + backend sync). **Navigation**: Sidebar with 4 collapsible sections (SETTING, LIVING WORLD, CAMPAIGN, EXTENDED), Dashboard/Wiki links, thematic labels support. **Performance**: <500ms canvas load, <100ms widget resize, 500ms debounced save. **Technologies**: react-grid-layout 1.3.4, react-resizable 3.0.4, TipTap 2.x, Better-SQLite3, Express 4.x. **Status**: 29/49 tasks complete (T001-T022, T023-T026 sidebar already existed, T027 category pages, T028-T031 CRUD routes, T032-T033 App.tsx routing), automated tests deferred.
+- **015-create-the-dashboard** (2025-10-14): ✅ **COMPLETE** - Interactive Dashboard Canvas System with full CRUD routing. Backend: 2 tables (dashboard_configs, category_landing_configs), 8 API routes, DashboardConfigService, CategoryLandingConfigService, widgetDataService. Frontend: react-grid-layout (12-col grid, 10px rows, responsive lg/md/sm), 13 CategoryLandingPage components, WidgetRegistry (7 functional widgets), size-adaptive rendering (1x1/2x2 compact, 3x3+ detailed), auto-save (500ms debounce), ViewModeToggle. Routing: Dashboard, 13 category landings, 13 table views, entity create/edit/detail (28 total). Sidebar: 4 collapsible sections (SETTING, LIVING WORLD, CAMPAIGN, EXTENDED), thematic labels support. Performance: <500ms canvas load, <100ms widget resize. Status: 29/49 tasks complete. [See spec](specs/015-create-the-dashboard/)
 
-- **011-create-model-context** (2025-10-03): Model Context Protocol (MCP) integration for structured AI tool calls. Implements Anthropic's MCP SDK to provide 29 tools across 8 categories for Feature 005's AI workflows: card operations (read, create, update, delete, search, move), hierarchy navigation (path, subtree, children, siblings, ancestor), knowledge graphs (query, list nodes, relationships, atomic updates), session recaps (get recaps, timeline events), information level discovery (list levels, get by name), database card operations (query, create entry, update entry), map card operations (list pins, create pin), plus 3 browsable resources (campaign://cards, recaps, graphs) and 2 AI prompt templates (import_workflow, planning_workflow). Middleware provides permissions (campaign ownership + information level filtering), atomic transactions (10s timeout, automatic rollback), and logging (mcp_tool_logs audit trail). All operations reuse existing services. Performance targets: <100ms single card read, <500ms search (100 results), 5 concurrent calls. **Status**: Spec complete (60 FRs), 41 files created (~6,400 lines), needs MCP SDK v0.5.0 API corrections - see specs/011-create-model-context/IMPLEMENTATION_NOTES.md for refactoring guide. Technologies: @modelcontextprotocol/sdk, zod, stdio transport, Better-SQLite3 WAL mode.
-
-- 010-create-public-campaign: Added Backend: Node.js 20 LTS + TypeScript 5.0+, Frontend: React 18 + TypeScript 5.0+ + Backend: Express 4.x, Better-SQLite3, crypto (Node.js built-in for random IDs), Frontend: React Router v6, TipTap 2.x (reuse from Feature 003), existing card components
-
-- **006-create-the-knowledge**: Formalized Knowledge Graph Architecture with separate tables (knowledge_graphs, graph_nodes, graph_edges, graph_versions). Toggle controls for selective AI context (campaign-level toggle_state). 1-deep versioning (current + backup) with restore functionality. Cross-graph queries via free-form observations (LLM interpretation). Graph Summary Panel above Planning AI showing all graphs with toggle controls, node/edge counts, last updated. Context Engineering help page. Chat-based graph creation via Planning AI. Manual node/edge CRUD operations. Custom graph types support (custom:{type}). Multiple instances of same graph type. GraphVersion entity for snapshots. GraphToggleService, GraphVersionService, CrossGraphQueryService. Adjacency list pattern with JSONB attributes for user-defined schemas. Information level filtering integration (DM Secret nodes hidden in Player View). Default World-Foundations graph on campaign init. Performance: <100ms query/toggle, <500ms save for 50 nodes/100 edges.
-
-- **005-create-the-ai**: Added AI Import and Planning workflows. 8 new entities: ImportSession, ImportBatch, PlanningSession, KnowledgeGraph, GraphNode, GraphEdge (7 new tables + Card extension with import metadata). 4 knowledge graph types per campaign: Geographical, Political-Web, World-Foundations, Campaign-Story. Import AI workflow: upload files (PDF/DOCX/TXT/MD) → LLM entity extraction → approval summary with fuzzy deduplication (Levenshtein threshold 0.7) → GM approval → atomic batch revert. Planning AI workflow: chat with Planning AI → immediate graph updates (no approval). Active filtering for Political-Web and Campaign-Story graphs: hybrid time-based (last 5 session recaps) + tag-based ("active", "party-relevant"). Pull-down tab UI with Radix UI Dialog. Server-Sent Events (SSE) for LLM streaming. OpenAI/Anthropic SDK integration (user credentials via Feature 008). Timeline consistency validation against Session Recaps. Custom AI instructions via Campaign Settings (system prompt injection). GM manual graph CRUD operations. SQLite JSON1 extension for graph JSONB storage.
-
-- **007-create-the-interactive**: Interactive map system as card feature. Konva.js canvas for map rendering. Pin/Zone/Layer cards as children of map-enabled cards. BLOB storage for map images (10MB limit, client-side compression). Absolute pixel coordinates for pins/zones. Tabs for multiple maps per card. Information filtering integration (pins inherit visibility from referenced cards). Nested map navigation via pin references. /map slash command. Orphaned pin warnings when referenced cards deleted. Modular parent-child architecture preserves coordinates on card move. Performance: <1s upload, <100ms pin operations, 60fps zoom/pan for 500+ pins.
-
-- **008-create-byollm-configuration**: BYOLLM (Bring Your Own LLM) configuration system. Implements Constitution Principle V (NON-NEGOTIABLE): user MUST provide own LLM credentials, stored locally with AES-256-GCM encryption (prototype-level), NEVER transmitted to Wrldbldr MCP Manager servers. OAuth 2.0 Authorization Code Flow + PKCE for OpenAI and Anthropic providers. API key alternative for Anthropic. Custom Endpoint support for local LLMs (Ollama, LM Studio) with OpenAI-compatible format. 3 new tables: byollm_configs (encrypted credentials, model config, custom prompts per scope), provider_credits (cached balance, org name, 5min TTL), oauth_sessions (PKCE state/verifier, 10min TTL). Credits/usage display prevents surprise costs. Model selection with context window info. Connection test validates bulk MCP operations. Custom system prompts for Import/Planning AI (text input or file upload). Global vs per-campaign configuration scopes (campaign overrides global). Blocking errors prevent Import/Planning AI usage without valid config. Rate limit handling: exponential backoff + jitter, respect Retry-After header, max 3 retries, user notification. Graceful failure with manual retry on API errors. OAuth token refresh automatic. All provider API calls direct from user machine (not proxied). Performance: OAuth flow <3s, connection test <5s, credits refresh <2s.
+**Earlier Features**:
+- **011** (MCP): 29 tools across 8 categories, 3 resources, 2 prompts, 3 middleware layers. ⚠️ Needs MCP SDK v0.5.0 refactoring. [See spec](specs/011-create-model-context/)
+- **008** (BYOLLM): OAuth 2.0 + PKCE, AES-256-GCM encryption, custom endpoints, rate limiting. [See spec](specs/008-create-byollm-configuration/)
+- **007** (Maps): Konva.js canvas, BLOB storage, pins/zones/layers, nested navigation. [See spec](specs/007-create-the-interactive/)
+- **006** (Knowledge Graphs): 4 graph types, toggle controls, 1-deep versioning, active filtering. [See spec](specs/006-create-the-knowledge/)
+- **005** (AI): Import/Planning workflows, SSE streaming, entity extraction, Levenshtein deduplication. [See spec](specs/005-create-the-ai/)
+- **004** (Information Filtering): 4 levels (System, Common Knowledge, Player Knowledge, DM Secret), view mode toggle. [See spec](specs/004-create-a-tagging/)
+- **003** (Cards): Notion-like wiki, TipTap rich text, hierarchy, database views, slash commands. [See spec](specs/003-create-a-notion/)
+- **002** (Auth): Keycloak OAuth 2.0, campaign management, session tracking. [See spec](specs/002-create-the-authentication/)
 
 ## Constitutional Principles
 
@@ -402,70 +226,51 @@ npm test:e2e                # E2E tests (Playwright)
 
 See `/memory/constitution.md` for complete governance document.
 
+## Testing
+
+**Backend**: Vitest + Supertest
+- **Contract tests**: 30+ files validating OpenAPI specs across Features 002-018 (auth, campaigns, cards, settings, database operations, information levels, view mode, AI import/planning, knowledge graphs, 13 categories, external API)
+- **Integration tests**: Auth flow, card hierarchy validation, view mode filtering, AI approval workflows, batch revert, MCP atomic operations/permissions/concurrency, information filtering (X-View-Mode header, dm_* field stripping), foreign key connections (NPC→Faction, NPC→NPC, Location→Location, Quest→NPC/SessionRecap, Campaign CASCADE), session prep one-way linking, performance validation (100 entities per category), Feature 018 scenarios (conversational query/create/update, hierarchy navigation, timeline queries, delete confirmation, bulk filtering, audit logging)
+- **Unit tests**: Service tests, circular reference detection, partial visibility logic, entity deduplication (Levenshtein), timeline conflict detection, informationFilter middleware, ExternalAPIService, AuditLogService
+
+**Frontend**: Vitest + React Testing Library (unit tests), Playwright (E2E tests)
+- Unit: CardTree, DatabaseView, SlashCommandPalette, PaintersEaselPalette, ViewModeToggle, ImportAITab, PlanningAITab, GraphNodeEditor, dashboard widgets
+- E2E: Auth flow, card hierarchy (create → nest → database CRUD → view switching → drag reorder), view mode filtering, AI workflows (import session recap → upload → chat → approve → verify graphs → revert batch, planning session → chat → immediate updates), knowledge graph inspection
+
+**Feature Highlights**:
+- **Feature 018**: 49/49 contract tests passing (100% coverage)
+- **Feature 014**: Performance validation (<100ms single read, <500ms list for 100 results)
+- **Feature 011**: 10 test files created, blocked pending MCP SDK v0.5.0 refactoring (see specs/011-create-model-context/IMPLEMENTATION_NOTES.md)
+
+**Run Tests**:
+```bash
+npm test                    # All tests
+npm test:contract           # Contract tests
+npm test:integration        # Integration tests
+npm test:unit               # Unit tests
+npm test tests/contract/external-api.test.ts  # Feature 018 (49/49)
+```
+
 ## API Contracts
 
-All API endpoints documented in OpenAPI 3.0 format:
+All API endpoints documented in OpenAPI 3.0 format at `/specs/{feature}/contracts/*.yaml`
 
-**Feature 002 (Authentication & Campaign Management)**:
-- `/specs/002-create-the-authentication/contracts/auth.yaml`
-- `/specs/002-create-the-authentication/contracts/campaigns.yaml`
-- `/specs/002-create-the-authentication/contracts/sessions.yaml`
+**Coverage**:
+- **Features 002-005**: Auth, campaigns (CRUD, sessions), cards (CRUD, move, reorder, subtree), settings, database-cards (schema, entry CRUD, views), information levels (CRUD, custom levels), view mode (X-View-Mode filtering), AI import (sessions, file upload, chat, approval, batch revert), AI planning (sessions, chat, immediate graph updates), knowledge graphs (CRUD, nodes/edges, active filtering)
+- **Feature 011**: MCP tools (8 JSON Schema files defining 29 tools, 3 resources, 2 prompts). ⚠️ See IMPLEMENTATION_NOTES.md for v0.5.0 refactoring requirements
+- **Feature 014**: 13 category CRUD endpoints (factions, npcs, locations, session-recaps, quests, player-characters, lore-entries, world-rules, planar-forces, session-prep, custom-mechanics, items, creatures, custom-field-definitions). Information filtering, pagination, FK validation, circular reference detection
+- **Feature 018**: External API (external-api.yaml) - 8 endpoint groups: health check, database query/create/update/delete operations across 13 categories, hierarchy navigation (locations/NPCs), session recap timeline queries, knowledge graph operations. Two-phase delete confirmation, information filtering, campaign validation
 
-**Feature 003 (Card-Based Content Architecture)**:
-- `/specs/003-create-a-notion/contracts/cards.yaml` - Card CRUD, move, reorder, subtree operations
-- `/specs/003-create-a-notion/contracts/settings.yaml` - Setting CRUD operations
-- `/specs/003-create-a-notion/contracts/database-cards.yaml` - Database schema management, entry CRUD, view operations
-
-**Feature 004 (Information Level-Based Filtering)**:
-- `/specs/004-create-a-tagging/contracts/information-levels.yaml` - Information level CRUD, custom level management
-- `/specs/004-create-a-tagging/contracts/view-mode.yaml` - View mode filtering endpoints with X-View-Mode header
-
-**Feature 005 (AI Import & Planning Workflows)**:
-- `/specs/005-create-the-ai/contracts/import.yaml` - Import session CRUD, file upload, chat, approval, batch revert
-- `/specs/005-create-the-ai/contracts/planning.yaml` - Planning session CRUD, chat with immediate graph updates
-- `/specs/005-create-the-ai/contracts/knowledge-graphs.yaml` - Knowledge graph CRUD, node/edge operations, active filtering
-
-**Feature 011 (Model Context Protocol Integration)**:
-- `/specs/011-create-model-context/contracts/*.json` - 8 JSON Schema files defining 29 MCP tools + resources + prompts
-- See IMPLEMENTATION_NOTES.md for API refactoring requirements
-
-**Feature 014 (Structured Category Database Foundation)**:
-- `/specs/014-create-the-database/contracts/factions.yaml` - Faction CRUD operations
-- `/specs/014-create-the-database/contracts/npcs.yaml` - NPC CRUD operations with faction/superior linking
-- `/specs/014-create-the-database/contracts/locations.yaml` - Location CRUD with hierarchy
-- `/specs/014-create-the-database/contracts/session-recaps.yaml` - Session recap CRUD (canonical enforcement)
-- `/specs/014-create-the-database/contracts/quests.yaml` - Quest CRUD with quest giver and session linking
-- `/specs/014-create-the-database/contracts/player-characters.yaml` - Player character CRUD
-- `/specs/014-create-the-database/contracts/lore-entries.yaml` - Lore entry CRUD
-- `/specs/014-create-the-database/contracts/world-rules.yaml` - World rule CRUD with related rules
-- `/specs/014-create-the-database/contracts/planar-forces.yaml` - Planar force CRUD
-- `/specs/014-create-the-database/contracts/session-prep.yaml` - Session prep CRUD (hypothetical enforcement, one-way linking)
-- `/specs/014-create-the-database/contracts/custom-mechanics.yaml` - Custom mechanic CRUD
-- `/specs/014-create-the-database/contracts/items.yaml` - Item CRUD with ownership tracking
-- `/specs/014-create-the-database/contracts/creatures.yaml` - Creature CRUD
-- `/specs/014-create-the-database/contracts/custom-field-definitions.yaml` - Custom field definition CRUD
-
-**Feature 018 (External API for Conversational Database Operations)**:
-- `/specs/018-create-an-external/contracts/external-api.yaml` - OpenAPI 3.0.3 spec for 8 endpoint groups
-- Health check, database query/create/update/delete, hierarchy navigation, session recaps, knowledge graphs
-- Two-phase delete confirmation workflow, information filtering, campaign validation
-
-Run contract tests to validate implementation:
+**Validate Implementation**:
 ```bash
-cd backend && npm test:contract
-cd backend && npm test tests/contract/external-api.test.ts  # Feature 018: 49/49 passing
+npm test:contract                                 # All contract tests
+npm test tests/contract/external-api.test.ts     # Feature 018: 49/49 passing
 ```
 
 ## Quickstart
 
-**Feature 002 Setup**: See `/specs/002-create-the-authentication/quickstart.md`
-**Feature 003 Setup**: See `/specs/003-create-a-notion/quickstart.md`
-**Feature 004 Setup**: See `/specs/004-create-a-tagging/quickstart.md`
-**Feature 005 Setup**: See `/specs/005-create-the-ai/quickstart.md`
-**Feature 011 Setup**: See `/specs/011-create-model-context/quickstart.md` (⚠️ requires API refactoring first)
-**Feature 014 Setup**: See `/specs/014-create-the-database/quickstart.md`
-**Feature 015 Setup**: See `/specs/015-create-the-dashboard/quickstart.md`
-**Feature 018 Setup**: See `/specs/018-create-an-external/quickstart.md`
+**Feature Setup Guides**: See `/specs/{feature}/quickstart.md` for detailed setup instructions
+- 002 (Auth), 003 (Cards), 004 (Information Filtering), 005 (AI), 011 (MCP - ⚠️ requires API refactoring first), 014 (Categories), 015 (Dashboard), 018 (External API)
 
 **TL;DR**:
 1. `docker-compose up --build`

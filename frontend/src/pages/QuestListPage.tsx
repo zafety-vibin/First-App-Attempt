@@ -1,4 +1,4 @@
-Import React from 'react';
+import React from 'react';
 import { useParams } from 'react-router-dom';
 import { GenericCategoryListView } from '../components/pages/GenericCategoryListView';
 import { ColumnDef } from '@tanstack/react-table';

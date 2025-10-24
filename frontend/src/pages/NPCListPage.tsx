@@ -136,9 +136,9 @@ export const NPCListPage: React.FC = () => {
       header: 'Appearance',
       cell: (info) => {
         const app = info.getValue() as string;
-        return app ? <TruncatedText text={app} maxLength={80} /> : '-';
+        return app ? <TruncatedText text={app} maxLength={200} /> : '-';
       },
-      size: 400,
+      size: 600,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -149,9 +149,9 @@ export const NPCListPage: React.FC = () => {
       header: 'Personality',
       cell: (info) => {
         const traits = info.getValue() as string;
-        return traits ? <TruncatedText text={traits} maxLength={60} /> : '-';
+        return traits ? <TruncatedText text={traits} maxLength={200} /> : '-';
       },
-      size: 350,
+      size: 600,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -162,9 +162,9 @@ export const NPCListPage: React.FC = () => {
       header: 'Motivation',
       cell: (info) => {
         const mot = info.getValue() as string;
-        return mot ? <TruncatedText text={mot} maxLength={60} /> : '-';
+        return mot ? <TruncatedText text={mot} maxLength={200} /> : '-';
       },
-      size: 350,
+      size: 600,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -188,9 +188,9 @@ export const NPCListPage: React.FC = () => {
       header: 'DM: Secrets',
       cell: (info) => {
         const secrets = info.getValue() as string;
-        return secrets ? <TruncatedText text={secrets} maxLength={100} /> : '-';
+        return secrets ? <TruncatedText text={secrets} maxLength={200} /> : '-';
       },
-      size: 450,
+      size: 600,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -201,9 +201,9 @@ export const NPCListPage: React.FC = () => {
       header: 'DM: Plot Relevance',
       cell: (info) => {
         const relevance = info.getValue() as string;
-        return relevance ? <TruncatedText text={relevance} maxLength={100} /> : '-';
+        return relevance ? <TruncatedText text={relevance} maxLength={200} /> : '-';
       },
-      size: 450,
+      size: 600,
       meta: {
         editable: true,
         editableType: 'textarea',

@@ -106,7 +106,7 @@ export const PlayerCharacterListPage: React.FC = () => {
       accessorKey: 'background',
       header: 'Background',
       cell: (info) => info.getValue() || '-',
-      size: 250,
+      size: 600,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -119,7 +119,7 @@ export const PlayerCharacterListPage: React.FC = () => {
         const pers = info.getValue() as string;
         return pers ? (pers.length > 60 ? pers.substring(0, 60) + '...' : pers) : '-';
       },
-      size: 350,
+      size: 600,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -132,7 +132,7 @@ export const PlayerCharacterListPage: React.FC = () => {
         const goals = info.getValue() as string;
         return goals ? (goals.length > 80 ? goals.substring(0, 80) + '...' : goals) : '-';
       },
-      size: 400,
+      size: 600,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -171,7 +171,7 @@ export const PlayerCharacterListPage: React.FC = () => {
         const secrets = info.getValue() as string;
         return secrets ? <TruncatedText text={secrets} maxLength={100} /> : '-';
       },
-      size: 400,
+      size: 600,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -184,7 +184,7 @@ export const PlayerCharacterListPage: React.FC = () => {
         const threads = info.getValue() as string;
         return threads ? <TruncatedText text={threads} maxLength={100} /> : '-';
       },
-      size: 400,
+      size: 600,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -197,7 +197,7 @@ export const PlayerCharacterListPage: React.FC = () => {
         const motivation = info.getValue() as string;
         return motivation ? <TruncatedText text={motivation} maxLength={100} /> : '-';
       },
-      size: 400,
+      size: 600,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -210,7 +210,7 @@ export const PlayerCharacterListPage: React.FC = () => {
         const consequences = info.getValue() as string;
         return consequences ? <TruncatedText text={consequences} maxLength={100} /> : '-';
       },
-      size: 400,
+      size: 600,
       meta: {
         editable: true,
         editableType: 'textarea',

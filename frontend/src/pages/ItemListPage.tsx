@@ -99,7 +99,7 @@ export const ItemListPage: React.FC = () => {
         const desc = info.getValue() as string;
         return desc ? (desc.length > 100 ? desc.substring(0, 100) + '...' : desc) : '-';
       },
-      size: 450,
+      size: 700,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -112,7 +112,7 @@ export const ItemListPage: React.FC = () => {
         const props = info.getValue() as string;
         return props ? (props.length > 80 ? props.substring(0, 80) + '...' : props) : '-';
       },
-      size: 400,
+      size: 600,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -165,7 +165,7 @@ export const ItemListPage: React.FC = () => {
         const secretProps = info.getValue() as string;
         return secretProps ? <TruncatedText text={secretProps} maxLength={100} /> : '-';
       },
-      size: 400,
+      size: 600,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -178,7 +178,7 @@ export const ItemListPage: React.FC = () => {
         const trueNature = info.getValue() as string;
         return trueNature ? <TruncatedText text={trueNature} maxLength={100} /> : '-';
       },
-      size: 400,
+      size: 600,
       meta: {
         editable: true,
         editableType: 'textarea',

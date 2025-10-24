@@ -91,7 +91,7 @@ export const FactionListPage: React.FC = () => {
         const desc = info.getValue() as string;
         return desc ? <TruncatedText text={desc} maxLength={100} /> : '-';
       },
-      size: 450,
+      size: 700,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -104,7 +104,7 @@ export const FactionListPage: React.FC = () => {
         const goals = info.getValue() as string;
         return goals ? <TruncatedText text={goals} maxLength={80} /> : '-';
       },
-      size: 400,
+      size: 600,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -117,7 +117,7 @@ export const FactionListPage: React.FC = () => {
         const res = info.getValue() as string;
         return res ? <TruncatedText text={res} maxLength={60} /> : '-';
       },
-      size: 350,
+      size: 600,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -143,7 +143,7 @@ export const FactionListPage: React.FC = () => {
         const agenda = info.getValue() as string;
         return agenda ? <TruncatedText text={agenda} maxLength={100} /> : '-';
       },
-      size: 450,
+      size: 600,
       meta: {
         editable: true,
         editableType: 'textarea',

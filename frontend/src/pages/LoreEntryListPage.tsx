@@ -104,7 +104,7 @@ export const LoreEntryListPage: React.FC = () => {
         const desc = info.getValue() as string;
         return desc ? (desc.length > 120 ? desc.substring(0, 120) + '...' : desc) : '-';
       },
-      size: 500,
+      size: 700,
       meta: {
         editable: true,
         editableType: 'textarea',

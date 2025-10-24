@@ -60,7 +60,7 @@ export const SessionPrepListPage: React.FC = () => {
         const desc = info.getValue() as string;
         return desc ? (desc.length > 100 ? desc.substring(0, 100) + '...' : desc) : '-';
       },
-      size: 500,
+      size: 700,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -73,7 +73,7 @@ export const SessionPrepListPage: React.FC = () => {
         const events = info.getValue() as string;
         return events ? (events.length > 80 ? events.substring(0, 80) + '...' : events) : '-';
       },
-      size: 450,
+      size: 700,
       meta: {
         editable: true,
         editableType: 'textarea',

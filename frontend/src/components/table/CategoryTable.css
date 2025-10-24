@@ -84,21 +84,22 @@
   right: 0;
   top: 0;
   height: 100%;
-  width: 5px;
+  width: 8px;
   background: transparent;
   cursor: col-resize;
   user-select: none;
   touch-action: none;
-  z-index: 1;
+  z-index: 100;
+  border-right: 2px solid transparent;
 }
 
 .column-resizer:hover {
-  background: #3b82f6;
+  border-right-color: #3b82f6;
 }
 
 .column-resizer.isResizing {
-  background: #2563eb;
-  width: 3px;
+  border-right-color: #2563eb;
+  border-right-width: 3px;
 }
 
 /* Make header cells position relative for resize handle */

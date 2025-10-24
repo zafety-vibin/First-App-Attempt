@@ -76,7 +76,7 @@ export const SessionRecapListPage: React.FC = () => {
         const summary = info.getValue() as string;
         return summary ? (summary.length > 120 ? summary.substring(0, 120) + '...' : summary) : '-';
       },
-      size: 500,
+      size: 700,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -147,7 +147,7 @@ export const SessionRecapListPage: React.FC = () => {
         const consequences = info.getValue() as string;
         return consequences ? <TruncatedText text={consequences} maxLength={100} /> : '-';
       },
-      size: 400,
+      size: 600,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -160,7 +160,7 @@ export const SessionRecapListPage: React.FC = () => {
         const behindScenes = info.getValue() as string;
         return behindScenes ? <TruncatedText text={behindScenes} maxLength={100} /> : '-';
       },
-      size: 400,
+      size: 600,
       meta: {
         editable: true,
         editableType: 'textarea',

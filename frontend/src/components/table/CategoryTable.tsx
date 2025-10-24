@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useReactTable, getCoreRowModel, ColumnDef, ColumnResizeMode } from '@tanstack/react-table';
 import { SortableTableHeader } from './SortableTableHeader';
 import { TableRow } from './TableRow';
+import { EditableCell, EditableCellType } from './EditableCell';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { EmptyState } from '../common/EmptyState';
 import { SortDirection } from '../../hooks/useSorting';
@@ -126,6 +127,7 @@ export function CategoryTable<T = any>({
                   <div
                     onMouseDown={header.getResizeHandler()}
                     onTouchStart={header.getResizeHandler()}
+                    onClick={(e) => e.stopPropagation()}
                     className={`column-resizer ${header.column.getIsResizing() ? 'isResizing' : ''}`}
                   />
                 ) : null;
@@ -152,6 +154,7 @@ export function CategoryTable<T = any>({
                       <div
                         onMouseDown={header.getResizeHandler()}
                         onTouchStart={header.getResizeHandler()}
+                        onClick={(e) => e.stopPropagation()}
                         className={`column-resizer ${header.column.getIsResizing() ? 'isResizing' : ''}`}
                       />
                     )}
@@ -165,13 +168,52 @@ export function CategoryTable<T = any>({
 
           <tbody className="category-table-body">
             {table.getRowModel().rows.map((row) => (
-              <TableRow
-                key={row.id}
-                entity={row.original}
-                columns={columns}
-                onClick={onRowClick}
-                onCellUpdate={onCellUpdate}
-              />
+              <tr key={row.id} className="table-row">
+                {row.getVisibleCells().map((cell) => {
+                  const columnDef = cell.column.columnDef;
+                  const fieldKey = columnDef.accessorKey as string;
+                  const isEditable = columnDef.meta?.editable === true;
+                  const editableType = columnDef.meta?.editableType as EditableCellType | undefined;
+                  const dropdownOptions = columnDef.meta?.dropdownOptions as Array<{ value: string; label: string }> | undefined;
+
+                  // Apply dynamic width from column state
+                  const cellStyle = {
+                    width: `${cell.column.getSize()}px`,
+                    minWidth: `${cell.column.getSize()}px`,
+                    maxWidth: `${cell.column.getSize()}px`,
+                  };
+
+                  if (isEditable && onCellUpdate && fieldKey) {
+                    const entityId = (row.original as any).id;
+                    return (
+                      <td key={cell.id} className="table-cell table-cell-editable" style={cellStyle}>
+                        <EditableCell
+                          value={cell.getValue()}
+                          type={editableType || 'text'}
+                          fieldKey={fieldKey}
+                          entityId={entityId}
+                          onUpdate={onCellUpdate}
+                          dropdownOptions={dropdownOptions}
+                        />
+                      </td>
+                    );
+                  }
+
+                  // Render using column's cell function
+                  let cellContent: React.ReactNode;
+                  if (columnDef.cell && typeof columnDef.cell === 'function') {
+                    cellContent = columnDef.cell(cell.getContext());
+                  } else {
+                    cellContent = cell.getValue() != null ? String(cell.getValue()) : '—';
+                  }
+
+                  return (
+                    <td key={cell.id} className="table-cell" style={cellStyle}>
+                      {cellContent}
+                    </td>
+                  );
+                })}
+              </tr>
             ))}
           </tbody>
         </table>

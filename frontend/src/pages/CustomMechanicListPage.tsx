@@ -65,7 +65,7 @@ export const CustomMechanicListPage: React.FC = () => {
         const desc = info.getValue() as string;
         return desc ? (desc.length > 120 ? desc.substring(0, 120) + '...' : desc) : '-';
       },
-      size: 550,
+      size: 700,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -78,7 +78,7 @@ export const CustomMechanicListPage: React.FC = () => {
         const rules = info.getValue() as string;
         return rules ? (rules.length > 100 ? rules.substring(0, 100) + '...' : rules) : '-';
       },
-      size: 500,
+      size: 700,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -91,7 +91,7 @@ export const CustomMechanicListPage: React.FC = () => {
         const prereq = info.getValue() as string;
         return prereq ? (prereq.length > 60 ? prereq.substring(0, 60) + '...' : prereq) : '-';
       },
-      size: 350,
+      size: 600,
       meta: {
         editable: true,
         editableType: 'textarea',

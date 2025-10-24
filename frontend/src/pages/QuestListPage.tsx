@@ -76,7 +76,7 @@ export const QuestListPage: React.FC = () => {
         const desc = info.getValue() as string;
         return desc ? <TruncatedText text={desc} maxLength={100} /> : '-';
       },
-      size: 450,
+      size: 700,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -102,7 +102,7 @@ export const QuestListPage: React.FC = () => {
         const rewards = info.getValue() as string;
         return rewards ? <TruncatedText text={rewards} maxLength={60} /> : '-';
       },
-      size: 350,
+      size: 600,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -154,7 +154,7 @@ export const QuestListPage: React.FC = () => {
         const dmObj = info.getValue() as string;
         return dmObj ? <TruncatedText text={dmObj} maxLength={80} /> : '-';
       },
-      size: 400,
+      size: 600,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -167,7 +167,7 @@ export const QuestListPage: React.FC = () => {
         const dmConseq = info.getValue() as string;
         return dmConseq ? <TruncatedText text={dmConseq} maxLength={80} /> : '-';
       },
-      size: 400,
+      size: 600,
       meta: {
         editable: true,
         editableType: 'textarea',

@@ -38,11 +38,18 @@ export function TableRow<T = any>({ entity, columns, onClick, onCellUpdate, clas
         const editableType = column.meta?.editableType as EditableCellType | undefined;
         const dropdownOptions = column.meta?.dropdownOptions as Array<{ value: string; label: string }> | undefined;
 
+        // Get column width from size property
+        const columnWidth = column.size ? `${column.size}px` : undefined;
+
         // Render editable cell if enabled
         if (isEditable && onCellUpdate && fieldKey) {
           const entityId = (entity as any).id;
           return (
-            <td key={columnId} className="table-cell table-cell-editable">
+            <td
+              key={columnId}
+              className="table-cell table-cell-editable"
+              style={{ width: columnWidth, minWidth: columnWidth, maxWidth: columnWidth }}
+            >
               <EditableCell
                 value={cellValue}
                 type={editableType || 'text'}
@@ -69,7 +76,11 @@ export function TableRow<T = any>({ entity, columns, onClick, onCellUpdate, clas
         }
 
         return (
-          <td key={columnId} className="table-cell">
+          <td
+            key={columnId}
+            className="table-cell"
+            style={{ width: columnWidth, minWidth: columnWidth, maxWidth: columnWidth }}
+          >
             {cellContent}
           </td>
         );

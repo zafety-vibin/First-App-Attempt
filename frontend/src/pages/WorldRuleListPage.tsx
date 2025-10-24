@@ -65,7 +65,7 @@ export const WorldRuleListPage: React.FC = () => {
         const desc = info.getValue() as string;
         return desc ? (desc.length > 150 ? desc.substring(0, 150) + '...' : desc) : '-';
       },
-      size: 600,
+      size: 700,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -78,7 +78,7 @@ export const WorldRuleListPage: React.FC = () => {
         const exc = info.getValue() as string;
         return exc ? (exc.length > 80 ? exc.substring(0, 80) + '...' : exc) : '-';
       },
-      size: 400,
+      size: 600,
       meta: {
         editable: true,
         editableType: 'textarea',

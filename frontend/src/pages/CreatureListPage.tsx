@@ -84,7 +84,7 @@ export const CreatureListPage: React.FC = () => {
         const desc = info.getValue() as string;
         return desc ? (desc.length > 120 ? desc.substring(0, 120) + '...' : desc) : '-';
       },
-      size: 550,
+      size: 700,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -97,7 +97,7 @@ export const CreatureListPage: React.FC = () => {
         const abilities = info.getValue() as string;
         return abilities ? (abilities.length > 80 ? abilities.substring(0, 80) + '...' : abilities) : '-';
       },
-      size: 450,
+      size: 600,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -136,7 +136,7 @@ export const CreatureListPage: React.FC = () => {
         const behaviorNotes = info.getValue() as string;
         return behaviorNotes ? <TruncatedText text={behaviorNotes} maxLength={100} /> : '-';
       },
-      size: 400,
+      size: 600,
       meta: {
         editable: true,
         editableType: 'textarea',

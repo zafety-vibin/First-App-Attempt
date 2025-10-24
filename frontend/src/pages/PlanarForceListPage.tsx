@@ -111,7 +111,7 @@ export const PlanarForceListPage: React.FC = () => {
         const desc = info.getValue() as string;
         return desc ? (desc.length > 100 ? desc.substring(0, 100) + '...' : desc) : '-';
       },
-      size: 450,
+      size: 700,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -124,7 +124,7 @@ export const PlanarForceListPage: React.FC = () => {
         const worshipers = info.getValue() as string;
         return worshipers ? (worshipers.length > 60 ? worshipers.substring(0, 60) + '...' : worshipers) : '-';
       },
-      size: 350,
+      size: 600,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -163,7 +163,7 @@ export const PlanarForceListPage: React.FC = () => {
         const trueNature = info.getValue() as string;
         return trueNature ? <TruncatedText text={trueNature} maxLength={100} /> : '-';
       },
-      size: 400,
+      size: 600,
       meta: {
         editable: true,
         editableType: 'textarea',

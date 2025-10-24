@@ -91,7 +91,7 @@ export const LocationListPage: React.FC = () => {
         const desc = info.getValue() as string;
         return desc ? <TruncatedText text={desc} maxLength={100} /> : '-';
       },
-      size: 450,
+      size: 700,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -104,7 +104,7 @@ export const LocationListPage: React.FC = () => {
         const culture = info.getValue() as string;
         return culture ? <TruncatedText text={culture} maxLength={80} /> : '-';
       },
-      size: 400,
+      size: 600,
       meta: {
         editable: true,
         editableType: 'textarea',
@@ -156,7 +156,7 @@ export const LocationListPage: React.FC = () => {
         const secrets = info.getValue() as string;
         return secrets ? <TruncatedText text={secrets} maxLength={100} /> : '-';
       },
-      size: 450,
+      size: 600,
       meta: {
         editable: true,
         editableType: 'textarea',

@@ -26,6 +26,10 @@ export const SessionRecapListPage: React.FC = () => {
       header: 'Name',
       cell: (info) => info.getValue(),
       size: 200,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'session_date',
@@ -103,6 +107,10 @@ export const SessionRecapListPage: React.FC = () => {
         return tags && tags.length > 0 ? tags.join(', ') : '-';
       },
       size: 150,
+      meta: {
+        editable: true,
+        editableType: 'tags',
+      },
     },
     {
       accessorKey: 'dm_consequences',

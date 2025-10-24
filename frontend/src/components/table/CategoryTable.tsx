@@ -3,10 +3,19 @@ import { useReactTable, getCoreRowModel, ColumnDef, ColumnResizeMode } from '@ta
 import { SortableTableHeader } from './SortableTableHeader';
 import { TableRow } from './TableRow';
 import { EditableCell, EditableCellType } from './EditableCell';
+import { QuickAddRow } from './QuickAddRow';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { EmptyState } from '../common/EmptyState';
 import { SortDirection } from '../../hooks/useSorting';
 import './CategoryTable.css';
+
+export interface QuickAddColumn {
+  fieldKey: string;
+  label: string;
+  type: 'text' | 'number' | 'dropdown' | 'player_knowledge';
+  required?: boolean;
+  dropdownOptions?: Array<{ value: string; label: string }>;
+}
 
 export interface CategoryTableProps<T = any> {
   data: T[];
@@ -18,6 +27,8 @@ export interface CategoryTableProps<T = any> {
   onSort?: (column: string) => void;
   onRowClick?: (entity: T) => void;
   onCellUpdate?: (entityId: string, fieldKey: string, newValue: any) => Promise<void>;
+  onQuickAdd?: (data: Record<string, any>) => Promise<void>;
+  quickAddColumns?: QuickAddColumn[];
   emptyMessage?: string;
   className?: string;
 }
@@ -36,6 +47,8 @@ export function CategoryTable<T = any>({
   onSort,
   onRowClick,
   onCellUpdate,
+  onQuickAdd,
+  quickAddColumns,
   emptyMessage = 'No items found',
   className = '',
 }: CategoryTableProps<T>) {
@@ -216,6 +229,15 @@ export function CategoryTable<T = any>({
               </tr>
             ))}
           </tbody>
+
+          {onQuickAdd && quickAddColumns && (
+            <tfoot className="category-table-footer">
+              <QuickAddRow
+                onAdd={onQuickAdd}
+                columns={quickAddColumns}
+              />
+            </tfoot>
+          )}
         </table>
       </div>
     </div>

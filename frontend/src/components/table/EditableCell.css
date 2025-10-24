@@ -14,14 +14,39 @@
 }
 
 .editable-cell-display {
-  cursor: pointer;
+  cursor: cell;
   background: transparent;
   border: 1px solid transparent;
+  transition: all 0.15s ease;
 }
 
 .editable-cell-display:hover {
   background: #f3f4f6;
   border-color: #d1d5db;
+  cursor: text;
+}
+
+.editable-cell-display:hover::after {
+  content: "Double-click to edit";
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1f2937;
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  margin-bottom: 0.25rem;
+}
+
+.editable-cell-display:hover::after {
+  opacity: 0.9;
+  transition-delay: 0.5s;
 }
 
 .editable-cell-display:focus {

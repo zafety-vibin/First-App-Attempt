@@ -246,7 +246,7 @@ export const EditableCell: React.FC<EditableCellProps> = ({
             className="editable-cell-textarea"
             rows={4}
             disabled={isSaving}
-            placeholder="Click to edit... (Ctrl+Enter to save, Esc to cancel)"
+            placeholder="Double-click to edit... (Ctrl+Enter to save, Esc to cancel)"
           />
         );
 
@@ -284,7 +284,7 @@ export const EditableCell: React.FC<EditableCellProps> = ({
       ) : (
         <div
           className="editable-cell editable-cell-display"
-          onClick={(e) => {
+          onDoubleClick={(e) => {
             e.stopPropagation(); // Prevent row click
             setIsEditing(true);
           }}
@@ -296,7 +296,7 @@ export const EditableCell: React.FC<EditableCellProps> = ({
           }}
           role="button"
           tabIndex={0}
-          title="Click to edit"
+          title="Double-click to edit"
         >
           {renderDisplayValue()}
         </div>

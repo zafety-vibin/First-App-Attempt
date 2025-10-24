@@ -13,36 +13,13 @@ export interface TableRowProps<T = any> {
 
 /**
  * Generic table row component for any category entity
- * Renders cells based on column definitions with hover effect
+ * Renders cells based on column definitions
  * Supports editable cells via meta.editable
+ * Row navigation handled via ActionsCell instead of row click to prevent accidental navigation
  */
 export function TableRow<T = any>({ entity, columns, onClick, onCellUpdate, className = '' }: TableRowProps<T>) {
-  const handleRowClick = (event: React.MouseEvent) => {
-    // Don't trigger row click if clicking on an editable cell
-    const target = event.target as HTMLElement;
-    if (target.closest('.editable-cell-wrapper')) {
-      return;
-    }
-    if (onClick) {
-      onClick(entity);
-    }
-  };
-
-  const handleKeyDown = (event: React.KeyboardEvent) => {
-    if (onClick && (event.key === 'Enter' || event.key === ' ')) {
-      event.preventDefault();
-      onClick(entity);
-    }
-  };
-
   return (
-    <tr
-      className={`table-row ${onClick ? 'table-row-clickable' : ''} ${className}`}
-      onClick={handleRowClick}
-      onKeyDown={handleKeyDown}
-      tabIndex={onClick ? 0 : undefined}
-      role={onClick ? 'button' : undefined}
-    >
+    <tr className={`table-row ${className}`}>
       {columns.map((column, index) => {
         const columnId = typeof column.id === 'string' ? column.id : `column-${index}`;
         const fieldKey = column.accessorKey as string;

@@ -13,6 +13,7 @@ import { TableToolbar } from '../table/TableToolbar';
 import { PaginationControls } from '../table/PaginationControls';
 import { CategoryStatsSection } from './CategoryStatsSection';
 import { LoadingSpinner } from '../common/LoadingSpinner';
+import { ActionsCell } from '../table/ActionsCell';
 import './GenericCategoryListView.css';
 
 export interface GenericCategoryListViewProps {
@@ -25,6 +26,18 @@ export interface GenericCategoryListViewProps {
 
 // Constant empty object to prevent recreating on every render
 const EMPTY_FILTERS = {};
+
+// Helper to properly singularize category labels
+const singularize = (plural: string): string => {
+  // Special cases
+  if (plural.endsWith('ies')) {
+    return plural.slice(0, -3) + 'y'; // "Entries" → "Entry"
+  }
+  if (plural.endsWith('s')) {
+    return plural.slice(0, -1); // "NPCs" → "NPC"
+  }
+  return plural;
+};
 
 /**
  * T059: Generic Category List View
@@ -91,20 +104,34 @@ export const GenericCategoryListView: React.FC<GenericCategoryListViewProps> = (
     }
   }, [refreshTrigger, refresh]);
 
+  // Add Actions column at the beginning
+  const columnsWithActions = useMemo(() => {
+    const actionsColumn = {
+      id: 'actions',
+      header: '',
+      cell: (info: any) => (
+        <ActionsCell
+          entityId={info.row.original.id}
+          category={category}
+          campaignId={campaignId}
+        />
+      ),
+      size: 60,
+      enableSorting: false,
+    };
+    return [actionsColumn, ...columns];
+  }, [columns, category, campaignId]);
+
   // Filter columns based on view mode - hide dm_* columns in player_view
   const filteredColumns = useMemo(() => {
     if (viewMode === 'player_view') {
-      return columns.filter(col => !col.accessorKey?.startsWith('dm_'));
+      return columnsWithActions.filter(col => !col.accessorKey?.startsWith('dm_'));
     }
-    return columns;
-  }, [columns, viewMode]);
+    return columnsWithActions;
+  }, [columnsWithActions, viewMode]);
 
   const categoryLabel = getCategoryLabel(category);
   const totalPages = Math.ceil(totalCount / limit);
-
-  const handleRowClick = (entity: any): void => {
-    navigate(`/campaigns/${campaignId}/${category}/${entity.id}`);
-  };
 
   const handleNewEntity = (): void => {
     navigate(`/campaigns/${campaignId}/${category}/new`);
@@ -149,9 +176,9 @@ export const GenericCategoryListView: React.FC<GenericCategoryListViewProps> = (
             type="button"
             className="list-new-button"
             onClick={handleNewEntity}
-            aria-label={`Create new ${categoryLabel.slice(0, -1)}`}
+            aria-label={`Create new ${singularize(categoryLabel)}`}
           >
-            New {categoryLabel.slice(0, -1)}
+            New {singularize(categoryLabel)}
           </button>
         </div>
       </header>
@@ -174,7 +201,6 @@ export const GenericCategoryListView: React.FC<GenericCategoryListViewProps> = (
       <CategoryTable
         data={entities}
         columns={filteredColumns}
-        onRowClick={handleRowClick}
         onCellUpdate={handleCellUpdate}
         onSort={handleSort}
         sortField={sortField}

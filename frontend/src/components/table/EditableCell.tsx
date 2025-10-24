@@ -207,10 +207,17 @@ export const EditableCell: React.FC<EditableCellProps> = ({
       case 'player_knowledge':
         // Use PaintersEaselPalette for information level selection
         return (
-          <div className="editable-cell-palette-wrapper">
+          <div className="editable-cell-palette-wrapper" onClick={(e) => e.stopPropagation()}>
             <PaintersEaselPalette
               currentLevelId={currentValue || 'common_knowledge'}
-              onSelect={(levelId) => handleChange(levelId)}
+              onSelect={(levelId) => {
+                // Clear debounce timeout
+                if (saveTimeoutRef.current) {
+                  clearTimeout(saveTimeoutRef.current);
+                }
+                // Immediately save the selection
+                handleSave(levelId);
+              }}
               showManagement={false}
             />
           </div>
@@ -240,16 +247,23 @@ export const EditableCell: React.FC<EditableCellProps> = ({
   return (
     <div className="editable-cell-wrapper">
       {isEditing ? (
-        <div className="editable-cell editable-cell-editing">
+        <div
+          className="editable-cell editable-cell-editing"
+          onClick={(e) => e.stopPropagation()} // Prevent row click while editing
+        >
           {renderEditInput()}
           {isSaving && <span className="editable-cell-saving">Saving...</span>}
         </div>
       ) : (
         <div
           className="editable-cell editable-cell-display"
-          onClick={() => setIsEditing(true)}
+          onClick={(e) => {
+            e.stopPropagation(); // Prevent row click
+            setIsEditing(true);
+          }}
           onKeyPress={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
+              e.stopPropagation(); // Prevent row click
               setIsEditing(true);
             }
           }}

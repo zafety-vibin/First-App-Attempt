@@ -107,7 +107,7 @@ export const LoreEntryListPage: React.FC = () => {
       size: 350,
       meta: {
         editable: true,
-        editableType: 'text',
+        editableType: 'textarea',
       },
     },
     {

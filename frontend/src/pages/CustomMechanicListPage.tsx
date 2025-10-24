@@ -68,7 +68,7 @@ export const CustomMechanicListPage: React.FC = () => {
       size: 350,
       meta: {
         editable: true,
-        editableType: 'text',
+        editableType: 'textarea',
       },
     },
     {
@@ -81,7 +81,7 @@ export const CustomMechanicListPage: React.FC = () => {
       size: 300,
       meta: {
         editable: true,
-        editableType: 'text',
+        editableType: 'textarea',
       },
     },
     {
@@ -94,7 +94,7 @@ export const CustomMechanicListPage: React.FC = () => {
       size: 200,
       meta: {
         editable: true,
-        editableType: 'text',
+        editableType: 'textarea',
       },
     },
     {

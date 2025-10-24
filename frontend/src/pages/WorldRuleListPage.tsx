@@ -68,7 +68,7 @@ export const WorldRuleListPage: React.FC = () => {
       size: 400,
       meta: {
         editable: true,
-        editableType: 'text',
+        editableType: 'textarea',
       },
     },
     {
@@ -81,7 +81,7 @@ export const WorldRuleListPage: React.FC = () => {
       size: 250,
       meta: {
         editable: true,
-        editableType: 'text',
+        editableType: 'textarea',
       },
     },
     {

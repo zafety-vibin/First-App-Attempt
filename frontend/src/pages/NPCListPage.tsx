@@ -141,7 +141,7 @@ export const NPCListPage: React.FC = () => {
       size: 250,
       meta: {
         editable: true,
-        editableType: 'text',
+        editableType: 'textarea',
       },
     },
     {
@@ -154,7 +154,7 @@ export const NPCListPage: React.FC = () => {
       size: 200,
       meta: {
         editable: true,
-        editableType: 'text',
+        editableType: 'textarea',
       },
     },
     {
@@ -167,7 +167,7 @@ export const NPCListPage: React.FC = () => {
       size: 200,
       meta: {
         editable: true,
-        editableType: 'text',
+        editableType: 'textarea',
       },
     },
     {
@@ -193,7 +193,7 @@ export const NPCListPage: React.FC = () => {
       size: 300,
       meta: {
         editable: true,
-        editableType: 'text',
+        editableType: 'textarea',
       },
     },
     {
@@ -206,7 +206,7 @@ export const NPCListPage: React.FC = () => {
       size: 300,
       meta: {
         editable: true,
-        editableType: 'text',
+        editableType: 'textarea',
       },
     },
   ];

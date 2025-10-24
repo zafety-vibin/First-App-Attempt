@@ -102,7 +102,7 @@ export const ItemListPage: React.FC = () => {
       size: 300,
       meta: {
         editable: true,
-        editableType: 'text',
+        editableType: 'textarea',
       },
     },
     {
@@ -115,7 +115,7 @@ export const ItemListPage: React.FC = () => {
       size: 250,
       meta: {
         editable: true,
-        editableType: 'text',
+        editableType: 'textarea',
       },
     },
     {
@@ -168,7 +168,7 @@ export const ItemListPage: React.FC = () => {
       size: 250,
       meta: {
         editable: true,
-        editableType: 'text',
+        editableType: 'textarea',
       },
     },
     {
@@ -181,7 +181,7 @@ export const ItemListPage: React.FC = () => {
       size: 250,
       meta: {
         editable: true,
-        editableType: 'text',
+        editableType: 'textarea',
       },
     },
   ];

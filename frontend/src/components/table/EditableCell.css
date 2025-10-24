@@ -142,10 +142,62 @@
   min-width: 140px;
 }
 
+/* Textarea styling - larger, more visible editing area */
+.editable-cell-textarea {
+  width: 100%;
+  min-width: 400px;
+  max-width: 600px;
+  padding: 0.5rem;
+  border: none;
+  outline: none;
+  font-size: 0.875rem;
+  font-family: inherit;
+  line-height: 1.5;
+  background: transparent;
+  resize: vertical;
+  min-height: 100px;
+}
+
+.editable-cell-textarea:focus {
+  outline: none;
+}
+
+.editable-cell-textarea:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+/* When editing textarea, expand the cell wrapper */
+.editable-cell-wrapper:has(.editable-cell-textarea) {
+  position: relative;
+}
+
+.editable-cell-editing:has(.editable-cell-textarea) {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 50;
+  min-width: 400px;
+  max-width: 600px;
+  background: white;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .editable-cell-input,
   .editable-cell-select {
     font-size: 1rem; /* Prevent zoom on iOS */
+  }
+
+  .editable-cell-textarea {
+    min-width: 300px;
+  }
+
+  .editable-cell-editing:has(.editable-cell-textarea) {
+    min-width: 300px;
+    max-width: 90vw;
   }
 }

@@ -79,7 +79,7 @@ export const SessionRecapListPage: React.FC = () => {
       size: 350,
       meta: {
         editable: true,
-        editableType: 'text',
+        editableType: 'textarea',
       },
     },
     {
@@ -150,7 +150,7 @@ export const SessionRecapListPage: React.FC = () => {
       size: 250,
       meta: {
         editable: true,
-        editableType: 'text',
+        editableType: 'textarea',
       },
     },
     {
@@ -163,7 +163,7 @@ export const SessionRecapListPage: React.FC = () => {
       size: 250,
       meta: {
         editable: true,
-        editableType: 'text',
+        editableType: 'textarea',
       },
     },
   ];

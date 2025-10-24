@@ -109,7 +109,7 @@ export const PlayerCharacterListPage: React.FC = () => {
       size: 130,
       meta: {
         editable: true,
-        editableType: 'text',
+        editableType: 'textarea',
       },
     },
     {
@@ -122,7 +122,7 @@ export const PlayerCharacterListPage: React.FC = () => {
       size: 200,
       meta: {
         editable: true,
-        editableType: 'text',
+        editableType: 'textarea',
       },
     },
     {
@@ -135,7 +135,7 @@ export const PlayerCharacterListPage: React.FC = () => {
       size: 250,
       meta: {
         editable: true,
-        editableType: 'text',
+        editableType: 'textarea',
       },
     },
     {
@@ -174,7 +174,7 @@ export const PlayerCharacterListPage: React.FC = () => {
       size: 250,
       meta: {
         editable: true,
-        editableType: 'text',
+        editableType: 'textarea',
       },
     },
     {
@@ -187,7 +187,7 @@ export const PlayerCharacterListPage: React.FC = () => {
       size: 250,
       meta: {
         editable: true,
-        editableType: 'text',
+        editableType: 'textarea',
       },
     },
     {
@@ -200,7 +200,7 @@ export const PlayerCharacterListPage: React.FC = () => {
       size: 250,
       meta: {
         editable: true,
-        editableType: 'text',
+        editableType: 'textarea',
       },
     },
     {
@@ -213,7 +213,7 @@ export const PlayerCharacterListPage: React.FC = () => {
       size: 250,
       meta: {
         editable: true,
-        editableType: 'text',
+        editableType: 'textarea',
       },
     },
   ];

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './EditableCell.css';
 
-export type EditableCellType = 'text' | 'number' | 'dropdown' | 'tags' | 'player_knowledge';
+export type EditableCellType = 'text' | 'textarea' | 'number' | 'dropdown' | 'tags' | 'player_knowledge';
 
 export interface EditableCellProps {
   value: any;
@@ -104,7 +104,19 @@ export const EditableCell: React.FC<EditableCellProps> = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && type !== 'text') {
+    // For textarea, Ctrl+Enter or Cmd+Enter saves, Escape cancels
+    if (type === 'textarea') {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        handleBlur();
+      } else if (e.key === 'Escape') {
+        if (saveTimeoutRef.current) {
+          clearTimeout(saveTimeoutRef.current);
+        }
+        setCurrentValue(value);
+        setIsEditing(false);
+      }
+    } else if (e.key === 'Enter' && type !== 'text') {
       e.preventDefault();
       handleBlur();
     } else if (e.key === 'Escape') {
@@ -220,6 +232,22 @@ export const EditableCell: React.FC<EditableCellProps> = ({
             <option value="player_knowledge">Player Knowledge</option>
             <option value="dm_only">DM Only</option>
           </select>
+        );
+
+      case 'textarea':
+        // Multi-line textarea for long text fields (description, appearance, etc.)
+        return (
+          <textarea
+            ref={inputRef as React.RefObject<HTMLTextAreaElement>}
+            value={currentValue || ''}
+            onChange={(e) => handleChange(e.target.value)}
+            onBlur={handleBlur}
+            onKeyDown={handleKeyDown}
+            className="editable-cell-textarea"
+            rows={4}
+            disabled={isSaving}
+            placeholder="Click to edit... (Ctrl+Enter to save, Esc to cancel)"
+          />
         );
 
       case 'text':

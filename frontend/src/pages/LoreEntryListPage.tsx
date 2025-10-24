@@ -45,24 +45,57 @@ export const LoreEntryListPage: React.FC = () => {
       header: 'Category',
       cell: (info) => info.getValue() || '-',
       size: 150,
+      meta: {
+        editable: true,
+        editableType: 'dropdown',
+        dropdownOptions: [
+          { value: 'historical_event', label: 'Historical Event' },
+          { value: 'myth_legend', label: 'Myth/Legend' },
+          { value: 'cultural_tradition', label: 'Cultural Tradition' },
+          { value: 'religious_text', label: 'Religious Text' },
+          { value: 'academic_knowledge', label: 'Academic Knowledge' },
+          { value: 'prophecy', label: 'Prophecy' },
+          { value: 'cosmology', label: 'Cosmology' },
+          { value: 'other', label: 'Other' },
+        ],
+      },
     },
     {
       accessorKey: 'era_period',
       header: 'Era/Period',
       cell: (info) => info.getValue() || '-',
       size: 130,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'in_game_date',
       header: 'In-Game Date',
       cell: (info) => info.getValue() || '-',
       size: 130,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'historical_accuracy',
       header: 'Accuracy',
       cell: (info) => info.getValue() || '-',
       size: 110,
+      meta: {
+        editable: true,
+        editableType: 'dropdown',
+        dropdownOptions: [
+          { value: 'accurate', label: 'Accurate' },
+          { value: 'mostly_accurate', label: 'Mostly Accurate' },
+          { value: 'embellished', label: 'Embellished' },
+          { value: 'myth', label: 'Myth' },
+          { value: 'fabrication', label: 'Fabrication' },
+        ],
+      },
     },
     {
       accessorKey: 'description',
@@ -72,6 +105,10 @@ export const LoreEntryListPage: React.FC = () => {
         return desc ? (desc.length > 120 ? desc.substring(0, 120) + '...' : desc) : '-';
       },
       size: 350,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'related_npcs',
@@ -81,6 +118,10 @@ export const LoreEntryListPage: React.FC = () => {
         return npcs && npcs.length > 0 ? `${npcs.length} NPCs` : '-';
       },
       size: 100,
+      meta: {
+        editable: true,
+        editableType: 'tags',
+      },
     },
     {
       accessorKey: 'related_factions',
@@ -90,6 +131,10 @@ export const LoreEntryListPage: React.FC = () => {
         return factions && factions.length > 0 ? `${factions.length} factions` : '-';
       },
       size: 110,
+      meta: {
+        editable: true,
+        editableType: 'tags',
+      },
     },
     {
       accessorKey: 'tags',

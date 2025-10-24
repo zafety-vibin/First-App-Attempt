@@ -29,6 +29,10 @@ export const SessionPrepListPage: React.FC = () => {
         return plannedDate ? new Date(plannedDate * 1000).toLocaleDateString() : '-';
       },
       size: 130,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'status',
@@ -38,6 +42,16 @@ export const SessionPrepListPage: React.FC = () => {
         return status ? status.toUpperCase() : '-';
       },
       size: 100,
+      meta: {
+        editable: true,
+        editableType: 'dropdown',
+        dropdownOptions: [
+          { value: 'planning', label: 'Planning' },
+          { value: 'ready', label: 'Ready' },
+          { value: 'in_progress', label: 'In Progress' },
+          { value: 'completed', label: 'Completed' },
+        ],
+      },
     },
     {
       accessorKey: 'description',
@@ -47,6 +61,10 @@ export const SessionPrepListPage: React.FC = () => {
         return desc ? (desc.length > 100 ? desc.substring(0, 100) + '...' : desc) : '-';
       },
       size: 300,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'planned_events',
@@ -56,6 +74,10 @@ export const SessionPrepListPage: React.FC = () => {
         return events ? (events.length > 80 ? events.substring(0, 80) + '...' : events) : '-';
       },
       size: 250,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'npcs_to_prep',
@@ -65,6 +87,10 @@ export const SessionPrepListPage: React.FC = () => {
         return npcs && npcs.length > 0 ? `${npcs.length} NPCs` : '-';
       },
       size: 100,
+      meta: {
+        editable: true,
+        editableType: 'tags',
+      },
     },
     {
       accessorKey: 'locations_to_prep',
@@ -74,6 +100,10 @@ export const SessionPrepListPage: React.FC = () => {
         return locs && locs.length > 0 ? `${locs.length} locations` : '-';
       },
       size: 110,
+      meta: {
+        editable: true,
+        editableType: 'tags',
+      },
     },
     {
       accessorKey: 'tags',

@@ -45,6 +45,18 @@ export const CustomMechanicListPage: React.FC = () => {
       header: 'Type',
       cell: (info) => info.getValue() || '-',
       size: 130,
+      meta: {
+        editable: true,
+        editableType: 'dropdown',
+        dropdownOptions: [
+          { value: 'feat', label: 'Feat' },
+          { value: 'spell', label: 'Spell' },
+          { value: 'class_feature', label: 'Class Feature' },
+          { value: 'item_property', label: 'Item Property' },
+          { value: 'environmental', label: 'Environmental' },
+          { value: 'subsystem', label: 'Subsystem' },
+        ],
+      },
     },
     {
       accessorKey: 'description',
@@ -54,6 +66,10 @@ export const CustomMechanicListPage: React.FC = () => {
         return desc ? (desc.length > 120 ? desc.substring(0, 120) + '...' : desc) : '-';
       },
       size: 350,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'rules_text',
@@ -63,6 +79,10 @@ export const CustomMechanicListPage: React.FC = () => {
         return rules ? (rules.length > 100 ? rules.substring(0, 100) + '...' : rules) : '-';
       },
       size: 300,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'prerequisites',
@@ -72,12 +92,20 @@ export const CustomMechanicListPage: React.FC = () => {
         return prereq ? (prereq.length > 60 ? prereq.substring(0, 60) + '...' : prereq) : '-';
       },
       size: 200,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'source',
       header: 'Source',
       cell: (info) => info.getValue() || '-',
       size: 130,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'related_rules',
@@ -87,6 +115,10 @@ export const CustomMechanicListPage: React.FC = () => {
         return rules && rules.length > 0 ? `${rules.length} rules` : '-';
       },
       size: 100,
+      meta: {
+        editable: true,
+        editableType: 'tags',
+      },
     },
     {
       accessorKey: 'tags',

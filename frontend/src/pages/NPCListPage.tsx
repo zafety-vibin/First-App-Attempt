@@ -74,6 +74,10 @@ export const NPCListPage: React.FC = () => {
         }
       },
       size: 150,
+      meta: {
+        editable: true,
+        editableType: 'tags', // Array of classes
+      },
     },
     {
       accessorKey: 'level',
@@ -114,6 +118,18 @@ export const NPCListPage: React.FC = () => {
       header: 'Party Relation',
       cell: (info) => info.getValue() || '-',
       size: 130,
+      meta: {
+        editable: true,
+        editableType: 'dropdown',
+        dropdownOptions: [
+          { value: 'Allied', label: 'Allied' },
+          { value: 'Friendly', label: 'Friendly' },
+          { value: 'Neutral', label: 'Neutral' },
+          { value: 'Suspicious', label: 'Suspicious' },
+          { value: 'Hostile', label: 'Hostile' },
+          { value: 'Enemy', label: 'Enemy' },
+        ],
+      },
     },
     {
       accessorKey: 'appearance',
@@ -123,6 +139,10 @@ export const NPCListPage: React.FC = () => {
         return app ? <TruncatedText text={app} maxLength={80} /> : '-';
       },
       size: 250,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'personality_traits',
@@ -132,6 +152,10 @@ export const NPCListPage: React.FC = () => {
         return traits ? <TruncatedText text={traits} maxLength={60} /> : '-';
       },
       size: 200,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'motivation',
@@ -141,6 +165,10 @@ export const NPCListPage: React.FC = () => {
         return mot ? <TruncatedText text={mot} maxLength={60} /> : '-';
       },
       size: 200,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'tags',
@@ -163,6 +191,10 @@ export const NPCListPage: React.FC = () => {
         return secrets ? <TruncatedText text={secrets} maxLength={100} /> : '-';
       },
       size: 300,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'dm_plot_relevance',
@@ -172,6 +204,10 @@ export const NPCListPage: React.FC = () => {
         return relevance ? <TruncatedText text={relevance} maxLength={100} /> : '-';
       },
       size: 300,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
   ];
 

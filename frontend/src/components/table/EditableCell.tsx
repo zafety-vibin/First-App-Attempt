@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { PaintersEaselPalette } from '../PaintersEaselPalette';
 import './EditableCell.css';
 
 export type EditableCellType = 'text' | 'number' | 'dropdown' | 'tags' | 'player_knowledge';
@@ -205,22 +204,22 @@ export const EditableCell: React.FC<EditableCellProps> = ({
         );
 
       case 'player_knowledge':
-        // Use PaintersEaselPalette for information level selection
+        // Simple dropdown for database tables (wiki uses PaintersEaselPalette)
         return (
-          <div className="editable-cell-palette-wrapper" onClick={(e) => e.stopPropagation()}>
-            <PaintersEaselPalette
-              currentLevelId={currentValue || 'common_knowledge'}
-              onSelect={(levelId) => {
-                // Clear debounce timeout
-                if (saveTimeoutRef.current) {
-                  clearTimeout(saveTimeoutRef.current);
-                }
-                // Immediately save the selection
-                handleSave(levelId);
-              }}
-              showManagement={false}
-            />
-          </div>
+          <select
+            ref={inputRef as React.RefObject<HTMLSelectElement>}
+            value={currentValue || 'common_knowledge'}
+            onChange={(e) => handleChange(e.target.value)}
+            onBlur={handleBlur}
+            onKeyDown={handleKeyDown}
+            className="editable-cell-select visibility-select"
+            disabled={isSaving}
+          >
+            <option value="system">System</option>
+            <option value="common_knowledge">Common Knowledge</option>
+            <option value="player_knowledge">Player Knowledge</option>
+            <option value="dm_only">DM Only</option>
+          </select>
         );
 
       case 'text':

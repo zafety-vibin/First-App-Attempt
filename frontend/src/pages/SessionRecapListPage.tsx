@@ -44,18 +44,30 @@ export const SessionRecapListPage: React.FC = () => {
         }
       },
       size: 120,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'in_game_date_start',
       header: 'In-Game Date',
       cell: (info) => info.getValue() || '-',
       size: 130,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'time_passed',
       header: 'Time Passed',
       cell: (info) => info.getValue() || '-',
       size: 120,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'summary',
@@ -65,6 +77,10 @@ export const SessionRecapListPage: React.FC = () => {
         return summary ? (summary.length > 120 ? summary.substring(0, 120) + '...' : summary) : '-';
       },
       size: 350,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'key_events',
@@ -74,6 +90,10 @@ export const SessionRecapListPage: React.FC = () => {
         return events && events.length > 0 ? `${events.length} events` : '-';
       },
       size: 100,
+      meta: {
+        editable: true,
+        editableType: 'tags',
+      },
     },
     {
       accessorKey: 'npcs_encountered',
@@ -83,6 +103,10 @@ export const SessionRecapListPage: React.FC = () => {
         return npcs && npcs.length > 0 ? `${npcs.length} NPCs` : '-';
       },
       size: 100,
+      meta: {
+        editable: true,
+        editableType: 'tags',
+      },
     },
     {
       accessorKey: 'locations_visited',
@@ -98,6 +122,10 @@ export const SessionRecapListPage: React.FC = () => {
         }
       },
       size: 110,
+      meta: {
+        editable: true,
+        editableType: 'tags',
+      },
     },
     {
       accessorKey: 'tags',
@@ -120,6 +148,10 @@ export const SessionRecapListPage: React.FC = () => {
         return consequences ? <TruncatedText text={consequences} maxLength={100} /> : '-';
       },
       size: 250,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'dm_behind_scenes',
@@ -129,6 +161,10 @@ export const SessionRecapListPage: React.FC = () => {
         return behindScenes ? <TruncatedText text={behindScenes} maxLength={100} /> : '-';
       },
       size: 250,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
   ];
 

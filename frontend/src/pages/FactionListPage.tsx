@@ -92,6 +92,10 @@ export const FactionListPage: React.FC = () => {
         return desc ? <TruncatedText text={desc} maxLength={100} /> : '-';
       },
       size: 300,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'goals',
@@ -101,6 +105,10 @@ export const FactionListPage: React.FC = () => {
         return goals ? <TruncatedText text={goals} maxLength={80} /> : '-';
       },
       size: 250,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'resources',
@@ -110,6 +118,10 @@ export const FactionListPage: React.FC = () => {
         return res ? <TruncatedText text={res} maxLength={60} /> : '-';
       },
       size: 200,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'tags',
@@ -132,6 +144,10 @@ export const FactionListPage: React.FC = () => {
         return agenda ? <TruncatedText text={agenda} maxLength={100} /> : '-';
       },
       size: 300,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
   ];
 

@@ -46,6 +46,23 @@ export const ItemListPage: React.FC = () => {
       header: 'Type',
       cell: (info) => info.getValue() || '-',
       size: 120,
+      meta: {
+        editable: true,
+        editableType: 'dropdown',
+        dropdownOptions: [
+          { value: 'weapon', label: 'Weapon' },
+          { value: 'armor', label: 'Armor' },
+          { value: 'potion', label: 'Potion' },
+          { value: 'scroll', label: 'Scroll' },
+          { value: 'wondrous', label: 'Wondrous' },
+          { value: 'ring', label: 'Ring' },
+          { value: 'rod', label: 'Rod' },
+          { value: 'staff', label: 'Staff' },
+          { value: 'wand', label: 'Wand' },
+          { value: 'consumable', label: 'Consumable' },
+          { value: 'treasure', label: 'Treasure' },
+        ],
+      },
     },
     {
       accessorKey: 'rarity',
@@ -70,6 +87,10 @@ export const ItemListPage: React.FC = () => {
       header: 'Value',
       cell: (info) => info.getValue() || '-',
       size: 100,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'description',
@@ -79,6 +100,10 @@ export const ItemListPage: React.FC = () => {
         return desc ? (desc.length > 100 ? desc.substring(0, 100) + '...' : desc) : '-';
       },
       size: 300,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'properties',
@@ -88,6 +113,10 @@ export const ItemListPage: React.FC = () => {
         return props ? (props.length > 80 ? props.substring(0, 80) + '...' : props) : '-';
       },
       size: 250,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'owner_npc_id',
@@ -137,6 +166,10 @@ export const ItemListPage: React.FC = () => {
         return secretProps ? <TruncatedText text={secretProps} maxLength={100} /> : '-';
       },
       size: 250,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'dm_true_nature',
@@ -146,6 +179,10 @@ export const ItemListPage: React.FC = () => {
         return trueNature ? <TruncatedText text={trueNature} maxLength={100} /> : '-';
       },
       size: 250,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
   ];
 

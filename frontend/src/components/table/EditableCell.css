@@ -137,21 +137,9 @@
   outline: none;
 }
 
-/* PaintersEaselPalette wrapper */
-.editable-cell-palette-wrapper {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  z-index: 100;
-  margin-top: 0.25rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  border-radius: 0.5rem;
-  background: white;
-}
-
-/* Make sure editable cell has position relative for absolute positioning */
-.editable-cell-editing {
-  position: relative;
+/* Visibility select styling */
+.visibility-select {
+  min-width: 140px;
 }
 
 /* Responsive adjustments */

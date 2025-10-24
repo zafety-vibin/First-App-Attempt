@@ -77,6 +77,10 @@ export const QuestListPage: React.FC = () => {
         return desc ? <TruncatedText text={desc} maxLength={100} /> : '-';
       },
       size: 300,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'objectives',
@@ -86,6 +90,10 @@ export const QuestListPage: React.FC = () => {
         return objectives && objectives.length > 0 ? `${objectives.length} objectives` : '-';
       },
       size: 110,
+      meta: {
+        editable: true,
+        editableType: 'tags',
+      },
     },
     {
       accessorKey: 'rewards',
@@ -95,6 +103,10 @@ export const QuestListPage: React.FC = () => {
         return rewards ? <TruncatedText text={rewards} maxLength={60} /> : '-';
       },
       size: 200,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'related_npcs',
@@ -104,6 +116,10 @@ export const QuestListPage: React.FC = () => {
         return npcs && npcs.length > 0 ? `${npcs.length} NPCs` : '-';
       },
       size: 120,
+      meta: {
+        editable: true,
+        editableType: 'tags',
+      },
     },
     {
       accessorKey: 'related_locations',
@@ -113,6 +129,10 @@ export const QuestListPage: React.FC = () => {
         return locs && locs.length > 0 ? `${locs.length} locations` : '-';
       },
       size: 110,
+      meta: {
+        editable: true,
+        editableType: 'tags',
+      },
     },
     {
       accessorKey: 'tags',
@@ -135,6 +155,10 @@ export const QuestListPage: React.FC = () => {
         return dmObj ? <TruncatedText text={dmObj} maxLength={80} /> : '-';
       },
       size: 250,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'dm_consequences',
@@ -144,6 +168,10 @@ export const QuestListPage: React.FC = () => {
         return dmConseq ? <TruncatedText text={dmConseq} maxLength={80} /> : '-';
       },
       size: 250,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
   ];
 

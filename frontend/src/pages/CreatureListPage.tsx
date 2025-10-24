@@ -85,6 +85,10 @@ export const CreatureListPage: React.FC = () => {
         return desc ? (desc.length > 120 ? desc.substring(0, 120) + '...' : desc) : '-';
       },
       size: 350,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'abilities',
@@ -94,6 +98,10 @@ export const CreatureListPage: React.FC = () => {
         return abilities ? (abilities.length > 80 ? abilities.substring(0, 80) + '...' : abilities) : '-';
       },
       size: 250,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'habitats',
@@ -103,6 +111,10 @@ export const CreatureListPage: React.FC = () => {
         return habitats && habitats.length > 0 ? `${habitats.length} locations` : '-';
       },
       size: 120,
+      meta: {
+        editable: true,
+        editableType: 'tags',
+      },
     },
     {
       accessorKey: 'tags',
@@ -125,6 +137,10 @@ export const CreatureListPage: React.FC = () => {
         return behaviorNotes ? <TruncatedText text={behaviorNotes} maxLength={100} /> : '-';
       },
       size: 250,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
   ];
 

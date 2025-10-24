@@ -46,6 +46,19 @@ export const PlanarForceListPage: React.FC = () => {
       header: 'Type',
       cell: (info) => info.getValue() || '-',
       size: 120,
+      meta: {
+        editable: true,
+        editableType: 'dropdown',
+        dropdownOptions: [
+          { value: 'deity', label: 'Deity' },
+          { value: 'demon_lord', label: 'Demon Lord' },
+          { value: 'archdevil', label: 'Archdevil' },
+          { value: 'primordial', label: 'Primordial' },
+          { value: 'fey_lord', label: 'Fey Lord' },
+          { value: 'elder_evil', label: 'Elder Evil' },
+          { value: 'cosmic_entity', label: 'Cosmic Entity' },
+        ],
+      },
     },
     {
       accessorKey: 'domains',
@@ -55,18 +68,41 @@ export const PlanarForceListPage: React.FC = () => {
         return Array.isArray(domains) ? domains.join(', ') : domains || '-';
       },
       size: 180,
+      meta: {
+        editable: true,
+        editableType: 'tags',
+      },
     },
     {
       accessorKey: 'alignment',
       header: 'Alignment',
       cell: (info) => info.getValue() || '-',
       size: 110,
+      meta: {
+        editable: true,
+        editableType: 'dropdown',
+        dropdownOptions: [
+          { value: 'lawful_good', label: 'Lawful Good' },
+          { value: 'neutral_good', label: 'Neutral Good' },
+          { value: 'chaotic_good', label: 'Chaotic Good' },
+          { value: 'lawful_neutral', label: 'Lawful Neutral' },
+          { value: 'true_neutral', label: 'True Neutral' },
+          { value: 'chaotic_neutral', label: 'Chaotic Neutral' },
+          { value: 'lawful_evil', label: 'Lawful Evil' },
+          { value: 'neutral_evil', label: 'Neutral Evil' },
+          { value: 'chaotic_evil', label: 'Chaotic Evil' },
+        ],
+      },
     },
     {
       accessorKey: 'plane_of_origin',
       header: 'Plane',
       cell: (info) => info.getValue() || '-',
       size: 150,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'description',
@@ -76,6 +112,10 @@ export const PlanarForceListPage: React.FC = () => {
         return desc ? (desc.length > 100 ? desc.substring(0, 100) + '...' : desc) : '-';
       },
       size: 300,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'worshiper_base',
@@ -85,6 +125,10 @@ export const PlanarForceListPage: React.FC = () => {
         return worshipers ? (worshipers.length > 60 ? worshipers.substring(0, 60) + '...' : worshipers) : '-';
       },
       size: 200,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'religious_orders',
@@ -94,6 +138,10 @@ export const PlanarForceListPage: React.FC = () => {
         return orders && orders.length > 0 ? `${orders.length} orders` : '-';
       },
       size: 100,
+      meta: {
+        editable: true,
+        editableType: 'tags',
+      },
     },
     {
       accessorKey: 'tags',
@@ -116,6 +164,10 @@ export const PlanarForceListPage: React.FC = () => {
         return trueNature ? <TruncatedText text={trueNature} maxLength={100} /> : '-';
       },
       size: 250,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
   ];
 

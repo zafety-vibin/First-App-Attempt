@@ -45,6 +45,18 @@ export const WorldRuleListPage: React.FC = () => {
       header: 'Type',
       cell: (info) => info.getValue() || '-',
       size: 130,
+      meta: {
+        editable: true,
+        editableType: 'dropdown',
+        dropdownOptions: [
+          { value: 'physical_law', label: 'Physical Law' },
+          { value: 'magical_law', label: 'Magical Law' },
+          { value: 'divine_law', label: 'Divine Law' },
+          { value: 'societal_norm', label: 'Societal Norm' },
+          { value: 'cosmic_principle', label: 'Cosmic Principle' },
+          { value: 'game_mechanic', label: 'Game Mechanic' },
+        ],
+      },
     },
     {
       accessorKey: 'description',
@@ -54,6 +66,10 @@ export const WorldRuleListPage: React.FC = () => {
         return desc ? (desc.length > 150 ? desc.substring(0, 150) + '...' : desc) : '-';
       },
       size: 400,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'exceptions',
@@ -63,6 +79,10 @@ export const WorldRuleListPage: React.FC = () => {
         return exc ? (exc.length > 80 ? exc.substring(0, 80) + '...' : exc) : '-';
       },
       size: 250,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'related_rules',
@@ -72,6 +92,10 @@ export const WorldRuleListPage: React.FC = () => {
         return rules && rules.length > 0 ? `${rules.length} rules` : '-';
       },
       size: 120,
+      meta: {
+        editable: true,
+        editableType: 'tags',
+      },
     },
     {
       accessorKey: 'tags',

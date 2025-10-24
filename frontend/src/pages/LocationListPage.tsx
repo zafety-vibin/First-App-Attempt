@@ -92,6 +92,10 @@ export const LocationListPage: React.FC = () => {
         return desc ? <TruncatedText text={desc} maxLength={100} /> : '-';
       },
       size: 300,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'cultural_characteristics',
@@ -101,6 +105,10 @@ export const LocationListPage: React.FC = () => {
         return culture ? <TruncatedText text={culture} maxLength={80} /> : '-';
       },
       size: 250,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'notable_npcs',
@@ -110,6 +118,10 @@ export const LocationListPage: React.FC = () => {
         return npcs && npcs.length > 0 ? `${npcs.length} NPCs` : '-';
       },
       size: 120,
+      meta: {
+        editable: true,
+        editableType: 'tags',
+      },
     },
     {
       accessorKey: 'factions_present',
@@ -119,6 +131,10 @@ export const LocationListPage: React.FC = () => {
         return factions && factions.length > 0 ? `${factions.length} factions` : '-';
       },
       size: 120,
+      meta: {
+        editable: true,
+        editableType: 'tags',
+      },
     },
     {
       accessorKey: 'tags',
@@ -141,6 +157,10 @@ export const LocationListPage: React.FC = () => {
         return secrets ? <TruncatedText text={secrets} maxLength={100} /> : '-';
       },
       size: 300,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
   ];
 

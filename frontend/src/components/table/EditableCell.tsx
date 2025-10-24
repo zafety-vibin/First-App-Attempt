@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { PaintersEaselPalette } from '../PaintersEaselPalette';
 import './EditableCell.css';
 
 export type EditableCellType = 'text' | 'number' | 'dropdown' | 'tags' | 'player_knowledge';
@@ -204,22 +205,15 @@ export const EditableCell: React.FC<EditableCellProps> = ({
         );
 
       case 'player_knowledge':
-        // For now, use dropdown - later we'll integrate PaintersEaselPalette
+        // Use PaintersEaselPalette for information level selection
         return (
-          <select
-            ref={inputRef as React.RefObject<HTMLSelectElement>}
-            value={currentValue || 'common_knowledge'}
-            onChange={(e) => handleChange(e.target.value)}
-            onBlur={handleBlur}
-            onKeyDown={handleKeyDown}
-            className="editable-cell-select"
-            disabled={isSaving}
-          >
-            <option value="system">System</option>
-            <option value="common_knowledge">Common Knowledge</option>
-            <option value="player_knowledge">Player Knowledge</option>
-            <option value="dm_only">DM Only</option>
-          </select>
+          <div className="editable-cell-palette-wrapper">
+            <PaintersEaselPalette
+              currentLevelId={currentValue || 'common_knowledge'}
+              onSelect={(levelId) => handleChange(levelId)}
+              showManagement={false}
+            />
+          </div>
         );
 
       case 'text':

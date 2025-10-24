@@ -32,10 +32,33 @@ export const NPCListPage: React.FC = () => {
       },
     },
     {
+      accessorKey: 'player_knowledge',
+      header: 'Visibility',
+      cell: (info) => {
+        const value = info.getValue() as string;
+        const labelMap: Record<string, string> = {
+          system: 'System',
+          common_knowledge: 'Common',
+          player_knowledge: 'Player',
+          dm_only: 'DM Only',
+        };
+        return labelMap[value] || value || 'Common';
+      },
+      size: 120,
+      meta: {
+        editable: true,
+        editableType: 'player_knowledge',
+      },
+    },
+    {
       accessorKey: 'race',
       header: 'Race',
       cell: (info) => info.getValue() || '-',
       size: 120,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'class',
@@ -60,12 +83,31 @@ export const NPCListPage: React.FC = () => {
         return value ? String(value) : '-';
       },
       size: 80,
+      meta: {
+        editable: true,
+        editableType: 'number',
+      },
     },
     {
       accessorKey: 'alignment',
       header: 'Alignment',
       cell: (info) => info.getValue() || '-',
       size: 100,
+      meta: {
+        editable: true,
+        editableType: 'dropdown',
+        dropdownOptions: [
+          { value: 'Lawful Good', label: 'Lawful Good' },
+          { value: 'Neutral Good', label: 'Neutral Good' },
+          { value: 'Chaotic Good', label: 'Chaotic Good' },
+          { value: 'Lawful Neutral', label: 'Lawful Neutral' },
+          { value: 'True Neutral', label: 'True Neutral' },
+          { value: 'Chaotic Neutral', label: 'Chaotic Neutral' },
+          { value: 'Lawful Evil', label: 'Lawful Evil' },
+          { value: 'Neutral Evil', label: 'Neutral Evil' },
+          { value: 'Chaotic Evil', label: 'Chaotic Evil' },
+        ],
+      },
     },
     {
       accessorKey: 'relationship_to_party',
@@ -108,6 +150,10 @@ export const NPCListPage: React.FC = () => {
         return tags && tags.length > 0 ? tags.join(', ') : '-';
       },
       size: 150,
+      meta: {
+        editable: true,
+        editableType: 'tags',
+      },
     },
     {
       accessorKey: 'dm_secrets',

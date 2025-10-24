@@ -17,6 +17,29 @@ export const ItemListPage: React.FC = () => {
       header: 'Name',
       cell: (info) => info.getValue(),
       size: 200,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
+    },
+    {
+      accessorKey: 'player_knowledge',
+      header: 'Visibility',
+      cell: (info) => {
+        const value = info.getValue() as string;
+        const labelMap: Record<string, string> = {
+          system: 'System',
+          common_knowledge: 'Common',
+          player_knowledge: 'Player',
+          dm_only: 'DM Only',
+        };
+        return labelMap[value] || value || 'Common';
+      },
+      size: 120,
+      meta: {
+        editable: true,
+        editableType: 'player_knowledge',
+      },
     },
     {
       accessorKey: 'item_type',
@@ -29,6 +52,18 @@ export const ItemListPage: React.FC = () => {
       header: 'Rarity',
       cell: (info) => info.getValue() || '-',
       size: 100,
+      meta: {
+        editable: true,
+        editableType: 'dropdown',
+        dropdownOptions: [
+          { value: 'common', label: 'Common' },
+          { value: 'uncommon', label: 'Uncommon' },
+          { value: 'rare', label: 'Rare' },
+          { value: 'very rare', label: 'Very Rare' },
+          { value: 'legendary', label: 'Legendary' },
+          { value: 'artifact', label: 'Artifact' },
+        ],
+      },
     },
     {
       accessorKey: 'value',
@@ -89,6 +124,10 @@ export const ItemListPage: React.FC = () => {
         return tags && tags.length > 0 ? tags.join(', ') : '-';
       },
       size: 150,
+      meta: {
+        editable: true,
+        editableType: 'tags',
+      },
     },
     {
       accessorKey: 'dm_secret_properties',

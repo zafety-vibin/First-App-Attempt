@@ -1,4 +1,4 @@
-import React from 'react';
+Import React from 'react';
 import { useParams } from 'react-router-dom';
 import { GenericCategoryListView } from '../components/pages/GenericCategoryListView';
 import { ColumnDef } from '@tanstack/react-table';
@@ -26,6 +26,29 @@ export const QuestListPage: React.FC = () => {
       header: 'Name',
       cell: (info) => info.getValue(),
       size: 200,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
+    },
+    {
+      accessorKey: 'player_knowledge',
+      header: 'Visibility',
+      cell: (info) => {
+        const value = info.getValue() as string;
+        const labelMap: Record<string, string> = {
+          system: 'System',
+          common_knowledge: 'Common',
+          player_knowledge: 'Player',
+          dm_only: 'DM Only',
+        };
+        return labelMap[value] || value || 'Common';
+      },
+      size: 120,
+      meta: {
+        editable: true,
+        editableType: 'player_knowledge',
+      },
     },
     {
       accessorKey: 'status',
@@ -35,6 +58,16 @@ export const QuestListPage: React.FC = () => {
         return status ? status.replace('_', ' ').toUpperCase() : '-';
       },
       size: 120,
+      meta: {
+        editable: true,
+        editableType: 'dropdown',
+        dropdownOptions: [
+          { value: 'active', label: 'Active' },
+          { value: 'completed', label: 'Completed' },
+          { value: 'failed', label: 'Failed' },
+          { value: 'on_hold', label: 'On Hold' },
+        ],
+      },
     },
     {
       accessorKey: 'description',
@@ -89,6 +122,10 @@ export const QuestListPage: React.FC = () => {
         return tags && tags.length > 0 ? tags.join(', ') : '-';
       },
       size: 150,
+      meta: {
+        editable: true,
+        editableType: 'tags',
+      },
     },
     {
       accessorKey: 'dm_true_objective',
@@ -116,12 +153,9 @@ export const QuestListPage: React.FC = () => {
       campaignId={campaignId}
       columns={questColumns}
       statsConfig={{
-        primaryStats: 'both',
+        primaryStats: 'total',
         breakdownField: 'status',
         breakdownLabel: 'Status',
-        statusField: 'status',
-        activeStatuses: ['not_started', 'in_progress'],
-        completedStatuses: ['completed'],
       }}
     />
   );

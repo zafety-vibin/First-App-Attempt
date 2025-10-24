@@ -17,18 +17,65 @@ export const CreatureListPage: React.FC = () => {
       header: 'Name',
       cell: (info) => info.getValue(),
       size: 200,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
+    },
+    {
+      accessorKey: 'player_knowledge',
+      header: 'Visibility',
+      cell: (info) => {
+        const value = info.getValue() as string;
+        const labelMap: Record<string, string> = {
+          system: 'System',
+          common_knowledge: 'Common',
+          player_knowledge: 'Player',
+          dm_only: 'DM Only',
+        };
+        return labelMap[value] || value || 'Common';
+      },
+      size: 120,
+      meta: {
+        editable: true,
+        editableType: 'player_knowledge',
+      },
     },
     {
       accessorKey: 'creature_type',
       header: 'Type',
       cell: (info) => info.getValue() || '-',
       size: 150,
+      meta: {
+        editable: true,
+        editableType: 'dropdown',
+        dropdownOptions: [
+          { value: 'aberration', label: 'Aberration' },
+          { value: 'beast', label: 'Beast' },
+          { value: 'celestial', label: 'Celestial' },
+          { value: 'construct', label: 'Construct' },
+          { value: 'dragon', label: 'Dragon' },
+          { value: 'elemental', label: 'Elemental' },
+          { value: 'fey', label: 'Fey' },
+          { value: 'fiend', label: 'Fiend' },
+          { value: 'giant', label: 'Giant' },
+          { value: 'humanoid', label: 'Humanoid' },
+          { value: 'monstrosity', label: 'Monstrosity' },
+          { value: 'ooze', label: 'Ooze' },
+          { value: 'plant', label: 'Plant' },
+          { value: 'undead', label: 'Undead' },
+        ],
+      },
     },
     {
       accessorKey: 'challenge_rating',
       header: 'CR',
       cell: (info) => info.getValue() || '-',
       size: 80,
+      meta: {
+        editable: true,
+        editableType: 'number',
+      },
     },
     {
       accessorKey: 'description',
@@ -65,6 +112,10 @@ export const CreatureListPage: React.FC = () => {
         return tags && tags.length > 0 ? tags.join(', ') : '-';
       },
       size: 150,
+      meta: {
+        editable: true,
+        editableType: 'tags',
+      },
     },
     {
       accessorKey: 'dm_behavior_notes',

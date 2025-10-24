@@ -10,9 +10,12 @@ if (!fs.existsSync(dir)) {
   fs.mkdirSync(dir, { recursive: true });
 }
 
+// Detect if running as MCP server (stdio must be clean for JSON-RPC)
+const isMCPMode = process.argv.some(arg => arg.includes('mcp/server'));
+
 // Initialize database with WAL mode
 export const db = new Database(DB_PATH, {
-  verbose: process.env.NODE_ENV === 'development' ? console.log : undefined,
+  verbose: !isMCPMode && process.env.NODE_ENV === 'development' ? console.error : undefined,
 });
 
 // Enable WAL mode for better concurrency
@@ -24,7 +27,7 @@ db.pragma('foreign_keys = ON');
 // Verify JSON1 extension is available (required for Feature 003 - Card-Based Content Architecture)
 try {
   db.prepare("SELECT json('{}')").get();
-  console.log('✓ SQLite JSON1 extension available');
+  if (!isMCPMode) console.error('✓ SQLite JSON1 extension available');
 } catch (error) {
   console.error('✗ SQLite JSON1 extension not available');
   console.error('Feature 003 (Card-Based Content Architecture) requires JSON1 extension');
@@ -36,7 +39,7 @@ try {
  * Run database migrations
  */
 export function runMigrations(): void {
-  console.log('Running database migrations...');
+  if (!isMCPMode) console.error('Running database migrations...');
 
   // Migration 1: Base schema (Feature 002)
   runMigration(1, () => {
@@ -61,7 +64,7 @@ export function runMigrations(): void {
       if (fs.existsSync(filePath)) {
         const sql = fs.readFileSync(filePath, 'utf-8');
         db.exec(sql);
-        console.log(`  ✓ Applied ${file}`);
+        if (!isMCPMode) console.error(`  ✓ Applied ${file}`);
       }
     }
   });
@@ -73,7 +76,7 @@ export function runMigrations(): void {
     if (fs.existsSync(filePath)) {
       const sql = fs.readFileSync(filePath, 'utf-8');
       db.exec(sql);
-      console.log(`  ✓ Applied 004-add-images.sql`);
+      if (!isMCPMode) console.error(`  ✓ Applied 004-add-images.sql`);
     }
   });
 
@@ -91,7 +94,7 @@ export function runMigrations(): void {
       if (fs.existsSync(filePath)) {
         const sql = fs.readFileSync(filePath, 'utf-8');
         db.exec(sql);
-        console.log(`  ✓ Applied ${file}`);
+        if (!isMCPMode) console.error(`  ✓ Applied ${file}`);
       }
     }
   });
@@ -103,7 +106,7 @@ export function runMigrations(): void {
     if (fs.existsSync(filePath)) {
       const sql = fs.readFileSync(filePath, 'utf-8');
       db.exec(sql);
-      console.log(`  ✓ Applied 006-knowledge-graphs.sql`);
+      if (!isMCPMode) console.error(`  ✓ Applied 006-knowledge-graphs.sql`);
     }
   });
 
@@ -121,7 +124,7 @@ export function runMigrations(): void {
       if (fs.existsSync(filePath)) {
         const sql = fs.readFileSync(filePath, 'utf-8');
         db.exec(sql);
-        console.log(`  ✓ Applied ${file}`);
+        if (!isMCPMode) console.error(`  ✓ Applied ${file}`);
       }
     }
   });
@@ -133,7 +136,7 @@ export function runMigrations(): void {
     if (fs.existsSync(filePath)) {
       const sql = fs.readFileSync(filePath, 'utf-8');
       db.exec(sql);
-      console.log(`  ✓ Applied 011-mcp-tool-logs.sql`);
+      if (!isMCPMode) console.error(`  ✓ Applied 011-mcp-tool-logs.sql`);
     }
   });
 
@@ -144,7 +147,7 @@ export function runMigrations(): void {
     if (fs.existsSync(filePath)) {
       const sql = fs.readFileSync(filePath, 'utf-8');
       db.exec(sql);
-      console.log(`  ✓ Applied 014-category-tables.sql`);
+      if (!isMCPMode) console.error(`  ✓ Applied 014-category-tables.sql`);
     }
   });
 
@@ -155,7 +158,7 @@ export function runMigrations(): void {
     if (fs.existsSync(filePath)) {
       const sql = fs.readFileSync(filePath, 'utf-8');
       db.exec(sql);
-      console.log(`  ✓ Applied 015-dashboard-canvas.sql`);
+      if (!isMCPMode) console.error(`  ✓ Applied 015-dashboard-canvas.sql`);
     }
   });
 
@@ -166,7 +169,7 @@ export function runMigrations(): void {
     if (fs.existsSync(filePath)) {
       const sql = fs.readFileSync(filePath, 'utf-8');
       db.exec(sql);
-      console.log(`  ✓ Applied 016-campaign-settings.sql`);
+      if (!isMCPMode) console.error(`  ✓ Applied 016-campaign-settings.sql`);
     }
   });
 
@@ -177,7 +180,7 @@ export function runMigrations(): void {
     if (fs.existsSync(filePath)) {
       const sql = fs.readFileSync(filePath, 'utf-8');
       db.exec(sql);
-      console.log(`  ✓ Applied 018-api-requests.sql`);
+      if (!isMCPMode) console.error(`  ✓ Applied 018-api-requests.sql`);
     }
   });
 
@@ -188,11 +191,11 @@ export function runMigrations(): void {
     if (fs.existsSync(filePath)) {
       const sql = fs.readFileSync(filePath, 'utf-8');
       db.exec(sql);
-      console.log(`  ✓ Applied 019-add-session-number.sql`);
+      if (!isMCPMode) console.error(`  ✓ Applied 019-add-session-number.sql`);
     }
   });
 
-  console.log('✓ Database initialized');
+  if (!isMCPMode) console.error('✓ Database initialized');
   logDatabaseInfo();
 }
 
@@ -215,9 +218,9 @@ function runMigration(version: number, migrationFn: () => void): void {
   if (!existing) {
     migrationFn();
     db.prepare('INSERT INTO schema_version (version, applied_at) VALUES (?, strftime(\'%s\', \'now\'))').run(version);
-    console.log(`✓ Migration version ${version} applied`);
+    if (!isMCPMode) console.error(`✓ Migration version ${version} applied`);
   } else {
-    console.log(`  Migration version ${version} already applied`);
+    if (!isMCPMode) console.error(`  Migration version ${version} already applied`);
   }
 }
 
@@ -231,7 +234,7 @@ function logDatabaseInfo(): void {
     )
     .all() as { name: string }[];
 
-  console.log(`Database tables: ${tables.map((t) => t.name).join(', ')}`);
+  if (!isMCPMode) console.error(`Database tables: ${tables.map((t) => t.name).join(', ')}`);
 }
 
 /**

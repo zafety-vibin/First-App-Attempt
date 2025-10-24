@@ -26,6 +26,10 @@ export const NPCListPage: React.FC = () => {
       header: 'Name',
       cell: (info) => info.getValue(),
       size: 180,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'race',

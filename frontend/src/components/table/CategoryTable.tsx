@@ -16,6 +16,7 @@ export interface CategoryTableProps<T = any> {
   sortDirection?: SortDirection;
   onSort?: (column: string) => void;
   onRowClick?: (entity: T) => void;
+  onCellUpdate?: (entityId: string, fieldKey: string, newValue: any) => Promise<void>;
   emptyMessage?: string;
   className?: string;
 }
@@ -33,6 +34,7 @@ export function CategoryTable<T = any>({
   sortDirection = null,
   onSort,
   onRowClick,
+  onCellUpdate,
   emptyMessage = 'No items found',
   className = '',
 }: CategoryTableProps<T>) {
@@ -141,6 +143,7 @@ export function CategoryTable<T = any>({
                 entity={row.original}
                 columns={columns}
                 onClick={onRowClick}
+                onCellUpdate={onCellUpdate}
               />
             ))}
           </tbody>

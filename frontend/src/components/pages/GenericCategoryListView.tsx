@@ -78,6 +78,7 @@ export const GenericCategoryListView: React.FC<GenericCategoryListViewProps> = (
     loading,
     error,
     refresh,
+    update,
   } = useCategory(category, campaignId, {
     pagination: paginationOptions,
     filters: filterOptions,
@@ -101,12 +102,16 @@ export const GenericCategoryListView: React.FC<GenericCategoryListViewProps> = (
   const categoryLabel = getCategoryLabel(category);
   const totalPages = Math.ceil(totalCount / limit);
 
-  const handleRowClick = (entityId: string): void => {
-    navigate(`/campaigns/${campaignId}/${category}/${entityId}`);
+  const handleRowClick = (entity: any): void => {
+    navigate(`/campaigns/${campaignId}/${category}/${entity.id}`);
   };
 
   const handleNewEntity = (): void => {
     navigate(`/campaigns/${campaignId}/${category}/new`);
+  };
+
+  const handleCellUpdate = async (entityId: string, fieldKey: string, newValue: any): Promise<void> => {
+    await update(entityId, { [fieldKey]: newValue });
   };
 
   if (loading && entities.length === 0) {
@@ -170,6 +175,7 @@ export const GenericCategoryListView: React.FC<GenericCategoryListViewProps> = (
         data={entities}
         columns={filteredColumns}
         onRowClick={handleRowClick}
+        onCellUpdate={handleCellUpdate}
         onSort={handleSort}
         sortField={sortField}
         sortDirection={sortDirection}

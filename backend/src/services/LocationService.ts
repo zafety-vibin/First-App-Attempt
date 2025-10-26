@@ -1,182 +1,64 @@
 /**
- * Location Service - Handles location CRUD operations
- * Feature 014: Structured Category Database Foundation
+ * LocationService - Business logic for location operations
+ * Feature: 014-create-the-database (standardized)
+ *
+ * Implements:
+ * - Standard CRUD operations via BaseCategoryService
+ * - Circular hierarchy validation (parent_location_id → locations.id)
+ * - JSON array handling (notable_npcs, factions_present, connected_locations)
  */
 
-import { db } from './DatabaseService';
+import Database from 'better-sqlite3';
+import { BaseCategoryService, EntityFilters, Pagination, ListResult, OperationOptions } from './BaseCategoryService';
 import { Location } from '../models/location';
-import crypto from 'crypto';
-
-export interface CreateLocationInput {
-  campaign_id: string;
-  name: string;
-  description?: string | null;
-  core_status?: 'active' | 'archived' | 'draft' | 'hidden';
-  player_knowledge?: string | null;
-  tags?: string[];
-  custom_fields?: Record<string, any>;
-
-  // Category-specific fields
-  location_type?: string | null;
-  population?: number | null;
-  cultural_characteristics?: string | null;
-  map?: string | null;
-
-  // Explicit connections
-  parent_location_id?: string | null;
-
-  // Many-to-many connections
-  notable_npcs?: string[];
-  factions_present?: string[];
-  connected_locations?: string[];
-
-  // DM-only fields
-  dm_secrets?: string | null;
-}
-
-export interface UpdateLocationInput {
-  name?: string;
-  description?: string | null;
-  core_status?: 'active' | 'archived' | 'draft' | 'hidden';
-  player_knowledge?: string | null;
-  tags?: string[];
-  custom_fields?: Record<string, any>;
-
-  // Category-specific fields
-  location_type?: string | null;
-  population?: number | null;
-  cultural_characteristics?: string | null;
-  map?: string | null;
-
-  // Explicit connections
-  parent_location_id?: string | null;
-
-  // Many-to-many connections
-  notable_npcs?: string[];
-  factions_present?: string[];
-  connected_locations?: string[];
-
-  // DM-only fields
-  dm_secrets?: string | null;
-}
 
 interface LocationRow {
   id: string;
   campaign_id: string;
   name: string;
   description: string | null;
-  core_status: 'active' | 'archived' | 'draft' | 'hidden';
+  core_status: string;
   player_knowledge: string | null;
   tags: string;
   created_at: number;
   updated_at: number;
   custom_fields: string;
-
   location_type: string | null;
   population: number | null;
   cultural_characteristics: string | null;
   map: string | null;
-
   parent_location_id: string | null;
-
   notable_npcs: string;
   factions_present: string;
   connected_locations: string;
-
   dm_secrets: string | null;
 }
 
-export class LocationService {
-  /**
-   * Convert database row to Location model
-   */
-  private static rowToLocation(row: LocationRow): Location {
-    return {
-      id: row.id,
-      campaign_id: row.campaign_id,
-      name: row.name,
-      description: row.description,
-      core_status: row.core_status,
-      player_knowledge: row.player_knowledge,
-      tags: JSON.parse(row.tags),
-      created_at: row.created_at,
-      updated_at: row.updated_at,
-      custom_fields: JSON.parse(row.custom_fields),
-
-      location_type: row.location_type,
-      population: row.population,
-      cultural_characteristics: row.cultural_characteristics,
-      map: row.map,
-
-      parent_location_id: row.parent_location_id,
-
-      notable_npcs: JSON.parse(row.notable_npcs),
-      factions_present: JSON.parse(row.factions_present),
-      connected_locations: JSON.parse(row.connected_locations),
-
-      dm_secrets: row.dm_secrets,
-    };
+export class LocationService extends BaseCategoryService<Location> {
+  constructor(db: Database.Database) {
+    super(db, 'locations');
   }
 
   /**
-   * Validate circular reference prevention
-   * Prevents a location from being its own ancestor
+   * Category-specific validation for locations
    */
-  private static validateNoCircularReference(
-    locationId: string,
-    parentLocationId: string | null
-  ): void {
-    if (!parentLocationId) return;
-
-    // Cannot be own parent
-    if (locationId === parentLocationId) {
-      throw new Error('Location cannot be its own parent');
-    }
-
-    // Check if proposed parent is already a descendant
-    const ancestors = this.getAncestorIds(parentLocationId);
-    if (ancestors.includes(locationId)) {
-      throw new Error('Circular reference detected: proposed parent is a descendant of this location');
-    }
-  }
-
-  /**
-   * Get all ancestor IDs for a location (traverses up the hierarchy)
-   */
-  private static getAncestorIds(locationId: string): string[] {
-    const ancestors: string[] = [];
-    let currentId: string | null = locationId;
-    const maxDepth = 100; // Safety limit
-    let depth = 0;
-
-    while (currentId && depth < maxDepth) {
-      const row = db
-        .prepare('SELECT parent_location_id FROM locations WHERE id = ?')
-        .get(currentId) as { parent_location_id: string | null } | undefined;
-
-      if (!row || !row.parent_location_id) break;
-
-      ancestors.push(row.parent_location_id);
-      currentId = row.parent_location_id;
-      depth++;
-    }
-
-    return ancestors;
-  }
-
-  /**
-   * Create new location
-   */
-  static create(input: CreateLocationInput): Location {
-    const id = crypto.randomUUID();
-    const now = Math.floor(Date.now() / 1000);
-
+  protected validateCategoryFields(data: Partial<Location>, options?: OperationOptions): void {
     // Validate no circular reference if parent is set
-    if (input.parent_location_id) {
-      this.validateNoCircularReference(id, input.parent_location_id);
+    if (data.parent_location_id) {
+      this.validateNoCircularReference(data.id!, data.parent_location_id);
     }
 
-    const stmt = db.prepare(`
+    // Validate population is non-negative
+    if (data.population !== undefined && data.population !== null && data.population < 0) {
+      throw new Error('population must be non-negative');
+    }
+  }
+
+  /**
+   * Insert location into database
+   */
+  protected insertEntity(data: Location): void {
+    const stmt = this.db.prepare(`
       INSERT INTO locations (
         id, campaign_id, name, description, core_status, player_knowledge,
         tags, created_at, updated_at, custom_fields,
@@ -188,35 +70,79 @@ export class LocationService {
     `);
 
     stmt.run(
-      id,
-      input.campaign_id,
-      input.name,
-      input.description ?? null,
-      input.core_status ?? 'active',
-      input.player_knowledge ?? 'common_knowledge',
-      JSON.stringify(input.tags ?? []),
-      now,
-      now,
-      JSON.stringify(input.custom_fields ?? {}),
-      input.location_type ?? null,
-      input.population ?? null,
-      input.cultural_characteristics ?? null,
-      input.map ?? null,
-      input.parent_location_id ?? null,
-      JSON.stringify(input.notable_npcs ?? []),
-      JSON.stringify(input.factions_present ?? []),
-      JSON.stringify(input.connected_locations ?? []),
-      input.dm_secrets ?? null
+      data.id,
+      data.campaign_id,
+      data.name,
+      data.description,
+      data.core_status,
+      data.player_knowledge,
+      JSON.stringify(data.tags),
+      data.created_at,
+      data.updated_at,
+      JSON.stringify(data.custom_fields),
+      data.location_type || null,
+      data.population || null,
+      data.cultural_characteristics || null,
+      data.map || null,
+      data.parent_location_id || null,
+      JSON.stringify(data.notable_npcs || []),
+      JSON.stringify(data.factions_present || []),
+      JSON.stringify(data.connected_locations || []),
+      data.dm_secrets || null
     );
+  }
 
-    return this.findById(id)!;
+  /**
+   * Update location in database
+   */
+  protected updateEntity(id: string, data: Partial<Location>): void {
+    const updates: string[] = [];
+    const values: any[] = [];
+
+    Object.keys(data).forEach((key) => {
+      if (key === 'id' || key === 'campaign_id' || key === 'created_at') {
+        return;
+      }
+
+      const value = (data as any)[key];
+
+      // Handle JSON fields
+      if (['tags', 'custom_fields', 'notable_npcs', 'factions_present', 'connected_locations'].includes(key)) {
+        updates.push(`${key} = ?`);
+        values.push(JSON.stringify(value));
+      } else {
+        updates.push(`${key} = ?`);
+        values.push(value);
+      }
+    });
+
+    if (updates.length === 0) {
+      return;
+    }
+
+    values.push(id);
+
+    const stmt = this.db.prepare(`
+      UPDATE locations
+      SET ${updates.join(', ')}
+      WHERE id = ?
+    `);
+
+    stmt.run(...values);
+  }
+
+  /**
+   * Delete location from database
+   */
+  protected deleteEntity(id: string): void {
+    this.db.prepare('DELETE FROM locations WHERE id = ?').run(id);
   }
 
   /**
    * Find location by ID
    */
-  static findById(id: string): Location | null {
-    const row = db
+  findById(id: string): Location | null {
+    const row = this.db
       .prepare('SELECT * FROM locations WHERE id = ?')
       .get(id) as LocationRow | undefined;
 
@@ -224,258 +150,109 @@ export class LocationService {
   }
 
   /**
-   * List locations by campaign with pagination and filtering
+   * List locations with filters and pagination
    */
-  static list(
-    campaignId: string,
-    options: {
-      limit?: number;
-      offset?: number;
-      core_status?: 'active' | 'archived' | 'draft' | 'hidden';
-      player_knowledge?: string;
-      parent_location_id?: string | null;
-      tags?: string[];
-      sort_by?: 'created_at' | 'updated_at' | 'name';
-      sort_order?: 'asc' | 'desc';
-      viewMode?: 'dm_view' | 'player_view';
-    } = {}
-  ): { locations: Location[]; total: number } {
-    const {
-      limit = 50,
-      offset = 0,
-      core_status,
-      player_knowledge,
-      parent_location_id,
-      tags,
-      sort_by = 'name',
-      sort_order = 'asc',
-      viewMode = 'dm_view'
-    } = options;
+  list(
+    filters: EntityFilters,
+    pagination: Pagination,
+    sortBy: string = 'created_at',
+    sortOrder: 'asc' | 'desc' = 'desc'
+  ): ListResult<Location> {
+    const whereClauses: string[] = [];
+    const params: any[] = [];
 
-    // Import getPlayerKnowledgeFilter inline to avoid circular deps
-    const { getPlayerKnowledgeFilter } = require('../middleware/informationFilter');
-
-    // Build WHERE clause
-    const conditions: string[] = ['campaign_id = ?'];
-    const params: any[] = [campaignId];
-
-    // Apply view mode filtering
-    const pkFilter = getPlayerKnowledgeFilter(viewMode);
-    if (pkFilter) {
-      conditions.push(`(${pkFilter})`);
+    if (filters.campaign_id) {
+      whereClauses.push('campaign_id = ?');
+      params.push(filters.campaign_id);
     }
 
-    if (core_status) {
-      conditions.push('core_status = ?');
-      params.push(core_status);
+    if (filters.core_status) {
+      whereClauses.push('core_status = ?');
+      params.push(filters.core_status);
     }
 
-    if (player_knowledge) {
-      conditions.push('player_knowledge = ?');
-      params.push(player_knowledge);
+    if (filters.player_knowledge) {
+      whereClauses.push('player_knowledge = ?');
+      params.push(filters.player_knowledge);
     }
 
-    if (parent_location_id !== undefined) {
-      if (parent_location_id === null) {
-        conditions.push('parent_location_id IS NULL');
-      } else {
-        conditions.push('parent_location_id = ?');
-        params.push(parent_location_id);
-      }
-    }
-
-    if (tags && tags.length > 0) {
-      const tagConditions = tags.map(() => 'tags LIKE ?');
-      conditions.push(`(${tagConditions.join(' OR ')})`);
-      tags.forEach(tag => {
+    if (filters.tags && filters.tags.length > 0) {
+      const tagConditions = filters.tags.map(() => `tags LIKE ?`).join(' OR ');
+      whereClauses.push(`(${tagConditions})`);
+      filters.tags.forEach((tag) => {
         params.push(`%"${tag}"%`);
       });
     }
 
-    const whereClause = conditions.join(' AND ');
+    // Category-specific filters
+    if (filters.location_type) {
+      whereClauses.push('location_type = ?');
+      params.push(filters.location_type);
+    }
 
-    // Get total count
-    const countResult = db
-      .prepare(`SELECT COUNT(*) as count FROM locations WHERE ${whereClause}`)
-      .get(...params) as { count: number };
+    if (filters.parent_location_id !== undefined) {
+      if (filters.parent_location_id === null) {
+        whereClauses.push('parent_location_id IS NULL');
+      } else {
+        whereClauses.push('parent_location_id = ?');
+        params.push(filters.parent_location_id);
+      }
+    }
 
-    // Get paginated results with sorting
-    const rows = db
-      .prepare(
-        `SELECT * FROM locations WHERE ${whereClause} ORDER BY ${sort_by} ${sort_order.toUpperCase()} LIMIT ? OFFSET ?`
-      )
-      .all(...params, limit, offset) as LocationRow[];
+    const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+    // Count total
+    const countStmt = this.db.prepare(`SELECT COUNT(*) as count FROM locations ${whereClause}`);
+    const { count } = countStmt.get(...params) as { count: number };
+
+    // Fetch data
+    const dataStmt = this.db.prepare(`
+      SELECT * FROM locations
+      ${whereClause}
+      ORDER BY ${sortBy} ${sortOrder}
+      LIMIT ? OFFSET ?
+    `);
+
+    const rows = dataStmt.all(...params, pagination.limit, pagination.offset) as LocationRow[];
 
     return {
-      locations: rows.map(this.rowToLocation),
-      total: countResult.count,
+      data: rows.map((row) => this.rowToLocation(row)),
+      total: count,
     };
   }
 
   /**
-   * Update location
+   * Validate no circular reference in parent_location_id chain
    */
-  static update(id: string, input: UpdateLocationInput): Location {
-    const existing = this.findById(id);
-    if (!existing) {
-      throw new Error('Location not found');
-    }
+  private validateNoCircularReference(locationId: string, parentId: string): void {
+    const visited = new Set<string>([locationId]);
+    let currentId: string | null = parentId;
 
-    // Validate circular reference if parent is being changed
-    if (input.parent_location_id !== undefined) {
-      this.validateNoCircularReference(id, input.parent_location_id);
-    }
+    while (currentId) {
+      if (visited.has(currentId)) {
+        throw new Error('Circular reference detected in location hierarchy');
+      }
 
-    const updates: string[] = [];
-    const values: any[] = [];
-
-    if (input.name !== undefined) {
-      updates.push('name = ?');
-      values.push(input.name);
-    }
-
-    if (input.description !== undefined) {
-      updates.push('description = ?');
-      values.push(input.description);
-    }
-
-    if (input.core_status !== undefined) {
-      updates.push('core_status = ?');
-      values.push(input.core_status);
-    }
-
-    if (input.player_knowledge !== undefined) {
-      updates.push('player_knowledge = ?');
-      values.push(input.player_knowledge);
-    }
-
-    if (input.tags !== undefined) {
-      updates.push('tags = ?');
-      values.push(JSON.stringify(input.tags));
-    }
-
-    if (input.custom_fields !== undefined) {
-      updates.push('custom_fields = ?');
-      values.push(JSON.stringify(input.custom_fields));
-    }
-
-    if (input.location_type !== undefined) {
-      updates.push('location_type = ?');
-      values.push(input.location_type);
-    }
-
-    if (input.population !== undefined) {
-      updates.push('population = ?');
-      values.push(input.population);
-    }
-
-    if (input.cultural_characteristics !== undefined) {
-      updates.push('cultural_characteristics = ?');
-      values.push(input.cultural_characteristics);
-    }
-
-    if (input.map !== undefined) {
-      updates.push('map = ?');
-      values.push(input.map);
-    }
-
-    if (input.parent_location_id !== undefined) {
-      updates.push('parent_location_id = ?');
-      values.push(input.parent_location_id);
-    }
-
-    if (input.notable_npcs !== undefined) {
-      updates.push('notable_npcs = ?');
-      values.push(JSON.stringify(input.notable_npcs));
-    }
-
-    if (input.factions_present !== undefined) {
-      updates.push('factions_present = ?');
-      values.push(JSON.stringify(input.factions_present));
-    }
-
-    if (input.connected_locations !== undefined) {
-      updates.push('connected_locations = ?');
-      values.push(JSON.stringify(input.connected_locations));
-    }
-
-    if (input.dm_secrets !== undefined) {
-      updates.push('dm_secrets = ?');
-      values.push(input.dm_secrets);
-    }
-
-    if (updates.length === 0) {
-      return existing;
-    }
-
-    // Always update updated_at
-    const now = Math.floor(Date.now() / 1000);
-    updates.push('updated_at = ?');
-    values.push(now);
-
-    // Add id for WHERE clause
-    values.push(id);
-
-    const stmt = db.prepare(
-      `UPDATE locations SET ${updates.join(', ')} WHERE id = ?`
-    );
-    stmt.run(...values);
-
-    return this.findById(id)!;
-  }
-
-  /**
-   * Delete location
-   */
-  static delete(id: string): void {
-    const stmt = db.prepare('DELETE FROM locations WHERE id = ?');
-    const result = stmt.run(id);
-
-    if (result.changes === 0) {
-      throw new Error('Location not found');
-    }
-  }
-
-  /**
-   * Get child locations (direct descendants)
-   */
-  static getChildren(parentId: string): Location[] {
-    const rows = db
-      .prepare('SELECT * FROM locations WHERE parent_location_id = ? ORDER BY name ASC')
-      .all(parentId) as LocationRow[];
-
-    return rows.map(this.rowToLocation);
-  }
-
-  /**
-   * Get all descendant locations (recursive)
-   */
-  static getDescendants(parentId: string): Location[] {
-    const descendants: Location[] = [];
-    const queue: string[] = [parentId];
-    const visited = new Set<string>();
-    const maxNodes = 1000; // Safety limit
-
-    while (queue.length > 0 && descendants.length < maxNodes) {
-      const currentId = queue.shift()!;
-      if (visited.has(currentId)) continue;
       visited.add(currentId);
 
-      const children = this.getChildren(currentId);
-      for (const child of children) {
-        descendants.push(child);
-        queue.push(child.id);
-      }
-    }
+      const parent = this.db
+        .prepare('SELECT parent_location_id FROM locations WHERE id = ?')
+        .get(currentId) as { parent_location_id: string | null } | undefined;
 
-    return descendants;
+      currentId = parent?.parent_location_id || null;
+    }
   }
 
   /**
-   * Execute callback within a transaction
+   * Convert database row to Location model
    */
-  static transaction<T>(callback: () => T): T {
-    const transaction = db.transaction(callback);
-    return transaction();
+  private rowToLocation(row: LocationRow): Location {
+    return this.parseJsonFields(row, [
+      'tags',
+      'custom_fields',
+      'notable_npcs',
+      'factions_present',
+      'connected_locations',
+    ]) as Location;
   }
 }

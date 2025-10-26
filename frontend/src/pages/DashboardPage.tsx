@@ -7,7 +7,7 @@
  * Configuration persists per user per campaign.
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Responsive, WidthProvider, Layout as RGLLayout } from 'react-grid-layout';
 import { useDashboardCanvas } from '../hooks/useDashboardCanvas';
@@ -16,6 +16,8 @@ import { BaseWidget } from '../components/dashboard/BaseWidget';
 import { WidgetPicker } from '../components/dashboard/WidgetPicker';
 import { ViewModeToggle } from '../components/ViewModeToggle';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
+import { useWizardStatus } from '../hooks/useWizardStatus';
+import WizardDialog from '../components/wizard/WizardDialog';
 import './DashboardPage.css';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
@@ -41,6 +43,16 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ campaignId: propCa
   const params = useParams<{ campaignId: string }>();
   const campaignId = propCampaignId || params.campaignId || '';
   const { viewMode } = useViewMode();
+
+  // Feature 016: Wizard integration
+  const { status: wizardStatus, loading: wizardLoading } = useWizardStatus(campaignId);
+  const [showWizard, setShowWizard] = useState(false);
+
+  useEffect(() => {
+    if (!wizardLoading && wizardStatus) {
+      setShowWizard(wizardStatus.shouldShowWizard);
+    }
+  }, [wizardStatus, wizardLoading]);
 
   const {
     layout,
@@ -95,6 +107,18 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ campaignId: propCa
 
   return (
     <div className="dashboard-page">
+      {/* Feature 016: Campaign Setup Wizard */}
+      {showWizard && (
+        <WizardDialog
+          open={showWizard}
+          onClose={() => {
+            setShowWizard(false);
+            window.location.reload(); // Reload to show dashboard with settings
+          }}
+          campaignId={campaignId}
+        />
+      )}
+
       {/* Header with Add Widget button and ViewModeToggle */}
       <header className="dashboard-header">
         <div className="dashboard-header-left">

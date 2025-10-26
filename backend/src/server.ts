@@ -11,6 +11,7 @@ import { createDatabaseChangeDetectionService } from './services/DatabaseChangeD
 import { createSessionImportService } from './services/SessionImportService';
 import authRoutes from './routes/auth';
 import campaignRoutes from './routes/campaigns';
+import campaignWizardRoutes from './routes/campaign-wizard'; // Feature 016
 import settingRoutes from './routes/settings';
 import cardRoutes from './routes/cards';
 import databaseCardRoutes from './routes/database-cards';
@@ -44,6 +45,8 @@ import graphToggleRoutes from './routes/graph-toggles';
 import crossGraphQueryRoutes from './routes/cross-graph-query';
 import confidenceDecayRoutes from './routes/confidence-decay';
 import campaignStorySessionRoutes from './routes/campaign-story-sessions';
+// Feature 018 external API routes
+import externalApiRoutes from './routes/external-api';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -59,6 +62,7 @@ app.use(express.json());
 // Routes
 app.use('/health', healthRoutes);
 app.use('/api/auth', authRoutes);
+app.use(campaignWizardRoutes); // Feature 016 - wizard routes (must be before general campaign routes for specificity)
 app.use('/api/campaigns', campaignRoutes);
 app.use('/api/settings', settingRoutes);
 app.use('/api/information-levels', informationLevelRoutes); // Feature 004
@@ -104,12 +108,39 @@ app.use(campaignStorySessionRoutes);
 // Error handler (must be last)
 app.use(errorHandler);
 
-// Start server
+// Start main server
 app.listen(PORT, () => {
   console.log(`✓ Backend server listening on http://localhost:${PORT}`);
   console.log(`✓ Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`✓ CORS origin: ${process.env.CORS_ORIGIN || 'http://localhost:3000'}`);
 });
 
-// Export for tests
+/**
+ * Feature 018: External API Server (Port 3002)
+ *
+ * Separate Express instance for conversational database operations.
+ * Used by external AI tools like Claude Desktop.
+ *
+ * Localhost only, no authentication (testing prototype).
+ */
+const externalApp = express();
+const EXTERNAL_PORT = process.env.EXTERNAL_API_PORT || 3002;
+
+// Middleware (minimal - CORS and body parsing handled in routes)
+externalApp.use(express.json());
+
+// Mount external API routes at /api/v1/external
+externalApp.use('/api/v1/external', externalApiRoutes);
+
+// Error handler
+externalApp.use(errorHandler);
+
+// Start external API server
+externalApp.listen(EXTERNAL_PORT, () => {
+  console.log(`✓ External API server listening on http://localhost:${EXTERNAL_PORT}`);
+  console.log(`✓ Feature 018: Conversational database operations for AI tools`);
+  console.log(`✓ Health check: http://localhost:${EXTERNAL_PORT}/api/v1/external/health`);
+});
+
+// Export main app for tests
 export default app;

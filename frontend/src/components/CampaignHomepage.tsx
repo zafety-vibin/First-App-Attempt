@@ -11,12 +11,20 @@ import { ViewModeToggle } from './ViewModeToggle';
 import { BlockList } from './cards/BlockList';
 import { useInformationLevel } from '../contexts/InformationLevelContext';
 import { useViewMode } from '../contexts/ViewModeContext';
+import { useWizardStatus } from '../hooks/useWizardStatus';
+import { useWizardCompletion } from '../hooks/useWizardCompletion';
+import WizardDialog from './wizard/WizardDialog';
 
 export function CampaignHomepage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [campaignLoading, setCampaignLoading] = useState(true);
+
+  // Feature 016: Wizard integration
+  const { status: wizardStatus, loading: wizardLoading } = useWizardStatus(id || '');
+  const { completeWizard } = useWizardCompletion();
+  const [showWizard, setShowWizard] = useState(false);
 
   // Create a virtual "homepage card" to act as parent for root-level cards
   // Using null as id signals BlockList to load root cards (parent_id IS NULL)
@@ -48,6 +56,25 @@ export function CampaignHomepage() {
     }
   }, [id]);
 
+  // Feature 016: Show wizard if needed
+  useEffect(() => {
+    if (!wizardLoading && wizardStatus) {
+      setShowWizard(wizardStatus.shouldShowWizard);
+    }
+  }, [wizardStatus, wizardLoading]);
+
+  // Feature 016: Handle wizard completion
+  const handleWizardComplete = async () => {
+    if (!id) return;
+
+    // Wizard submission handled by WizardDialog internal logic
+    // After wizard completes, it calls onClose which triggers this handler
+    setShowWizard(false);
+
+    // Reload campaign to reflect new settings
+    await loadCampaign(id);
+  };
+
   const loadCampaign = async (campaignId: string) => {
     try {
       setCampaignLoading(true);
@@ -76,6 +103,15 @@ export function CampaignHomepage() {
 
   return (
     <div style={{ padding: '2rem', maxWidth: '900px', margin: '0 auto' }}>
+      {/* Feature 016: Campaign Setup Wizard */}
+      {showWizard && id && (
+        <WizardDialog
+          open={showWizard}
+          onClose={handleWizardComplete}
+          campaignId={id}
+        />
+      )}
+
       {/* Feature 004: View Mode Toggle */}
       <ViewModeToggle />
 

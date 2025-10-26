@@ -25,13 +25,51 @@ export const LocationListPage: React.FC = () => {
       accessorKey: 'name',
       header: 'Name',
       cell: (info) => info.getValue(),
-      size: 200,
+      size: 300,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
+    },
+    {
+      accessorKey: 'player_knowledge',
+      header: 'Visibility',
+      cell: (info) => {
+        const value = info.getValue() as string;
+        const labelMap: Record<string, string> = {
+          system: 'System',
+          common_knowledge: 'Common',
+          player_knowledge: 'Player',
+          dm_only: 'DM Only',
+        };
+        return labelMap[value] || value || 'Common';
+      },
+      size: 180,
+      meta: {
+        editable: true,
+        editableType: 'player_knowledge',
+      },
     },
     {
       accessorKey: 'location_type',
       header: 'Type',
       cell: (info) => info.getValue() || '-',
-      size: 120,
+      size: 200,
+      meta: {
+        editable: true,
+        editableType: 'dropdown',
+        dropdownOptions: [
+          { value: 'City', label: 'City' },
+          { value: 'Town', label: 'Town' },
+          { value: 'Village', label: 'Village' },
+          { value: 'Dungeon', label: 'Dungeon' },
+          { value: 'Wilderness', label: 'Wilderness' },
+          { value: 'Plane', label: 'Plane' },
+          { value: 'Building', label: 'Building' },
+          { value: 'Region', label: 'Region' },
+          { value: 'Other', label: 'Other' },
+        ],
+      },
     },
     {
       accessorKey: 'population',
@@ -40,7 +78,11 @@ export const LocationListPage: React.FC = () => {
         const value = info.getValue();
         return value ? String(value) : '-';
       },
-      size: 100,
+      size: 150,
+      meta: {
+        editable: true,
+        editableType: 'number',
+      },
     },
     {
       accessorKey: 'description',
@@ -49,7 +91,11 @@ export const LocationListPage: React.FC = () => {
         const desc = info.getValue() as string;
         return desc ? <TruncatedText text={desc} maxLength={100} /> : '-';
       },
-      size: 300,
+      size: 700,
+      meta: {
+        editable: true,
+        editableType: 'textarea',
+      },
     },
     {
       accessorKey: 'cultural_characteristics',
@@ -58,7 +104,11 @@ export const LocationListPage: React.FC = () => {
         const culture = info.getValue() as string;
         return culture ? <TruncatedText text={culture} maxLength={80} /> : '-';
       },
-      size: 250,
+      size: 600,
+      meta: {
+        editable: true,
+        editableType: 'textarea',
+      },
     },
     {
       accessorKey: 'notable_npcs',
@@ -67,7 +117,11 @@ export const LocationListPage: React.FC = () => {
         const npcs = info.getValue() as string[];
         return npcs && npcs.length > 0 ? `${npcs.length} NPCs` : '-';
       },
-      size: 120,
+      size: 200,
+      meta: {
+        editable: true,
+        editableType: 'tags',
+      },
     },
     {
       accessorKey: 'factions_present',
@@ -76,7 +130,11 @@ export const LocationListPage: React.FC = () => {
         const factions = info.getValue() as string[];
         return factions && factions.length > 0 ? `${factions.length} factions` : '-';
       },
-      size: 120,
+      size: 200,
+      meta: {
+        editable: true,
+        editableType: 'tags',
+      },
     },
     {
       accessorKey: 'tags',
@@ -85,7 +143,11 @@ export const LocationListPage: React.FC = () => {
         const tags = info.getValue() as string[];
         return tags && tags.length > 0 ? tags.join(', ') : '-';
       },
-      size: 150,
+      size: 250,
+      meta: {
+        editable: true,
+        editableType: 'tags',
+      },
     },
     {
       accessorKey: 'dm_secrets',
@@ -94,7 +156,11 @@ export const LocationListPage: React.FC = () => {
         const secrets = info.getValue() as string;
         return secrets ? <TruncatedText text={secrets} maxLength={100} /> : '-';
       },
-      size: 300,
+      size: 600,
+      meta: {
+        editable: true,
+        editableType: 'textarea',
+      },
     },
   ];
 

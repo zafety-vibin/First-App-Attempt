@@ -25,7 +25,30 @@ export const QuestListPage: React.FC = () => {
       accessorKey: 'name',
       header: 'Name',
       cell: (info) => info.getValue(),
-      size: 200,
+      size: 350,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
+    },
+    {
+      accessorKey: 'player_knowledge',
+      header: 'Visibility',
+      cell: (info) => {
+        const value = info.getValue() as string;
+        const labelMap: Record<string, string> = {
+          system: 'System',
+          common_knowledge: 'Common',
+          player_knowledge: 'Player',
+          dm_only: 'DM Only',
+        };
+        return labelMap[value] || value || 'Common';
+      },
+      size: 180,
+      meta: {
+        editable: true,
+        editableType: 'player_knowledge',
+      },
     },
     {
       accessorKey: 'status',
@@ -34,7 +57,17 @@ export const QuestListPage: React.FC = () => {
         const status = info.getValue() as string;
         return status ? status.replace('_', ' ').toUpperCase() : '-';
       },
-      size: 120,
+      size: 180,
+      meta: {
+        editable: true,
+        editableType: 'dropdown',
+        dropdownOptions: [
+          { value: 'active', label: 'Active' },
+          { value: 'completed', label: 'Completed' },
+          { value: 'failed', label: 'Failed' },
+          { value: 'on_hold', label: 'On Hold' },
+        ],
+      },
     },
     {
       accessorKey: 'description',
@@ -43,7 +76,11 @@ export const QuestListPage: React.FC = () => {
         const desc = info.getValue() as string;
         return desc ? <TruncatedText text={desc} maxLength={100} /> : '-';
       },
-      size: 300,
+      size: 700,
+      meta: {
+        editable: true,
+        editableType: 'textarea',
+      },
     },
     {
       accessorKey: 'objectives',
@@ -52,7 +89,11 @@ export const QuestListPage: React.FC = () => {
         const objectives = info.getValue() as string[];
         return objectives && objectives.length > 0 ? `${objectives.length} objectives` : '-';
       },
-      size: 110,
+      size: 180,
+      meta: {
+        editable: true,
+        editableType: 'tags',
+      },
     },
     {
       accessorKey: 'rewards',
@@ -61,7 +102,11 @@ export const QuestListPage: React.FC = () => {
         const rewards = info.getValue() as string;
         return rewards ? <TruncatedText text={rewards} maxLength={60} /> : '-';
       },
-      size: 200,
+      size: 600,
+      meta: {
+        editable: true,
+        editableType: 'textarea',
+      },
     },
     {
       accessorKey: 'related_npcs',
@@ -70,7 +115,11 @@ export const QuestListPage: React.FC = () => {
         const npcs = info.getValue() as string[];
         return npcs && npcs.length > 0 ? `${npcs.length} NPCs` : '-';
       },
-      size: 120,
+      size: 180,
+      meta: {
+        editable: true,
+        editableType: 'tags',
+      },
     },
     {
       accessorKey: 'related_locations',
@@ -79,7 +128,11 @@ export const QuestListPage: React.FC = () => {
         const locs = info.getValue() as string[];
         return locs && locs.length > 0 ? `${locs.length} locations` : '-';
       },
-      size: 110,
+      size: 180,
+      meta: {
+        editable: true,
+        editableType: 'tags',
+      },
     },
     {
       accessorKey: 'tags',
@@ -88,7 +141,11 @@ export const QuestListPage: React.FC = () => {
         const tags = info.getValue() as string[];
         return tags && tags.length > 0 ? tags.join(', ') : '-';
       },
-      size: 150,
+      size: 250,
+      meta: {
+        editable: true,
+        editableType: 'tags',
+      },
     },
     {
       accessorKey: 'dm_true_objective',
@@ -97,7 +154,11 @@ export const QuestListPage: React.FC = () => {
         const dmObj = info.getValue() as string;
         return dmObj ? <TruncatedText text={dmObj} maxLength={80} /> : '-';
       },
-      size: 250,
+      size: 600,
+      meta: {
+        editable: true,
+        editableType: 'textarea',
+      },
     },
     {
       accessorKey: 'dm_consequences',
@@ -106,7 +167,11 @@ export const QuestListPage: React.FC = () => {
         const dmConseq = info.getValue() as string;
         return dmConseq ? <TruncatedText text={dmConseq} maxLength={80} /> : '-';
       },
-      size: 250,
+      size: 600,
+      meta: {
+        editable: true,
+        editableType: 'textarea',
+      },
     },
   ];
 
@@ -116,12 +181,9 @@ export const QuestListPage: React.FC = () => {
       campaignId={campaignId}
       columns={questColumns}
       statsConfig={{
-        primaryStats: 'both',
+        primaryStats: 'total',
         breakdownField: 'status',
         breakdownLabel: 'Status',
-        statusField: 'status',
-        activeStatuses: ['not_started', 'in_progress'],
-        completedStatuses: ['completed'],
       }}
     />
   );

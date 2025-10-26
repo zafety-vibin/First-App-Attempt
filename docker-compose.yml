@@ -24,6 +24,7 @@ services:
     container_name: wrldbldr-backend
     ports:
       - "3001:3001"
+      - "3002:3002"  # Feature 018: External API for conversational database operations
     environment:
       DATABASE_PATH: /app/data/wrldbldr-mcp-manager.db
       KEYCLOAK_URL: http://keycloak:8080
@@ -31,6 +32,7 @@ services:
       KEYCLOAK_CLIENT_ID: wrldbldr-mcp-manager-backend
       CORS_ORIGIN: http://localhost:3000
       PORT: 3001
+      EXTERNAL_API_PORT: 3002  # Feature 018: External API port
       NODE_ENV: development
       SESSION_SECRET: dev-secret-change-in-production
     volumes:

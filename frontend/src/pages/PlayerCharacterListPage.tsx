@@ -25,13 +25,40 @@ export const PlayerCharacterListPage: React.FC = () => {
       accessorKey: 'name',
       header: 'Character Name',
       cell: (info) => info.getValue(),
+      size: 280,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
+    },
+    {
+      accessorKey: 'player_knowledge',
+      header: 'Visibility',
+      cell: (info) => {
+        const value = info.getValue() as string;
+        const labelMap: Record<string, string> = {
+          system: 'System',
+          common_knowledge: 'Common',
+          player_knowledge: 'Player',
+          dm_only: 'DM Only',
+        };
+        return labelMap[value] || value || 'Common';
+      },
       size: 180,
+      meta: {
+        editable: true,
+        editableType: 'player_knowledge',
+      },
     },
     {
       accessorKey: 'player_name',
       header: 'Player Name',
       cell: (info) => info.getValue() || '-',
-      size: 150,
+      size: 250,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'class',
@@ -46,7 +73,11 @@ export const PlayerCharacterListPage: React.FC = () => {
           return String(value);
         }
       },
-      size: 150,
+      size: 250,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'level',
@@ -55,19 +86,31 @@ export const PlayerCharacterListPage: React.FC = () => {
         const value = info.getValue();
         return value ? String(value) : '-';
       },
-      size: 80,
+      size: 100,
+      meta: {
+        editable: true,
+        editableType: 'number',
+      },
     },
     {
       accessorKey: 'race',
       header: 'Race',
       cell: (info) => info.getValue() || '-',
-      size: 120,
+      size: 200,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'background',
       header: 'Background',
       cell: (info) => info.getValue() || '-',
-      size: 130,
+      size: 600,
+      meta: {
+        editable: true,
+        editableType: 'textarea',
+      },
     },
     {
       accessorKey: 'personality',
@@ -76,7 +119,11 @@ export const PlayerCharacterListPage: React.FC = () => {
         const pers = info.getValue() as string;
         return pers ? (pers.length > 60 ? pers.substring(0, 60) + '...' : pers) : '-';
       },
-      size: 200,
+      size: 600,
+      meta: {
+        editable: true,
+        editableType: 'textarea',
+      },
     },
     {
       accessorKey: 'goals',
@@ -85,7 +132,11 @@ export const PlayerCharacterListPage: React.FC = () => {
         const goals = info.getValue() as string;
         return goals ? (goals.length > 80 ? goals.substring(0, 80) + '...' : goals) : '-';
       },
-      size: 250,
+      size: 600,
+      meta: {
+        editable: true,
+        editableType: 'textarea',
+      },
     },
     {
       accessorKey: 'faction_affiliations',
@@ -94,7 +145,11 @@ export const PlayerCharacterListPage: React.FC = () => {
         const factions = info.getValue() as string[];
         return factions && factions.length > 0 ? `${factions.length} factions` : '-';
       },
-      size: 100,
+      size: 180,
+      meta: {
+        editable: true,
+        editableType: 'tags',
+      },
     },
     {
       accessorKey: 'tags',
@@ -103,7 +158,11 @@ export const PlayerCharacterListPage: React.FC = () => {
         const tags = info.getValue() as string[];
         return tags && tags.length > 0 ? tags.join(', ') : '-';
       },
-      size: 150,
+      size: 250,
+      meta: {
+        editable: true,
+        editableType: 'tags',
+      },
     },
     {
       accessorKey: 'dm_secrets',
@@ -112,7 +171,11 @@ export const PlayerCharacterListPage: React.FC = () => {
         const secrets = info.getValue() as string;
         return secrets ? <TruncatedText text={secrets} maxLength={100} /> : '-';
       },
-      size: 250,
+      size: 600,
+      meta: {
+        editable: true,
+        editableType: 'textarea',
+      },
     },
     {
       accessorKey: 'dm_plot_threads',
@@ -121,7 +184,11 @@ export const PlayerCharacterListPage: React.FC = () => {
         const threads = info.getValue() as string;
         return threads ? <TruncatedText text={threads} maxLength={100} /> : '-';
       },
-      size: 250,
+      size: 600,
+      meta: {
+        editable: true,
+        editableType: 'textarea',
+      },
     },
     {
       accessorKey: 'dm_true_motivation',
@@ -130,7 +197,11 @@ export const PlayerCharacterListPage: React.FC = () => {
         const motivation = info.getValue() as string;
         return motivation ? <TruncatedText text={motivation} maxLength={100} /> : '-';
       },
-      size: 250,
+      size: 600,
+      meta: {
+        editable: true,
+        editableType: 'textarea',
+      },
     },
     {
       accessorKey: 'dm_consequences',
@@ -139,7 +210,11 @@ export const PlayerCharacterListPage: React.FC = () => {
         const consequences = info.getValue() as string;
         return consequences ? <TruncatedText text={consequences} maxLength={100} /> : '-';
       },
-      size: 250,
+      size: 600,
+      meta: {
+        editable: true,
+        editableType: 'textarea',
+      },
     },
   ];
 

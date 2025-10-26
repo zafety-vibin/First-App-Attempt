@@ -78,9 +78,26 @@ export function useDashboardCanvas(campaignId: string): UseDashboardCanvasResult
         setLayout(fetchedConfig.layout.layouts.lg || []);
       } else {
         // No config exists, create default
-        const newConfig = await createDashboardConfig(campaignId, DEFAULT_DASHBOARD_LAYOUT);
-        setConfig(newConfig);
-        setLayout(newConfig.layout.layouts.lg || []);
+        try {
+          const newConfig = await createDashboardConfig(campaignId, DEFAULT_DASHBOARD_LAYOUT);
+          setConfig(newConfig);
+          setLayout(newConfig.layout.layouts.lg || []);
+        } catch (createErr: any) {
+          // Handle race condition: config might have been created by another component
+          if (createErr.response?.status === 400 || createErr.message?.includes('already exists')) {
+            console.log('Config already exists (race condition), refetching...');
+            const refetchedConfig = await getDashboardConfig(campaignId);
+            if (refetchedConfig) {
+              setConfig(refetchedConfig);
+              setLayout(refetchedConfig.layout.layouts.lg || []);
+            } else {
+              // Still no config? Use default layout
+              setLayout(DEFAULT_DASHBOARD_LAYOUT.layouts.lg);
+            }
+          } else {
+            throw createErr; // Re-throw if it's a different error
+          }
+        }
       }
     } catch (err: any) {
       setError(err.message || 'Failed to load dashboard configuration');

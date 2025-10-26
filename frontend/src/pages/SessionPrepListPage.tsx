@@ -15,7 +15,11 @@ export const SessionPrepListPage: React.FC = () => {
       accessorKey: 'name',
       header: 'Name',
       cell: (info) => info.getValue(),
-      size: 200,
+      size: 350,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'planned_date',
@@ -24,7 +28,11 @@ export const SessionPrepListPage: React.FC = () => {
         const plannedDate = row.original.planned_date;
         return plannedDate ? new Date(plannedDate * 1000).toLocaleDateString() : '-';
       },
-      size: 130,
+      size: 200,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'status',
@@ -33,7 +41,17 @@ export const SessionPrepListPage: React.FC = () => {
         const status = info.getValue() as string;
         return status ? status.toUpperCase() : '-';
       },
-      size: 100,
+      size: 180,
+      meta: {
+        editable: true,
+        editableType: 'dropdown',
+        dropdownOptions: [
+          { value: 'planning', label: 'Planning' },
+          { value: 'ready', label: 'Ready' },
+          { value: 'in_progress', label: 'In Progress' },
+          { value: 'completed', label: 'Completed' },
+        ],
+      },
     },
     {
       accessorKey: 'description',
@@ -42,7 +60,11 @@ export const SessionPrepListPage: React.FC = () => {
         const desc = info.getValue() as string;
         return desc ? (desc.length > 100 ? desc.substring(0, 100) + '...' : desc) : '-';
       },
-      size: 300,
+      size: 700,
+      meta: {
+        editable: true,
+        editableType: 'textarea',
+      },
     },
     {
       accessorKey: 'planned_events',
@@ -51,7 +73,11 @@ export const SessionPrepListPage: React.FC = () => {
         const events = info.getValue() as string;
         return events ? (events.length > 80 ? events.substring(0, 80) + '...' : events) : '-';
       },
-      size: 250,
+      size: 700,
+      meta: {
+        editable: true,
+        editableType: 'textarea',
+      },
     },
     {
       accessorKey: 'npcs_to_prep',
@@ -60,7 +86,11 @@ export const SessionPrepListPage: React.FC = () => {
         const npcs = info.getValue() as string[];
         return npcs && npcs.length > 0 ? `${npcs.length} NPCs` : '-';
       },
-      size: 100,
+      size: 180,
+      meta: {
+        editable: true,
+        editableType: 'tags',
+      },
     },
     {
       accessorKey: 'locations_to_prep',
@@ -69,7 +99,11 @@ export const SessionPrepListPage: React.FC = () => {
         const locs = info.getValue() as string[];
         return locs && locs.length > 0 ? `${locs.length} locations` : '-';
       },
-      size: 110,
+      size: 200,
+      meta: {
+        editable: true,
+        editableType: 'tags',
+      },
     },
     {
       accessorKey: 'tags',
@@ -78,7 +112,11 @@ export const SessionPrepListPage: React.FC = () => {
         const tags = info.getValue() as string[];
         return tags && tags.length > 0 ? tags.join(', ') : '-';
       },
-      size: 150,
+      size: 250,
+      meta: {
+        editable: true,
+        editableType: 'tags',
+      },
     },
   ];
 

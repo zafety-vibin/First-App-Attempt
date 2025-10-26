@@ -8,6 +8,8 @@ export interface SortableTableHeaderProps {
   currentSortColumn: string | null;
   currentSortDirection: SortDirection;
   onSort: (column: string) => void;
+  width?: number;
+  resizeHandle?: React.ReactNode;
   className?: string;
 }
 
@@ -21,6 +23,8 @@ export const SortableTableHeader: React.FC<SortableTableHeaderProps> = ({
   currentSortColumn,
   currentSortDirection,
   onSort,
+  width,
+  resizeHandle,
   className = '',
 }) => {
   const isSorted = currentSortColumn === sortKey;
@@ -54,12 +58,22 @@ export const SortableTableHeader: React.FC<SortableTableHeaderProps> = ({
 
   const ariaSort = isSorted && sortDirection ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none';
 
+  const handleHeaderClick = (e: React.MouseEvent) => {
+    // Don't sort if clicking on resize handle
+    const target = e.target as HTMLElement;
+    if (target.closest('.column-resizer')) {
+      return;
+    }
+    onSort(sortKey);
+  };
+
   return (
     <th
       className={`sortable-header ${isSorted ? 'sortable-header-sorted' : ''} ${className}`}
-      onClick={() => onSort(sortKey)}
+      onClick={handleHeaderClick}
       aria-sort={ariaSort}
       role="columnheader"
+      style={{ width: width ? `${width}px` : undefined, position: 'relative' }}
     >
       <button
         type="button"
@@ -69,6 +83,7 @@ export const SortableTableHeader: React.FC<SortableTableHeaderProps> = ({
         <span className="sortable-header-label">{label}</span>
         {getSortIcon()}
       </button>
+      {resizeHandle}
     </th>
   );
 };

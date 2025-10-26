@@ -13,14 +13,15 @@ export interface Quest {
   custom_fields: Record<string, any>;
 
   // Category-specific fields
-  status: 'not_started' | 'in_progress' | 'completed' | 'failed';
-  objectives: string[];  // JSON array
+  status: string | null;
+  objectives: string[];
   rewards: string | null;
 
   // Explicit connections
   quest_giver_id: string | null;
   started_session_id: string | null;
   completed_session_id: string | null;
+  faction_id: string | null;
 
   // Many-to-many connections
   related_npcs: string[];

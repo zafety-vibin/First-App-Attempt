@@ -25,13 +25,40 @@ export const NPCListPage: React.FC = () => {
       accessorKey: 'name',
       header: 'Name',
       cell: (info) => info.getValue(),
+      size: 250,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
+    },
+    {
+      accessorKey: 'player_knowledge',
+      header: 'Visibility',
+      cell: (info) => {
+        const value = info.getValue() as string;
+        const labelMap: Record<string, string> = {
+          system: 'System',
+          common_knowledge: 'Common',
+          player_knowledge: 'Player',
+          dm_only: 'DM Only',
+        };
+        return labelMap[value] || value || 'Common';
+      },
       size: 180,
+      meta: {
+        editable: true,
+        editableType: 'player_knowledge',
+      },
     },
     {
       accessorKey: 'race',
       header: 'Race',
       cell: (info) => info.getValue() || '-',
-      size: 120,
+      size: 200,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'class',
@@ -46,7 +73,11 @@ export const NPCListPage: React.FC = () => {
           return String(value);
         }
       },
-      size: 150,
+      size: 250,
+      meta: {
+        editable: true,
+        editableType: 'tags', // Array of classes
+      },
     },
     {
       accessorKey: 'level',
@@ -55,46 +86,89 @@ export const NPCListPage: React.FC = () => {
         const value = info.getValue();
         return value ? String(value) : '-';
       },
-      size: 80,
+      size: 100,
+      meta: {
+        editable: true,
+        editableType: 'number',
+      },
     },
     {
       accessorKey: 'alignment',
       header: 'Alignment',
       cell: (info) => info.getValue() || '-',
-      size: 100,
+      size: 180,
+      meta: {
+        editable: true,
+        editableType: 'dropdown',
+        dropdownOptions: [
+          { value: 'Lawful Good', label: 'Lawful Good' },
+          { value: 'Neutral Good', label: 'Neutral Good' },
+          { value: 'Chaotic Good', label: 'Chaotic Good' },
+          { value: 'Lawful Neutral', label: 'Lawful Neutral' },
+          { value: 'True Neutral', label: 'True Neutral' },
+          { value: 'Chaotic Neutral', label: 'Chaotic Neutral' },
+          { value: 'Lawful Evil', label: 'Lawful Evil' },
+          { value: 'Neutral Evil', label: 'Neutral Evil' },
+          { value: 'Chaotic Evil', label: 'Chaotic Evil' },
+        ],
+      },
     },
     {
       accessorKey: 'relationship_to_party',
       header: 'Party Relation',
       cell: (info) => info.getValue() || '-',
-      size: 130,
+      size: 200,
+      meta: {
+        editable: true,
+        editableType: 'dropdown',
+        dropdownOptions: [
+          { value: 'Allied', label: 'Allied' },
+          { value: 'Friendly', label: 'Friendly' },
+          { value: 'Neutral', label: 'Neutral' },
+          { value: 'Suspicious', label: 'Suspicious' },
+          { value: 'Hostile', label: 'Hostile' },
+          { value: 'Enemy', label: 'Enemy' },
+        ],
+      },
     },
     {
       accessorKey: 'appearance',
       header: 'Appearance',
       cell: (info) => {
         const app = info.getValue() as string;
-        return app ? <TruncatedText text={app} maxLength={80} /> : '-';
+        return app ? <TruncatedText text={app} maxLength={200} /> : '-';
       },
-      size: 250,
+      size: 600,
+      meta: {
+        editable: true,
+        editableType: 'textarea',
+      },
     },
     {
       accessorKey: 'personality_traits',
       header: 'Personality',
       cell: (info) => {
         const traits = info.getValue() as string;
-        return traits ? <TruncatedText text={traits} maxLength={60} /> : '-';
+        return traits ? <TruncatedText text={traits} maxLength={200} /> : '-';
       },
-      size: 200,
+      size: 600,
+      meta: {
+        editable: true,
+        editableType: 'textarea',
+      },
     },
     {
       accessorKey: 'motivation',
       header: 'Motivation',
       cell: (info) => {
         const mot = info.getValue() as string;
-        return mot ? <TruncatedText text={mot} maxLength={60} /> : '-';
+        return mot ? <TruncatedText text={mot} maxLength={200} /> : '-';
       },
-      size: 200,
+      size: 600,
+      meta: {
+        editable: true,
+        editableType: 'textarea',
+      },
     },
     {
       accessorKey: 'tags',
@@ -103,25 +177,37 @@ export const NPCListPage: React.FC = () => {
         const tags = info.getValue() as string[];
         return tags && tags.length > 0 ? tags.join(', ') : '-';
       },
-      size: 150,
+      size: 250,
+      meta: {
+        editable: true,
+        editableType: 'tags',
+      },
     },
     {
       accessorKey: 'dm_secrets',
       header: 'DM: Secrets',
       cell: (info) => {
         const secrets = info.getValue() as string;
-        return secrets ? <TruncatedText text={secrets} maxLength={100} /> : '-';
+        return secrets ? <TruncatedText text={secrets} maxLength={200} /> : '-';
       },
-      size: 300,
+      size: 600,
+      meta: {
+        editable: true,
+        editableType: 'textarea',
+      },
     },
     {
       accessorKey: 'dm_plot_relevance',
       header: 'DM: Plot Relevance',
       cell: (info) => {
         const relevance = info.getValue() as string;
-        return relevance ? <TruncatedText text={relevance} maxLength={100} /> : '-';
+        return relevance ? <TruncatedText text={relevance} maxLength={200} /> : '-';
       },
-      size: 300,
+      size: 600,
+      meta: {
+        editable: true,
+        editableType: 'textarea',
+      },
     },
   ];
 

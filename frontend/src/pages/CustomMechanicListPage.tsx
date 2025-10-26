@@ -15,13 +15,48 @@ export const CustomMechanicListPage: React.FC = () => {
       accessorKey: 'name',
       header: 'Name',
       cell: (info) => info.getValue(),
-      size: 200,
+      size: 350,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
+    },
+    {
+      accessorKey: 'player_knowledge',
+      header: 'Visibility',
+      cell: (info) => {
+        const value = info.getValue() as string;
+        const labelMap: Record<string, string> = {
+          system: 'System',
+          common_knowledge: 'Common',
+          player_knowledge: 'Player',
+          dm_only: 'DM Only',
+        };
+        return labelMap[value] || value || 'Common';
+      },
+      size: 180,
+      meta: {
+        editable: true,
+        editableType: 'player_knowledge',
+      },
     },
     {
       accessorKey: 'mechanic_type',
       header: 'Type',
       cell: (info) => info.getValue() || '-',
-      size: 130,
+      size: 220,
+      meta: {
+        editable: true,
+        editableType: 'dropdown',
+        dropdownOptions: [
+          { value: 'feat', label: 'Feat' },
+          { value: 'spell', label: 'Spell' },
+          { value: 'class_feature', label: 'Class Feature' },
+          { value: 'item_property', label: 'Item Property' },
+          { value: 'environmental', label: 'Environmental' },
+          { value: 'subsystem', label: 'Subsystem' },
+        ],
+      },
     },
     {
       accessorKey: 'description',
@@ -30,7 +65,11 @@ export const CustomMechanicListPage: React.FC = () => {
         const desc = info.getValue() as string;
         return desc ? (desc.length > 120 ? desc.substring(0, 120) + '...' : desc) : '-';
       },
-      size: 350,
+      size: 700,
+      meta: {
+        editable: true,
+        editableType: 'textarea',
+      },
     },
     {
       accessorKey: 'rules_text',
@@ -39,7 +78,11 @@ export const CustomMechanicListPage: React.FC = () => {
         const rules = info.getValue() as string;
         return rules ? (rules.length > 100 ? rules.substring(0, 100) + '...' : rules) : '-';
       },
-      size: 300,
+      size: 700,
+      meta: {
+        editable: true,
+        editableType: 'textarea',
+      },
     },
     {
       accessorKey: 'prerequisites',
@@ -48,13 +91,21 @@ export const CustomMechanicListPage: React.FC = () => {
         const prereq = info.getValue() as string;
         return prereq ? (prereq.length > 60 ? prereq.substring(0, 60) + '...' : prereq) : '-';
       },
-      size: 200,
+      size: 600,
+      meta: {
+        editable: true,
+        editableType: 'textarea',
+      },
     },
     {
       accessorKey: 'source',
       header: 'Source',
       cell: (info) => info.getValue() || '-',
-      size: 130,
+      size: 220,
+      meta: {
+        editable: true,
+        editableType: 'text',
+      },
     },
     {
       accessorKey: 'related_rules',
@@ -63,7 +114,11 @@ export const CustomMechanicListPage: React.FC = () => {
         const rules = info.getValue() as string[];
         return rules && rules.length > 0 ? `${rules.length} rules` : '-';
       },
-      size: 100,
+      size: 180,
+      meta: {
+        editable: true,
+        editableType: 'tags',
+      },
     },
     {
       accessorKey: 'tags',
@@ -72,7 +127,11 @@ export const CustomMechanicListPage: React.FC = () => {
         const tags = info.getValue() as string[];
         return tags && tags.length > 0 ? tags.join(', ') : '-';
       },
-      size: 150,
+      size: 250,
+      meta: {
+        editable: true,
+        editableType: 'tags',
+      },
     },
   ];
 

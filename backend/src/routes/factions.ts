@@ -1,22 +1,23 @@
 /**
- * Factions routes
+ * Factions routes (standardized)
  * Feature: 014-create-the-database
- * Task: T043 - Wire FactionService to REST endpoints
  *
- * Implements 5 CRUD endpoints with:
- * - Authentication (protect middleware)
- * - Information filtering (extractViewMode + applyInformationFilter)
- * - Foreign key validation (leader_id → npcs.id)
- * - Campaign ownership validation
+ * Uses standardized FactionService with:
+ * - Sync methods (no async/await)
+ * - Optional ownership validation via OperationOptions
+ * - Standard list() method with filters
  */
 
 import express, { Request, Response } from 'express';
 import { FactionService } from '../services/FactionService';
 import { protect } from '../middleware/auth';
 import { extractViewMode, applyInformationFilter } from '../middleware/informationFilter';
+import { db } from '../services/DatabaseService';
 
 const router = express.Router();
-const factionService = new FactionService();
+
+// Initialize FactionService (now requires db instance)
+const factionService = new FactionService(db);
 
 // All routes require authentication and view mode filtering
 router.use(protect);
@@ -26,14 +27,10 @@ router.use(applyInformationFilter);
 /**
  * GET /api/factions
  * List all factions for a campaign
- * Query params:
- *   - campaign_id (required): Campaign ID
- * Headers:
- *   - X-View-Mode: dm_view (default) | player_view
  */
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', (req: Request, res: Response) => {
   try {
-    const { campaign_id } = req.query;
+    const { campaign_id, limit = '50', offset = '0' } = req.query;
     const userId = req.user!.id;
 
     if (!campaign_id || typeof campaign_id !== 'string') {
@@ -41,24 +38,35 @@ router.get('/', async (req: Request, res: Response) => {
       return;
     }
 
-    const factions = await factionService.getByCampaign(campaign_id, userId);
+    // Verify campaign ownership
+    const campaign = db
+      .prepare('SELECT * FROM campaigns WHERE id = ? AND owner_id = ?')
+      .get(campaign_id, userId);
 
-    // Return format expected by frontend
-    res.status(200).json({
-      data: factions,
-      pagination: {
-        currentPage: 1,
-        pageSize: factions.length,
-        totalPages: 1,
-        totalCount: factions.length
-      }
-    });
-  } catch (error: any) {
-    if (error.message.includes('not found') || error.message.includes('access denied')) {
-      res.status(403).json({ error: error.message });
+    if (!campaign) {
+      res.status(403).json({ error: 'Campaign not found or access denied' });
       return;
     }
 
+    // Use standardized list method
+    const result = factionService.list(
+      { campaign_id },
+      {
+        limit: parseInt(limit as string) || 50,
+        offset: parseInt(offset as string) || 0,
+      }
+    );
+
+    res.status(200).json({
+      data: result.data,
+      pagination: {
+        currentPage: 1,
+        pageSize: result.data.length,
+        totalPages: 1,
+        totalCount: result.total,
+      },
+    });
+  } catch (error: any) {
     console.error('List factions error:', error);
     res.status(500).json({ error: 'Failed to fetch factions' });
   }
@@ -67,11 +75,8 @@ router.get('/', async (req: Request, res: Response) => {
 /**
  * POST /api/factions
  * Create a new faction
- * Body: CreateFactionRequest (see FactionService)
- * Headers:
- *   - X-View-Mode: dm_view (default) | player_view
  */
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', (req: Request, res: Response) => {
   try {
     const userId = req.user!.id;
 
@@ -81,18 +86,8 @@ router.post('/', async (req: Request, res: Response) => {
       return;
     }
 
-    // Validate core_status enum if provided
-    if (req.body.core_status) {
-      const validStatuses = ['active', 'archived', 'draft', 'hidden'];
-      if (!validStatuses.includes(req.body.core_status)) {
-        res.status(400).json({
-          error: 'Invalid core_status. Must be: active, archived, draft, or hidden',
-        });
-        return;
-      }
-    }
-
-    const faction = await factionService.create(req.body, userId);
+    // Use standardized create method with ownership validation
+    const faction = factionService.create(req.body, { ownerId: userId });
 
     res.status(201).json(faction);
   } catch (error: any) {
@@ -114,18 +109,27 @@ router.post('/', async (req: Request, res: Response) => {
 /**
  * GET /api/factions/:id
  * Get faction by ID
- * Headers:
- *   - X-View-Mode: dm_view (default) | player_view
  */
-router.get('/:id', async (req: Request, res: Response) => {
+router.get('/:id', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const userId = req.user!.id;
 
-    const faction = await factionService.getById(id, userId);
+    // Fetch faction
+    const faction = factionService.findById(id);
 
     if (!faction) {
       res.status(404).json({ error: 'Faction not found' });
+      return;
+    }
+
+    // Verify campaign ownership
+    const campaign = db
+      .prepare('SELECT * FROM campaigns WHERE id = ? AND owner_id = ?')
+      .get(faction.campaign_id, userId);
+
+    if (!campaign) {
+      res.status(403).json({ error: 'Access denied' });
       return;
     }
 
@@ -139,27 +143,14 @@ router.get('/:id', async (req: Request, res: Response) => {
 /**
  * PUT /api/factions/:id
  * Update faction by ID
- * Body: UpdateFactionRequest (see FactionService)
- * Headers:
- *   - X-View-Mode: dm_view (default) | player_view
  */
-router.put('/:id', async (req: Request, res: Response) => {
+router.put('/:id', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const userId = req.user!.id;
 
-    // Validate core_status enum if provided
-    if (req.body.core_status) {
-      const validStatuses = ['active', 'archived', 'draft', 'hidden'];
-      if (!validStatuses.includes(req.body.core_status)) {
-        res.status(400).json({
-          error: 'Invalid core_status. Must be: active, archived, draft, or hidden',
-        });
-        return;
-      }
-    }
-
-    const faction = await factionService.update(id, req.body, userId);
+    // Use standardized update method with ownership validation
+    const faction = factionService.update(id, req.body, { ownerId: userId });
 
     res.status(200).json(faction);
   } catch (error: any) {
@@ -181,14 +172,14 @@ router.put('/:id', async (req: Request, res: Response) => {
 /**
  * DELETE /api/factions/:id
  * Delete faction by ID
- * Note: CASCADE behavior handled by FK constraints in database
  */
-router.delete('/:id', async (req: Request, res: Response) => {
+router.delete('/:id', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const userId = req.user!.id;
 
-    await factionService.delete(id, userId);
+    // Use standardized delete method with ownership validation
+    factionService.delete(id, { ownerId: userId });
 
     res.status(204).send();
   } catch (error: any) {

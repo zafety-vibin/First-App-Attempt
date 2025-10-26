@@ -36,6 +36,11 @@ import creatureRoutes from './routes/creatures';
 // Feature 015 canvas routes
 import dashboardConfigRoutes from './routes/dashboardConfigs';
 import categoryLandingConfigRoutes from './routes/categoryLandingConfigs';
+// Feature 021 geographic map routes
+import locationMapsRoutes from './routes/location-maps';
+import locationPinsRoutes from './routes/location-pins';
+import factionRegionsRoutes from './routes/faction-regions';
+import hierarchyNavigatorRoutes from './routes/hierarchy-navigator';
 // Feature 006 knowledge graph routes
 import knowledgeGraphRoutes from './routes/knowledge-graphs';
 import graphNodeRoutes from './routes/graph-nodes';
@@ -88,6 +93,12 @@ app.use('/api/session-prep', sessionPrepRoutes);
 app.use('/api/custom-mechanics', customMechanicRoutes);
 app.use('/api/items', itemRoutes);
 app.use('/api/creatures', creatureRoutes);
+
+// Feature 021: Geographic map routes (must come after base location routes)
+app.use('/api/locations', locationMapsRoutes);
+app.use('/api/locations', locationPinsRoutes);
+app.use('/api/locations', factionRegionsRoutes);
+app.use('/api', hierarchyNavigatorRoutes);
 
 // Feature 015: Canvas configuration routes
 app.use('/api/dashboard-configs', dashboardConfigRoutes);

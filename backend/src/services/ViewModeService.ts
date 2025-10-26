@@ -183,4 +183,67 @@ export class ViewModeService {
   validateViewMode(mode: string): mode is ViewMode {
     return mode === 'dm' || mode === 'player';
   }
+
+  /**
+   * Feature 021: Geographic Map Filtering
+   */
+
+  /**
+   * Filter map pins based on linked entity visibility
+   * Hides pins when linked entity has player_knowledge='dm_only' in player_view
+   *
+   * @param pins - Array of MapPin objects
+   * @param viewMode - 'dm' or 'player' (System 1) or 'dm_view' or 'player_view' (System 2)
+   * @returns Filtered pins array
+   */
+  filterMapPins(pins: any[], viewMode: ViewMode | string, db: any): any[] {
+    // DM view shows all pins
+    if (viewMode === 'dm' || viewMode === 'dm_view') {
+      return pins;
+    }
+
+    // Player view - filter by linked entity visibility
+    return pins.filter(pin => {
+      const table = pin.linked_entity_type === 'location' ? 'locations' : 'npcs';
+      const entity = db
+        .prepare(`SELECT player_knowledge FROM ${table} WHERE id = ?`)
+        .get(pin.linked_entity_id) as { player_knowledge: string | null } | undefined;
+
+      if (!entity) return false;
+
+      // Include if player_knowledge is common_knowledge, player_knowledge, or null
+      return !entity.player_knowledge ||
+             entity.player_knowledge === 'common_knowledge' ||
+             entity.player_knowledge === 'player_knowledge';
+    });
+  }
+
+  /**
+   * Filter faction regions based on faction visibility
+   * Hides regions when linked faction has player_knowledge='dm_only' in player_view
+   *
+   * @param regions - Array of FactionRegion objects
+   * @param viewMode - 'dm' or 'player' (System 1) or 'dm_view' or 'player_view' (System 2)
+   * @returns Filtered regions array
+   */
+  filterFactionRegions(regions: any[], viewMode: ViewMode | string, db: any): any[] {
+    // DM view shows all regions
+    if (viewMode === 'dm' || viewMode === 'dm_view') {
+      return regions;
+    }
+
+    // Player view - filter by faction visibility
+    return regions.filter(region => {
+      const faction = db
+        .prepare('SELECT player_knowledge FROM factions WHERE id = ?')
+        .get(region.faction_id) as { player_knowledge: string | null } | undefined;
+
+      if (!faction) return false;
+
+      // Include if player_knowledge is common_knowledge, player_knowledge, or null
+      return !faction.player_knowledge ||
+             faction.player_knowledge === 'common_knowledge' ||
+             faction.player_knowledge === 'player_knowledge';
+    });
+  }
 }

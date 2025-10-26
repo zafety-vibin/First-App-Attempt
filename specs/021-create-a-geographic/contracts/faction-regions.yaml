@@ -1,0 +1,303 @@
+openapi: 3.0.0
+info:
+  title: Faction Territory Regions API
+  version: 1.0.0
+  description: API endpoints for managing faction territory regions on location maps
+
+paths:
+  /api/locations/{location_id}/regions:
+    post:
+      summary: Create faction region
+      description: Add a new territory region polygon to a location map
+      tags:
+        - Faction Regions
+      parameters:
+        - name: location_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - map_id
+                - vertices
+                - faction_id
+                - color
+              properties:
+                map_id:
+                  type: string
+                  format: uuid
+                  description: ID of map image in this location
+                vertices:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      x:
+                        type: number
+                        minimum: 0
+                      y:
+                        type: number
+                        minimum: 0
+                  minItems: 3
+                  description: Polygon vertices (minimum 3 points)
+                  example: [{"x": 100, "y": 100}, {"x": 200, "y": 100}, {"x": 200, "y": 200}]
+                faction_id:
+                  type: string
+                  format: uuid
+                  description: UUID of faction that controls this territory
+                  example: "faction-zhentarim"
+                color:
+                  type: string
+                  pattern: '^#[0-9A-F]{6}$'
+                  description: Hex color for region fill/stroke
+                  example: "#EF4444"
+                label:
+                  type: string
+                  maxLength: 100
+                  nullable: true
+                  description: Optional text label for region
+                  example: "Zhentarim Territory"
+                z_order:
+                  type: integer
+                  minimum: 0
+                  default: 0
+                  description: Stacking order for overlapping regions (higher = on top)
+      responses:
+        '201':
+          description: Region created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  region:
+                    $ref: '#/components/schemas/FactionRegion'
+        '400':
+          description: Invalid request data (vertices out of bounds, <3 vertices, invalid faction)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Location, map, or faction not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      summary: List regions for location
+      description: Retrieve all faction regions for a location (filtered by X-View-Mode and faction visibility)
+      tags:
+        - Faction Regions
+      parameters:
+        - name: location_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: map_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: Filter regions by map ID
+        - name: X-View-Mode
+          in: header
+          required: false
+          schema:
+            type: string
+            enum: [dm_view, player_view]
+            default: dm_view
+      responses:
+        '200':
+          description: List of regions (sorted by z_order ascending)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  regions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/FactionRegion'
+        '404':
+          description: Location not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/locations/{location_id}/regions/{region_id}:
+    put:
+      summary: Update faction region
+      description: Update region vertices, faction, color, or z-order
+      tags:
+        - Faction Regions
+      parameters:
+        - name: location_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: region_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                vertices:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      x:
+                        type: number
+                        minimum: 0
+                      y:
+                        type: number
+                        minimum: 0
+                  minItems: 3
+                faction_id:
+                  type: string
+                  format: uuid
+                color:
+                  type: string
+                  pattern: '^#[0-9A-F]{6}$'
+                label:
+                  type: string
+                  maxLength: 100
+                  nullable: true
+                z_order:
+                  type: integer
+                  minimum: 0
+      responses:
+        '200':
+          description: Region updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  region:
+                    $ref: '#/components/schemas/FactionRegion'
+        '400':
+          description: Invalid update data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Location or region not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Delete faction region
+      description: Remove a faction region from the map
+      tags:
+        - Faction Regions
+      parameters:
+        - name: location_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: region_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Region deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '404':
+          description: Location or region not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    FactionRegion:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        map_id:
+          type: string
+          format: uuid
+        vertices:
+          type: array
+          items:
+            type: object
+            properties:
+              x:
+                type: number
+                minimum: 0
+              y:
+                type: number
+                minimum: 0
+          minItems: 3
+        faction_id:
+          type: string
+          format: uuid
+        color:
+          type: string
+          pattern: '^#[0-9A-F]{6}$'
+        label:
+          type: string
+          maxLength: 100
+          nullable: true
+        z_order:
+          type: integer
+          minimum: 0
+          description: Stacking order (higher = on top)
+        created_at:
+          type: integer
+          format: int64
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        details:
+          type: string

@@ -1,0 +1,248 @@
+openapi: 3.0.0
+info:
+  title: Geographic Hierarchy Navigator API
+  version: 1.0.0
+  description: API endpoints for building location hierarchy trees and navigation breadcrumbs
+
+paths:
+  /api/campaigns/{campaign_id}/locations/hierarchy:
+    get:
+      summary: Get location hierarchy tree
+      description: Build hierarchical tree structure from parent_location_id relationships
+      tags:
+        - Hierarchy Navigator
+      parameters:
+        - name: campaign_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: X-View-Mode
+          in: header
+          required: false
+          schema:
+            type: string
+            enum: [dm_view, player_view]
+            default: dm_view
+          description: Filter locations by information level
+      responses:
+        '200':
+          description: Location hierarchy tree
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tree:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LocationTreeNode'
+                    description: Root nodes (locations with parent_location_id = null)
+                  total_locations:
+                    type: integer
+                    description: Total number of locations in campaign
+                    example: 42
+                  cycles_detected:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        location_id:
+                          type: string
+                          format: uuid
+                        cycle_path:
+                          type: array
+                          items:
+                            type: string
+                            format: uuid
+                          description: IDs in the cycle chain
+                    description: List of circular parent_location_id references detected
+        '404':
+          description: Campaign not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/locations/{location_id}/breadcrumb:
+    get:
+      summary: Get breadcrumb path for location
+      description: Traverse parent_location_id chain to build navigation breadcrumb
+      tags:
+        - Hierarchy Navigator
+      parameters:
+        - name: location_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: X-View-Mode
+          in: header
+          required: false
+          schema:
+            type: string
+            enum: [dm_view, player_view]
+            default: dm_view
+      responses:
+        '200':
+          description: Breadcrumb navigation path
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  breadcrumb:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BreadcrumbItem'
+                    description: Ordered path from root to current location
+                  has_cycle:
+                    type: boolean
+                    description: True if circular reference detected
+                    example: false
+        '404':
+          description: Location not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/locations/{location_id}/children:
+    get:
+      summary: Get immediate child locations
+      description: Fetch all locations with parent_location_id = {location_id}
+      tags:
+        - Hierarchy Navigator
+      parameters:
+        - name: location_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: X-View-Mode
+          in: header
+          required: false
+          schema:
+            type: string
+            enum: [dm_view, player_view]
+            default: dm_view
+      responses:
+        '200':
+          description: List of child locations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  children:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LocationSummary'
+                  count:
+                    type: integer
+                    description: Number of children
+                    example: 5
+        '404':
+          description: Location not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    LocationTreeNode:
+      type: object
+      properties:
+        location:
+          $ref: '#/components/schemas/LocationSummary'
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/LocationTreeNode'
+          description: Nested child nodes
+        depth:
+          type: integer
+          minimum: 0
+          description: Depth in tree (0 = root)
+          example: 2
+        has_map:
+          type: boolean
+          description: True if location has at least one map image
+          example: true
+        has_cycle:
+          type: boolean
+          description: True if circular parent_location_id reference detected
+          example: false
+
+    LocationSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        campaign_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: "Waterdeep"
+        location_type:
+          type: string
+          nullable: true
+          example: "city"
+        parent_location_id:
+          type: string
+          format: uuid
+          nullable: true
+        player_knowledge:
+          type: string
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+        map_count:
+          type: integer
+          description: Number of maps for this location
+          example: 3
+        created_at:
+          type: integer
+          format: int64
+        updated_at:
+          type: integer
+          format: int64
+
+    BreadcrumbItem:
+      type: object
+      properties:
+        location_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: "Sword Coast"
+        location_type:
+          type: string
+          nullable: true
+          example: "continent"
+        has_map:
+          type: boolean
+          description: True if this location has maps
+          example: true
+        depth:
+          type: integer
+          minimum: 0
+          description: Depth in hierarchy (0 = root)
+          example: 1
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        details:
+          type: string

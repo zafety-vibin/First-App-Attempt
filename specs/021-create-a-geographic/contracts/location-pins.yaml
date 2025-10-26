@@ -1,0 +1,306 @@
+openapi: 3.0.0
+info:
+  title: Location Map Pins API
+  version: 1.0.0
+  description: API endpoints for managing map pins on location maps
+
+paths:
+  /api/locations/{location_id}/pins:
+    post:
+      summary: Create map pin
+      description: Add a new pin to a location map linking to a location or NPC
+      tags:
+        - Map Pins
+      parameters:
+        - name: location_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - map_id
+                - x
+                - y
+                - linked_entity_type
+                - linked_entity_id
+              properties:
+                map_id:
+                  type: string
+                  format: uuid
+                  description: ID of map image in this location
+                x:
+                  type: number
+                  minimum: 0
+                  description: Absolute pixel X coordinate
+                  example: 512
+                y:
+                  type: number
+                  minimum: 0
+                  description: Absolute pixel Y coordinate
+                  example: 384
+                linked_entity_type:
+                  type: string
+                  enum: [location, npc]
+                  description: Type of entity this pin links to
+                  example: "location"
+                linked_entity_id:
+                  type: string
+                  format: uuid
+                  description: UUID of linked location or NPC
+                  example: "loc-waterdeep"
+                icon:
+                  type: string
+                  enum: [castle, city, town, village, dungeon, cave, mountain, forest, desert, water, landmark, temple, tower, port, bridge, ruins, camp, mine, farm, other]
+                  nullable: true
+                  description: Optional icon type
+                  example: "city"
+                color:
+                  type: string
+                  pattern: '^#[0-9A-F]{6}$'
+                  nullable: true
+                  description: Optional hex color
+                  example: "#3B82F6"
+                label:
+                  type: string
+                  maxLength: 50
+                  nullable: true
+                  description: Optional text label
+                  example: "Waterdeep"
+      responses:
+        '201':
+          description: Pin created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  pin:
+                    $ref: '#/components/schemas/MapPin'
+        '400':
+          description: Invalid request data (coordinates out of bounds, invalid entity reference)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Location, map, or linked entity not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      summary: List pins for location
+      description: Retrieve all pins for a location (filtered by X-View-Mode and linked entity visibility)
+      tags:
+        - Map Pins
+      parameters:
+        - name: location_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: map_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: Filter pins by map ID
+        - name: X-View-Mode
+          in: header
+          required: false
+          schema:
+            type: string
+            enum: [dm_view, player_view]
+            default: dm_view
+      responses:
+        '200':
+          description: List of pins
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pins:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MapPin'
+        '404':
+          description: Location not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/locations/{location_id}/pins/{pin_id}:
+    put:
+      summary: Update map pin
+      description: Update pin coordinates, linked entity, or visual properties
+      tags:
+        - Map Pins
+      parameters:
+        - name: location_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: pin_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                x:
+                  type: number
+                  minimum: 0
+                y:
+                  type: number
+                  minimum: 0
+                linked_entity_type:
+                  type: string
+                  enum: [location, npc]
+                linked_entity_id:
+                  type: string
+                  format: uuid
+                icon:
+                  type: string
+                  enum: [castle, city, town, village, dungeon, cave, mountain, forest, desert, water, landmark, temple, tower, port, bridge, ruins, camp, mine, farm, other]
+                  nullable: true
+                color:
+                  type: string
+                  pattern: '^#[0-9A-F]{6}$'
+                  nullable: true
+                label:
+                  type: string
+                  maxLength: 50
+                  nullable: true
+      responses:
+        '200':
+          description: Pin updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  pin:
+                    $ref: '#/components/schemas/MapPin'
+        '400':
+          description: Invalid update data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Location or pin not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Delete map pin
+      description: Remove a pin from the map
+      tags:
+        - Map Pins
+      parameters:
+        - name: location_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: pin_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Pin deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '404':
+          description: Location or pin not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    MapPin:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        map_id:
+          type: string
+          format: uuid
+        x:
+          type: number
+          minimum: 0
+          description: Absolute pixel X coordinate
+        y:
+          type: number
+          minimum: 0
+          description: Absolute pixel Y coordinate
+        linked_entity_type:
+          type: string
+          enum: [location, npc]
+        linked_entity_id:
+          type: string
+          format: uuid
+        icon:
+          type: string
+          enum: [castle, city, town, village, dungeon, cave, mountain, forest, desert, water, landmark, temple, tower, port, bridge, ruins, camp, mine, farm, other]
+          nullable: true
+        color:
+          type: string
+          pattern: '^#[0-9A-F]{6}$'
+          nullable: true
+        label:
+          type: string
+          maxLength: 50
+          nullable: true
+        created_at:
+          type: integer
+          format: int64
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        details:
+          type: string

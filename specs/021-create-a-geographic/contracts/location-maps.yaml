@@ -1,0 +1,291 @@
+openapi: 3.0.0
+info:
+  title: Location Maps API
+  version: 1.0.0
+  description: API endpoints for managing map images on location entries
+
+paths:
+  /api/locations/{location_id}/maps:
+    post:
+      summary: Upload map image to location
+      description: Upload a new map image (PNG/JPG/WebP) as base64 data URL
+      tags:
+        - Location Maps
+      parameters:
+        - name: location_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - data
+                - width
+                - height
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                  description: User-provided name for the map
+                  example: "Faerûn World Map"
+                data:
+                  type: string
+                  pattern: '^data:image/(png|jpeg|webp);base64,'
+                  description: Base64 data URL of image
+                  example: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
+                width:
+                  type: integer
+                  minimum: 100
+                  maximum: 10000
+                  description: Image width in pixels
+                  example: 2048
+                height:
+                  type: integer
+                  minimum: 100
+                  maximum: 10000
+                  description: Image height in pixels
+                  example: 1536
+      responses:
+        '201':
+          description: Map uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  map:
+                    $ref: '#/components/schemas/MapImage'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Location not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Map image too large (>10MB)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      summary: List maps for location
+      description: Retrieve all map images for a location (filtered by X-View-Mode)
+      tags:
+        - Location Maps
+      parameters:
+        - name: location_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: X-View-Mode
+          in: header
+          required: false
+          schema:
+            type: string
+            enum: [dm_view, player_view]
+            default: dm_view
+      responses:
+        '200':
+          description: List of maps with pins and regions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  maps:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MapImage'
+                  pins:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MapPin'
+                  regions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/FactionRegion'
+        '404':
+          description: Location not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/locations/{location_id}/maps/{map_id}:
+    delete:
+      summary: Delete map from location
+      description: Remove a map image and all associated pins/regions
+      tags:
+        - Location Maps
+      parameters:
+        - name: location_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: map_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Map deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  deleted_pins:
+                    type: integer
+                    description: Number of pins deleted
+                    example: 5
+                  deleted_regions:
+                    type: integer
+                    description: Number of regions deleted
+                    example: 2
+        '404':
+          description: Location or map not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    MapImage:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        data:
+          type: string
+          pattern: '^data:image/(png|jpeg|webp);base64,'
+        width:
+          type: integer
+          minimum: 100
+          maximum: 10000
+        height:
+          type: integer
+          minimum: 100
+          maximum: 10000
+        uploaded_at:
+          type: integer
+          format: int64
+          description: Unix timestamp
+
+    MapPin:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        map_id:
+          type: string
+          format: uuid
+        x:
+          type: number
+          minimum: 0
+          description: Absolute pixel X coordinate
+        y:
+          type: number
+          minimum: 0
+          description: Absolute pixel Y coordinate
+        linked_entity_type:
+          type: string
+          enum: [location, npc]
+        linked_entity_id:
+          type: string
+          format: uuid
+        icon:
+          type: string
+          enum: [castle, city, town, village, dungeon, cave, mountain, forest, desert, water, landmark, temple, tower, port, bridge, ruins, camp, mine, farm, other]
+          nullable: true
+        color:
+          type: string
+          pattern: '^#[0-9A-F]{6}$'
+          nullable: true
+        label:
+          type: string
+          maxLength: 50
+          nullable: true
+        created_at:
+          type: integer
+          format: int64
+
+    FactionRegion:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        map_id:
+          type: string
+          format: uuid
+        vertices:
+          type: array
+          items:
+            type: object
+            properties:
+              x:
+                type: number
+                minimum: 0
+              y:
+                type: number
+                minimum: 0
+          minItems: 3
+        faction_id:
+          type: string
+          format: uuid
+        color:
+          type: string
+          pattern: '^#[0-9A-F]{6}$'
+        label:
+          type: string
+          maxLength: 100
+          nullable: true
+        z_order:
+          type: integer
+          minimum: 0
+          description: Stacking order (higher = on top)
+        created_at:
+          type: integer
+          format: int64
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        details:
+          type: string

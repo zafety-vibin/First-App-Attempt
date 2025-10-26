@@ -195,6 +195,17 @@ export function runMigrations(): void {
     }
   });
 
+  // Migration 21: Geographic Map System (Feature 021)
+  runMigration(21, () => {
+    const migrationsDir = path.join(__dirname, '../db/migrations');
+    const filePath = path.join(migrationsDir, '021-geographic-maps.sql');
+    if (fs.existsSync(filePath)) {
+      const sql = fs.readFileSync(filePath, 'utf-8');
+      db.exec(sql);
+      if (!isMCPMode) console.error(`  ✓ Applied 021-geographic-maps.sql`);
+    }
+  });
+
   if (!isMCPMode) console.error('✓ Database initialized');
   logDatabaseInfo();
 }

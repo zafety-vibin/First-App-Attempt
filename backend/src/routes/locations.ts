@@ -60,8 +60,8 @@ router.get('/', (req: Request, res: Response) => {
     const limitNum = parseInt(limit as string, 10);
     const offsetNum = parseInt(offset as string, 10);
 
-    if (isNaN(limitNum) || limitNum < 1 || limitNum > 100) {
-      res.status(400).json({ error: 'limit must be between 1 and 100' });
+    if (isNaN(limitNum) || limitNum < 1 || limitNum > 1000) {
+      res.status(400).json({ error: 'limit must be between 1 and 1000' });
       return;
     }
 

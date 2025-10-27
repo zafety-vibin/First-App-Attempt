@@ -69,11 +69,11 @@ export const categoryToolDefinitions = [
 The structured category databases (Feature 014) - NOT the wiki cards (use read_card/search_cards for wiki).
 
 13 Categories Available:
-- npcs: Characters with race/class/faction (56 in Test Campaign)
-- locations: Places with hierarchies (3 in Test Campaign)
-- factions: Organizations with power dynamics (3 in Test Campaign)
-- session_recaps: Canonical session records (2 in Test Campaign)
-- quests: Mission tracking with status (2 in Test Campaign)
+- npcs: Characters with race/class/faction 
+- locations: Places with hierarchies 
+- factions: Organizations with power dynamics 
+- session_recaps: Canonical session records 
+- quests: Mission tracking with status 
 - player_characters: PC roster
 - lore_entries: Historical knowledge
 - world_rules: Magic systems, cosmology

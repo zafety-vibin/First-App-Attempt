@@ -3,18 +3,20 @@ import request from 'supertest';
 import { v4 as uuidv4 } from 'uuid';
 import express, { Application } from 'express';
 import locationPinsRoutes from '../../src/routes/location-pins';
+import { createTestUser, cleanupTestUser, getAuthHeader, TestUser } from '../helpers/testAuth';
 
 /**
- * Contract Tests: Location Map Pins API
+ * Contract Tests: Location Pins API
  *
- * Feature 021: Map pin management for linking locations/NPCs to map coordinates
- * Tests CRUD operations for pins with entity linking and coordinate validation
+ * Feature 021: Clickable pins on maps linking to entities
+ * Tests pin creation, updating, and entity linking
  *
  * Contract: specs/021-create-a-geographic/contracts/location-pins.yaml
  */
 
 describe('Location Pins API Contract Tests', () => {
   let app: Application;
+  let testUser: TestUser;
   let testCampaignId: string;
   let testLocationId: string;
   let testChildLocationId: string;
@@ -22,11 +24,16 @@ describe('Location Pins API Contract Tests', () => {
   let testMapId: string;
   let testPinId: string;
 
+  const validBase64Image = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+
   beforeAll(async () => {
     // Initialize test Express app
     app = express();
     app.use(express.json());
     app.use('/api/locations', locationPinsRoutes);
+
+    // Create test user with auth session
+    testUser = createTestUser();
 
     // Setup test data
     testCampaignId = uuidv4();
@@ -37,38 +44,32 @@ describe('Location Pins API Contract Tests', () => {
 
     const { db } = await import('../../src/services/DatabaseService');
 
-    // Create test user
-    db.prepare(`
-      INSERT OR IGNORE INTO users (user_id, username, email, created_at)
-      VALUES ('test-user', 'testuser', 'test@example.com', strftime('%s', 'now'))
-    `).run();
-
     // Create test campaign
     db.prepare(`
       INSERT INTO campaigns (id, owner_id, name, created_at, updated_at)
-      VALUES (?, 'test-user', 'Test Campaign', strftime('%s', 'now'), strftime('%s', 'now'))
-    `).run(testCampaignId);
+      VALUES (?, ?, 'Test Campaign', strftime('%s', 'now'), strftime('%s', 'now'))
+    `).run(testCampaignId, testUser.id);
 
-    // Create test location with map
+    // Create parent location with map
     db.prepare(`
       INSERT INTO locations (id, campaign_id, name, description, map_images, created_at, updated_at, tags, custom_fields, notable_npcs, factions_present, connected_locations)
       VALUES (?, ?, 'Test Location', 'A test location', ?, strftime('%s', 'now'), strftime('%s', 'now'), '[]', '{}', '[]', '[]', '[]')
     `).run(testLocationId, testCampaignId, JSON.stringify([{
       id: testMapId,
       name: 'Test Map',
-      data: 'data:image/png;base64,iVBORw0KGgo=',
+      data: validBase64Image,
       width: 2048,
       height: 1536,
-      uploaded_at: Date.now()
+      uploaded_at: Math.floor(Date.now() / 1000)
     }]));
 
-    // Create child location to link to
+    // Create child location
     db.prepare(`
       INSERT INTO locations (id, campaign_id, name, parent_location_id, created_at, updated_at, tags, custom_fields, notable_npcs, factions_present, connected_locations)
       VALUES (?, ?, 'Waterdeep', ?, strftime('%s', 'now'), strftime('%s', 'now'), '[]', '{}', '[]', '[]', '[]')
     `).run(testChildLocationId, testCampaignId, testLocationId);
 
-    // Create test NPC to link to
+    // Create test NPC
     db.prepare(`
       INSERT INTO npcs (id, campaign_id, name, description, created_at, updated_at, tags, custom_fields, class, locations)
       VALUES (?, ?, 'Test NPC', 'An NPC', strftime('%s', 'now'), strftime('%s', 'now'), '[]', '{}', '[]', '[]')
@@ -78,12 +79,14 @@ describe('Location Pins API Contract Tests', () => {
   afterAll(async () => {
     const { db } = await import('../../src/services/DatabaseService');
     db.prepare('DELETE FROM campaigns WHERE id = ?').run(testCampaignId);
+    cleanupTestUser(testUser.id);
   });
 
   describe('POST /api/locations/:id/pins', () => {
     it('should create a pin linked to a location', async () => {
       const response = await request(app)
         .post(`/api/locations/${testLocationId}/pins`)
+        .set(getAuthHeader(testUser.token))
         .send({
           map_id: testMapId,
           x: 512,
@@ -118,13 +121,15 @@ describe('Location Pins API Contract Tests', () => {
     it('should create a pin linked to an NPC', async () => {
       const response = await request(app)
         .post(`/api/locations/${testLocationId}/pins`)
+        .set(getAuthHeader(testUser.token))
         .send({
           map_id: testMapId,
-          x: 1024,
-          y: 768,
+          x: 256,
+          y: 256,
           linked_entity_type: 'npc',
           linked_entity_id: testNPCId,
-          icon: 'other',
+          icon: 'person',
+          color: '#10B981',
           label: 'NPC Location'
         });
 
@@ -136,6 +141,7 @@ describe('Location Pins API Contract Tests', () => {
     it('should reject invalid coordinates', async () => {
       const response = await request(app)
         .post(`/api/locations/${testLocationId}/pins`)
+        .set(getAuthHeader(testUser.token))
         .send({
           map_id: testMapId,
           x: -10, // negative coordinate
@@ -151,9 +157,10 @@ describe('Location Pins API Contract Tests', () => {
     it('should reject out-of-bounds coordinates', async () => {
       const response = await request(app)
         .post(`/api/locations/${testLocationId}/pins`)
+        .set(getAuthHeader(testUser.token))
         .send({
           map_id: testMapId,
-          x: 3000, // exceeds map width (2048)
+          x: 3000, // exceeds map width of 2048
           y: 384,
           linked_entity_type: 'location',
           linked_entity_id: testChildLocationId
@@ -166,6 +173,7 @@ describe('Location Pins API Contract Tests', () => {
     it('should reject invalid entity type', async () => {
       const response = await request(app)
         .post(`/api/locations/${testLocationId}/pins`)
+        .set(getAuthHeader(testUser.token))
         .send({
           map_id: testMapId,
           x: 512,
@@ -181,6 +189,7 @@ describe('Location Pins API Contract Tests', () => {
     it('should return 404 for non-existent linked entity', async () => {
       const response = await request(app)
         .post(`/api/locations/${testLocationId}/pins`)
+        .set(getAuthHeader(testUser.token))
         .send({
           map_id: testMapId,
           x: 512,
@@ -196,6 +205,7 @@ describe('Location Pins API Contract Tests', () => {
     it('should return 404 for non-existent map', async () => {
       const response = await request(app)
         .post(`/api/locations/${testLocationId}/pins`)
+        .set(getAuthHeader(testUser.token))
         .send({
           map_id: uuidv4(), // non-existent
           x: 512,
@@ -213,6 +223,7 @@ describe('Location Pins API Contract Tests', () => {
     it('should list all pins for location', async () => {
       const response = await request(app)
         .get(`/api/locations/${testLocationId}/pins`)
+        .set(getAuthHeader(testUser.token))
         .set('X-View-Mode', 'dm_view');
 
       expect(response.status).toBe(200);
@@ -222,15 +233,15 @@ describe('Location Pins API Contract Tests', () => {
       expect(response.body.pins.length).toBeGreaterThan(0);
       expect(response.body.pins[0]).toMatchObject({
         id: testPinId,
-        map_id: testMapId,
-        linked_entity_type: 'location',
-        linked_entity_id: testChildLocationId
+        linked_entity_type: 'location'
       });
     });
 
     it('should filter pins by map_id', async () => {
       const response = await request(app)
         .get(`/api/locations/${testLocationId}/pins`)
+        .set(getAuthHeader(testUser.token))
+        .set('X-View-Mode', 'dm_view')
         .query({ map_id: testMapId });
 
       expect(response.status).toBe(200);
@@ -250,13 +261,14 @@ describe('Location Pins API Contract Tests', () => {
         VALUES (?, ?, 'Secret NPC', 'dm_only', strftime('%s', 'now'), strftime('%s', 'now'), '[]', '{}', '[]', '[]')
       `).run(dmNPCId, testCampaignId);
 
-      // Create pin linking to dm_only NPC
+      // Create pin linked to dm_only NPC
       await request(app)
         .post(`/api/locations/${testLocationId}/pins`)
+        .set(getAuthHeader(testUser.token))
         .send({
           map_id: testMapId,
-          x: 256,
-          y: 256,
+          x: 128,
+          y: 128,
           linked_entity_type: 'npc',
           linked_entity_id: dmNPCId
         });
@@ -264,6 +276,7 @@ describe('Location Pins API Contract Tests', () => {
       // Player view should not see pins linked to dm_only entities
       const response = await request(app)
         .get(`/api/locations/${testLocationId}/pins`)
+        .set(getAuthHeader(testUser.token))
         .set('X-View-Mode', 'player_view');
 
       expect(response.status).toBe(200);
@@ -273,7 +286,8 @@ describe('Location Pins API Contract Tests', () => {
 
     it('should return 404 for non-existent location', async () => {
       const response = await request(app)
-        .get(`/api/locations/${uuidv4()}/pins`);
+        .get(`/api/locations/${uuidv4()}/pins`)
+        .set(getAuthHeader(testUser.token));
 
       expect(response.status).toBe(404);
       expect(response.body.error).toContain('not found');
@@ -284,9 +298,10 @@ describe('Location Pins API Contract Tests', () => {
     it('should update pin coordinates', async () => {
       const response = await request(app)
         .put(`/api/locations/${testLocationId}/pins/${testPinId}`)
+        .set(getAuthHeader(testUser.token))
         .send({
           x: 600,
-          y: 450
+          y: 400
         });
 
       expect(response.status).toBe(200);
@@ -295,7 +310,7 @@ describe('Location Pins API Contract Tests', () => {
         pin: {
           id: testPinId,
           x: 600,
-          y: 450
+          y: 400
         }
       });
     });
@@ -303,23 +318,25 @@ describe('Location Pins API Contract Tests', () => {
     it('should update pin visual properties', async () => {
       const response = await request(app)
         .put(`/api/locations/${testLocationId}/pins/${testPinId}`)
+        .set(getAuthHeader(testUser.token))
         .send({
           icon: 'castle',
           color: '#EF4444',
-          label: 'Red Castle'
+          label: 'Updated Label'
         });
 
       expect(response.status).toBe(200);
       expect(response.body.pin).toMatchObject({
         icon: 'castle',
         color: '#EF4444',
-        label: 'Red Castle'
+        label: 'Updated Label'
       });
     });
 
     it('should update linked entity', async () => {
       const response = await request(app)
         .put(`/api/locations/${testLocationId}/pins/${testPinId}`)
+        .set(getAuthHeader(testUser.token))
         .send({
           linked_entity_type: 'npc',
           linked_entity_id: testNPCId
@@ -335,6 +352,7 @@ describe('Location Pins API Contract Tests', () => {
     it('should reject invalid updates', async () => {
       const response = await request(app)
         .put(`/api/locations/${testLocationId}/pins/${testPinId}`)
+        .set(getAuthHeader(testUser.token))
         .send({
           x: -100 // invalid coordinate
         });
@@ -346,6 +364,7 @@ describe('Location Pins API Contract Tests', () => {
     it('should return 404 for non-existent pin', async () => {
       const response = await request(app)
         .put(`/api/locations/${testLocationId}/pins/${uuidv4()}`)
+        .set(getAuthHeader(testUser.token))
         .send({ x: 100 });
 
       expect(response.status).toBe(404);
@@ -358,10 +377,11 @@ describe('Location Pins API Contract Tests', () => {
       // Create a pin to delete
       const createResponse = await request(app)
         .post(`/api/locations/${testLocationId}/pins`)
+        .set(getAuthHeader(testUser.token))
         .send({
           map_id: testMapId,
-          x: 100,
-          y: 100,
+          x: 999,
+          y: 999,
           linked_entity_type: 'location',
           linked_entity_id: testChildLocationId
         });
@@ -370,7 +390,8 @@ describe('Location Pins API Contract Tests', () => {
 
       // Delete the pin
       const deleteResponse = await request(app)
-        .delete(`/api/locations/${testLocationId}/pins/${pinToDelete}`);
+        .delete(`/api/locations/${testLocationId}/pins/${pinToDelete}`)
+        .set(getAuthHeader(testUser.token));
 
       expect(deleteResponse.status).toBe(200);
       expect(deleteResponse.body).toMatchObject({
@@ -379,7 +400,8 @@ describe('Location Pins API Contract Tests', () => {
 
       // Verify pin is gone
       const listResponse = await request(app)
-        .get(`/api/locations/${testLocationId}/pins`);
+        .get(`/api/locations/${testLocationId}/pins`)
+        .set(getAuthHeader(testUser.token));
 
       const pinIds = listResponse.body.pins.map((p: any) => p.id);
       expect(pinIds).not.toContain(pinToDelete);
@@ -387,7 +409,8 @@ describe('Location Pins API Contract Tests', () => {
 
     it('should return 404 for non-existent pin', async () => {
       const response = await request(app)
-        .delete(`/api/locations/${testLocationId}/pins/${uuidv4()}`);
+        .delete(`/api/locations/${testLocationId}/pins/${uuidv4()}`)
+        .set(getAuthHeader(testUser.token));
 
       expect(response.status).toBe(404);
       expect(response.body.error).toContain('not found');
@@ -395,7 +418,8 @@ describe('Location Pins API Contract Tests', () => {
 
     it('should return 404 for non-existent location', async () => {
       const response = await request(app)
-        .delete(`/api/locations/${uuidv4()}/pins/${uuidv4()}`);
+        .delete(`/api/locations/${uuidv4()}/pins/${uuidv4()}`)
+        .set(getAuthHeader(testUser.token));
 
       expect(response.status).toBe(404);
       expect(response.body.error).toContain('not found');

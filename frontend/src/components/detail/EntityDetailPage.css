@@ -118,6 +118,37 @@
   outline-offset: 2px;
 }
 
+/* Tab Navigation */
+.entity-detail-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 2px solid var(--border-color, #e5e7eb);
+  margin-bottom: 24px;
+}
+
+.entity-detail-tab {
+  padding: 12px 24px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--text-secondary, #6b7280);
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: -2px;
+}
+
+.entity-detail-tab:hover {
+  color: var(--text-primary, #111827);
+  background-color: var(--bg-secondary, #f9fafb);
+}
+
+.entity-detail-tab.active {
+  color: var(--primary-color, #3b82f6);
+  border-bottom-color: var(--primary-color, #3b82f6);
+}
+
 /* Sections */
 .entity-detail-section {
   margin-bottom: 32px;

@@ -19,6 +19,7 @@ import { SessionTimelineWidget } from './widgets/SessionTimelineWidget';
 import { PlayerCharactersWidget } from './widgets/PlayerCharactersWidget';
 import { RecentActivityWidget } from './widgets/RecentActivityWidget';
 import { KnowledgeGraphsWidget } from './widgets/KnowledgeGraphsWidget';
+import { MapViewportWidget } from './widgets/MapViewportWidget';
 
 // Valid category names from Feature 014
 export type CategoryName =
@@ -240,6 +241,20 @@ WidgetRegistry.register({
   maxSize: { w: 12, h: 50 },
   component: KnowledgeGraphsWidget,
   // No categories filter = available everywhere (dashboard + all landing pages)
+});
+
+// Feature 021: Geographic Map Widget
+WidgetRegistry.register({
+  id: 'map-viewport',
+  type: 'custom',
+  name: 'Map Viewport',
+  description: 'Interactive map view with pins and faction regions',
+  supportedSizes: ['2x2', '3x3', '4x3', '4x4'],
+  defaultSize: '3x3',
+  minSize: { w: 2, h: 2 },
+  maxSize: { w: 12, h: 50 },
+  component: MapViewportWidget,
+  categories: ['locations'], // Only show on Locations landing page
 });
 
 // Export singleton instance for convenience

@@ -3,6 +3,7 @@ import request from 'supertest';
 import { v4 as uuidv4 } from 'uuid';
 import express, { Application } from 'express';
 import hierarchyNavigatorRoutes from '../../src/routes/hierarchy-navigator';
+import { createTestUser, cleanupTestUser, getAuthHeader, TestUser } from '../helpers/testAuth';
 
 /**
  * Contract Tests: Geographic Hierarchy Navigator API
@@ -15,6 +16,7 @@ import hierarchyNavigatorRoutes from '../../src/routes/hierarchy-navigator';
 
 describe('Hierarchy Navigator API Contract Tests', () => {
   let app: Application;
+  let testUser: TestUser;
   let testCampaignId: string;
   let rootLocationId: string;
   let continentId: string;
@@ -31,6 +33,9 @@ describe('Hierarchy Navigator API Contract Tests', () => {
     app.use(express.json());
     app.use('/api', hierarchyNavigatorRoutes);
 
+    // Create test user with auth session
+    testUser = createTestUser();
+
     // Setup test data
     testCampaignId = uuidv4();
     rootLocationId = uuidv4();
@@ -44,17 +49,11 @@ describe('Hierarchy Navigator API Contract Tests', () => {
 
     const { db } = await import('../../src/services/DatabaseService');
 
-    // Create test user
-    db.prepare(`
-      INSERT OR IGNORE INTO users (user_id, username, email, created_at)
-      VALUES ('test-user', 'testuser', 'test@example.com', strftime('%s', 'now'))
-    `).run();
-
     // Create test campaign
     db.prepare(`
       INSERT INTO campaigns (id, owner_id, name, created_at, updated_at)
-      VALUES (?, 'test-user', 'Test Campaign', strftime('%s', 'now'), strftime('%s', 'now'))
-    `).run(testCampaignId);
+      VALUES (?, ?, 'Test Campaign', strftime('%s', 'now'), strftime('%s', 'now'))
+    `).run(testCampaignId, testUser.id);
 
     // Create location hierarchy (root → continent → region → city → district)
     db.prepare(`
@@ -96,12 +95,14 @@ describe('Hierarchy Navigator API Contract Tests', () => {
   afterAll(async () => {
     const { db } = await import('../../src/services/DatabaseService');
     db.prepare('DELETE FROM campaigns WHERE id = ?').run(testCampaignId);
+    cleanupTestUser(testUser.id);
   });
 
   describe('GET /api/campaigns/:campaign_id/locations/hierarchy', () => {
     it('should build complete hierarchy tree', async () => {
       const response = await request(app)
         .get(`/api/campaigns/${testCampaignId}/locations/hierarchy`)
+        .set(getAuthHeader(testUser.token))
         .set('X-View-Mode', 'dm_view');
 
       expect(response.status).toBe(200);
@@ -137,6 +138,7 @@ describe('Hierarchy Navigator API Contract Tests', () => {
     it('should detect circular references', async () => {
       const response = await request(app)
         .get(`/api/campaigns/${testCampaignId}/locations/hierarchy`)
+        .set(getAuthHeader(testUser.token))
         .set('X-View-Mode', 'dm_view');
 
       expect(response.status).toBe(200);
@@ -155,10 +157,12 @@ describe('Hierarchy Navigator API Contract Tests', () => {
     it('should filter locations by X-View-Mode', async () => {
       const dmResponse = await request(app)
         .get(`/api/campaigns/${testCampaignId}/locations/hierarchy`)
+        .set(getAuthHeader(testUser.token))
         .set('X-View-Mode', 'dm_view');
 
       const playerResponse = await request(app)
         .get(`/api/campaigns/${testCampaignId}/locations/hierarchy`)
+        .set(getAuthHeader(testUser.token))
         .set('X-View-Mode', 'player_view');
 
       expect(dmResponse.status).toBe(200);
@@ -171,6 +175,7 @@ describe('Hierarchy Navigator API Contract Tests', () => {
     it('should mark locations with cycles', async () => {
       const response = await request(app)
         .get(`/api/campaigns/${testCampaignId}/locations/hierarchy`)
+        .set(getAuthHeader(testUser.token))
         .set('X-View-Mode', 'dm_view');
 
       expect(response.status).toBe(200);
@@ -194,7 +199,8 @@ describe('Hierarchy Navigator API Contract Tests', () => {
 
     it('should return 404 for non-existent campaign', async () => {
       const response = await request(app)
-        .get(`/api/campaigns/${uuidv4()}/locations/hierarchy`);
+        .get(`/api/campaigns/${uuidv4()}/locations/hierarchy`)
+        .set(getAuthHeader(testUser.token));
 
       expect(response.status).toBe(404);
       expect(response.body.error).toContain('not found');
@@ -205,6 +211,7 @@ describe('Hierarchy Navigator API Contract Tests', () => {
     it('should build breadcrumb path from leaf to root', async () => {
       const response = await request(app)
         .get(`/api/locations/${districtId}/breadcrumb`)
+        .set(getAuthHeader(testUser.token))
         .set('X-View-Mode', 'dm_view');
 
       expect(response.status).toBe(200);
@@ -240,7 +247,8 @@ describe('Hierarchy Navigator API Contract Tests', () => {
 
     it('should handle root location breadcrumb', async () => {
       const response = await request(app)
-        .get(`/api/locations/${rootLocationId}/breadcrumb`);
+        .get(`/api/locations/${rootLocationId}/breadcrumb`)
+        .set(getAuthHeader(testUser.token));
 
       expect(response.status).toBe(200);
       expect(response.body.breadcrumb).toHaveLength(1);
@@ -253,7 +261,8 @@ describe('Hierarchy Navigator API Contract Tests', () => {
 
     it('should detect cycles in breadcrumb path', async () => {
       const response = await request(app)
-        .get(`/api/locations/${cycleLocation1Id}/breadcrumb`);
+        .get(`/api/locations/${cycleLocation1Id}/breadcrumb`)
+        .set(getAuthHeader(testUser.token));
 
       expect(response.status).toBe(200);
       expect(response.body.has_cycle).toBe(true);
@@ -278,6 +287,7 @@ describe('Hierarchy Navigator API Contract Tests', () => {
       // Player view should not be able to access breadcrumb through dm_only parent
       const response = await request(app)
         .get(`/api/locations/${childOfSecretId}/breadcrumb`)
+        .set(getAuthHeader(testUser.token))
         .set('X-View-Mode', 'player_view');
 
       expect(response.status).toBe(404);
@@ -285,7 +295,8 @@ describe('Hierarchy Navigator API Contract Tests', () => {
 
     it('should return 404 for non-existent location', async () => {
       const response = await request(app)
-        .get(`/api/locations/${uuidv4()}/breadcrumb`);
+        .get(`/api/locations/${uuidv4()}/breadcrumb`)
+        .set(getAuthHeader(testUser.token));
 
       expect(response.status).toBe(404);
       expect(response.body.error).toContain('not found');
@@ -296,6 +307,7 @@ describe('Hierarchy Navigator API Contract Tests', () => {
     it('should list immediate child locations', async () => {
       const response = await request(app)
         .get(`/api/locations/${regionId}/children`)
+        .set(getAuthHeader(testUser.token))
         .set('X-View-Mode', 'dm_view');
 
       expect(response.status).toBe(200);
@@ -319,7 +331,8 @@ describe('Hierarchy Navigator API Contract Tests', () => {
 
     it('should return empty array for leaf locations', async () => {
       const response = await request(app)
-        .get(`/api/locations/${districtId}/children`);
+        .get(`/api/locations/${districtId}/children`)
+        .set(getAuthHeader(testUser.token));
 
       expect(response.status).toBe(200);
       expect(response.body.children).toEqual([]);
@@ -330,10 +343,12 @@ describe('Hierarchy Navigator API Contract Tests', () => {
       // City has both regular and dm_only children
       const dmResponse = await request(app)
         .get(`/api/locations/${cityId}/children`)
+        .set(getAuthHeader(testUser.token))
         .set('X-View-Mode', 'dm_view');
 
       const playerResponse = await request(app)
         .get(`/api/locations/${cityId}/children`)
+        .set(getAuthHeader(testUser.token))
         .set('X-View-Mode', 'player_view');
 
       expect(dmResponse.status).toBe(200);
@@ -351,7 +366,8 @@ describe('Hierarchy Navigator API Contract Tests', () => {
 
     it('should include map_count for each child', async () => {
       const response = await request(app)
-        .get(`/api/locations/${continentId}/children`);
+        .get(`/api/locations/${continentId}/children`)
+        .set(getAuthHeader(testUser.token));
 
       expect(response.status).toBe(200);
       response.body.children.forEach((child: any) => {
@@ -362,7 +378,8 @@ describe('Hierarchy Navigator API Contract Tests', () => {
 
     it('should return 404 for non-existent location', async () => {
       const response = await request(app)
-        .get(`/api/locations/${uuidv4()}/children`);
+        .get(`/api/locations/${uuidv4()}/children`)
+        .set(getAuthHeader(testUser.token));
 
       expect(response.status).toBe(404);
       expect(response.body.error).toContain('not found');

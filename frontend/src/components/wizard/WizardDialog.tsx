@@ -57,8 +57,26 @@ function WizardDialogContent({ onClose, campaignId }: Omit<WizardDialogProps, 'o
 
       // Get theme labels (either custom or from selected theme)
       const selectedTheme = THEME_DESCRIPTORS.find(t => t.id === state.step1.selectedTheme);
+
+      // Default generic labels for custom theme (if user didn't provide custom labels)
+      const defaultLabels = {
+        npcs: 'NPCs',
+        locations: 'Locations',
+        factions: 'Factions',
+        session_recaps: 'Session Recaps',
+        quests: 'Quests',
+        player_characters: 'Player Characters',
+        lore_entries: 'Lore Entries',
+        world_rules: 'World Rules',
+        planar_forces: 'Planar Forces',
+        session_prep: 'Session Prep',
+        custom_mechanics: 'Custom Mechanics',
+        items: 'Items',
+        creatures: 'Creatures'
+      };
+
       const categoryLabels = state.step1.selectedTheme === 'custom'
-        ? state.step1.customLabels
+        ? (state.step1.customLabels || defaultLabels) // Fallback to generic labels
         : selectedTheme?.labels;
 
       if (!categoryLabels) {

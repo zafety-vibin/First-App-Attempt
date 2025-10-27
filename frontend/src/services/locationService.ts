@@ -83,3 +83,166 @@ export async function getLocationStats(campaignId: string): Promise<LocationStat
   });
   return response.data;
 }
+
+// ============================================================================
+// Map Management Functions (Feature 021)
+// ============================================================================
+
+export interface MapImage {
+  id: string;
+  name: string;
+  data: string;
+  width: number;
+  height: number;
+  uploaded_at: number;
+}
+
+export interface MapPin {
+  id: string;
+  map_id: string;
+  x: number;
+  y: number;
+  linked_entity_type: 'location' | 'npc';
+  linked_entity_id: string;
+  icon: string | null;
+  color: string | null;
+  label: string | null;
+  created_at: number;
+}
+
+export interface FactionRegion {
+  id: string;
+  map_id: string;
+  vertices: Array<{ x: number; y: number }>;
+  faction_id: string;
+  color: string;
+  label: string | null;
+  z_order: number;
+  created_at: number;
+}
+
+export interface LocationMapsResponse {
+  maps: MapImage[];
+  pins: MapPin[];
+  regions: FactionRegion[];
+}
+
+/**
+ * Upload map image to location
+ */
+export async function uploadMap(
+  locationId: string,
+  mapData: { name: string; data: string; width: number; height: number }
+): Promise<MapImage> {
+  const response = await apiClient.post(`/locations/${locationId}/maps`, mapData);
+  return response.data.map;
+}
+
+/**
+ * Get all maps, pins, and regions for a location
+ */
+export async function getLocationMaps(locationId: string): Promise<LocationMapsResponse> {
+  const response = await apiClient.get(`/locations/${locationId}/maps`);
+  return response.data;
+}
+
+/**
+ * Delete a map (also deletes associated pins and regions)
+ */
+export async function deleteMap(locationId: string, mapId: string): Promise<void> {
+  await apiClient.delete(`/locations/${locationId}/maps/${mapId}`);
+}
+
+/**
+ * Create a pin on a map
+ */
+export async function createPin(
+  locationId: string,
+  pinData: {
+    map_id: string;
+    x: number;
+    y: number;
+    linked_entity_type: 'location' | 'npc';
+    linked_entity_id: string;
+    icon?: string | null;
+    color?: string | null;
+    label?: string | null;
+  }
+): Promise<MapPin> {
+  const response = await apiClient.post(`/locations/${locationId}/pins`, pinData);
+  return response.data.pin;
+}
+
+/**
+ * Update a pin
+ */
+export async function updatePin(
+  locationId: string,
+  pinId: string,
+  updates: Partial<Omit<MapPin, 'id' | 'map_id' | 'created_at'>>
+): Promise<MapPin> {
+  const response = await apiClient.put(`/locations/${locationId}/pins/${pinId}`, updates);
+  return response.data.pin;
+}
+
+/**
+ * Delete a pin
+ */
+export async function deletePin(locationId: string, pinId: string): Promise<void> {
+  await apiClient.delete(`/locations/${locationId}/pins/${pinId}`);
+}
+
+/**
+ * Get all pins for a location (optionally filtered by map_id)
+ */
+export async function getPins(locationId: string, mapId?: string): Promise<MapPin[]> {
+  const params = mapId ? { map_id: mapId } : {};
+  const response = await apiClient.get(`/locations/${locationId}/pins`, { params });
+  return response.data.pins;
+}
+
+/**
+ * Create a faction region on a map
+ */
+export async function createRegion(
+  locationId: string,
+  regionData: {
+    map_id: string;
+    vertices: Array<{ x: number; y: number }>;
+    faction_id: string;
+    color: string;
+    label?: string | null;
+    z_order?: number;
+  }
+): Promise<FactionRegion> {
+  const response = await apiClient.post(`/locations/${locationId}/regions`, regionData);
+  return response.data.region;
+}
+
+/**
+ * Update a faction region
+ */
+export async function updateRegion(
+  locationId: string,
+  regionId: string,
+  updates: Partial<Omit<FactionRegion, 'id' | 'map_id' | 'created_at'>>
+): Promise<FactionRegion> {
+  const response = await apiClient.put(`/locations/${locationId}/regions/${regionId}`, updates);
+  return response.data.region;
+}
+
+/**
+ * Delete a faction region
+ */
+export async function deleteRegion(locationId: string, regionId: string): Promise<void> {
+  await apiClient.delete(`/locations/${locationId}/regions/${regionId}`);
+}
+
+/**
+ * Get all regions for a location (optionally filtered by map_id)
+ */
+export async function getRegions(locationId: string, mapId?: string): Promise<FactionRegion[]> {
+  const params = mapId ? { map_id: mapId } : {};
+  const response = await apiClient.get(`/locations/${locationId}/regions`, { params });
+  return response.data.regions;
+}

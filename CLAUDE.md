@@ -103,6 +103,10 @@ wrldbldr-mcp-manager/
 # Start all services (first time - builds images)
 docker-compose up --build
 
+# IMPORTANT: After rebuilding backend, install sharp with platform binaries
+docker exec wrldbldr-backend npm install --include=optional sharp
+docker-compose restart backend
+
 # Start all services (subsequent runs)
 docker-compose up
 

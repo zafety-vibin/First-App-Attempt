@@ -3,6 +3,7 @@ import request from 'supertest';
 import { v4 as uuidv4 } from 'uuid';
 import express, { Application } from 'express';
 import locationMapsRoutes from '../../src/routes/location-maps';
+import { createTestUser, cleanupTestUser, getAuthHeader, TestUser } from '../helpers/testAuth';
 
 /**
  * Contract Tests: Location Maps API
@@ -15,6 +16,7 @@ import locationMapsRoutes from '../../src/routes/location-maps';
 
 describe('Location Maps API Contract Tests', () => {
   let app: Application;
+  let testUser: TestUser;
   let testCampaignId: string;
   let testLocationId: string;
   let testMapId: string;
@@ -27,23 +29,20 @@ describe('Location Maps API Contract Tests', () => {
     app.use(express.json({ limit: '10mb' }));
     app.use('/api/locations', locationMapsRoutes);
 
+    // Create test user with auth session
+    testUser = createTestUser();
+
     // Setup test data
     testCampaignId = uuidv4();
     testLocationId = uuidv4();
 
     const { db } = await import('../../src/services/DatabaseService');
 
-    // Create test user
-    db.prepare(`
-      INSERT OR IGNORE INTO users (user_id, username, email, created_at)
-      VALUES ('test-user', 'testuser', 'test@example.com', strftime('%s', 'now'))
-    `).run();
-
     // Create test campaign
     db.prepare(`
       INSERT INTO campaigns (id, owner_id, name, created_at, updated_at)
-      VALUES (?, 'test-user', 'Test Campaign', strftime('%s', 'now'), strftime('%s', 'now'))
-    `).run(testCampaignId);
+      VALUES (?, ?, 'Test Campaign', strftime('%s', 'now'), strftime('%s', 'now'))
+    `).run(testCampaignId, testUser.id);
 
     // Create test location
     db.prepare(`
@@ -55,12 +54,14 @@ describe('Location Maps API Contract Tests', () => {
   afterAll(async () => {
     const { db } = await import('../../src/services/DatabaseService');
     db.prepare('DELETE FROM campaigns WHERE id = ?').run(testCampaignId);
+    cleanupTestUser(testUser.id);
   });
 
   describe('POST /api/locations/:id/maps', () => {
     it('should upload a new map image', async () => {
       const response = await request(app)
         .post(`/api/locations/${testLocationId}/maps`)
+        .set(getAuthHeader(testUser.token))
         .send({
           name: 'Faerûn World Map',
           data: validBase64Image,
@@ -87,6 +88,7 @@ describe('Location Maps API Contract Tests', () => {
     it('should reject invalid image data', async () => {
       const response = await request(app)
         .post(`/api/locations/${testLocationId}/maps`)
+        .set(getAuthHeader(testUser.token))
         .send({
           name: 'Bad Map',
           data: 'not-base64-image-data',
@@ -101,6 +103,7 @@ describe('Location Maps API Contract Tests', () => {
     it('should reject oversized dimensions', async () => {
       const response = await request(app)
         .post(`/api/locations/${testLocationId}/maps`)
+        .set(getAuthHeader(testUser.token))
         .send({
           name: 'Huge Map',
           data: validBase64Image,
@@ -115,6 +118,7 @@ describe('Location Maps API Contract Tests', () => {
     it('should return 404 for non-existent location', async () => {
       const response = await request(app)
         .post(`/api/locations/${uuidv4()}/maps`)
+        .set(getAuthHeader(testUser.token))
         .send({
           name: 'Map',
           data: validBase64Image,
@@ -132,6 +136,7 @@ describe('Location Maps API Contract Tests', () => {
 
       const response = await request(app)
         .post(`/api/locations/${testLocationId}/maps`)
+        .set(getAuthHeader(testUser.token))
         .send({
           name: 'Large Map',
           data: largeData,
@@ -148,6 +153,7 @@ describe('Location Maps API Contract Tests', () => {
     it('should list all maps for location', async () => {
       const response = await request(app)
         .get(`/api/locations/${testLocationId}/maps`)
+        .set(getAuthHeader(testUser.token))
         .set('X-View-Mode', 'dm_view');
 
       expect(response.status).toBe(200);
@@ -176,6 +182,7 @@ describe('Location Maps API Contract Tests', () => {
       // Player view should not see dm_only locations
       const response = await request(app)
         .get(`/api/locations/${dmLocationId}/maps`)
+        .set(getAuthHeader(testUser.token))
         .set('X-View-Mode', 'player_view');
 
       expect(response.status).toBe(404);
@@ -183,7 +190,8 @@ describe('Location Maps API Contract Tests', () => {
 
     it('should return 404 for non-existent location', async () => {
       const response = await request(app)
-        .get(`/api/locations/${uuidv4()}/maps`);
+        .get(`/api/locations/${uuidv4()}/maps`)
+        .set(getAuthHeader(testUser.token));
 
       expect(response.status).toBe(404);
       expect(response.body.error).toContain('not found');
@@ -195,6 +203,7 @@ describe('Location Maps API Contract Tests', () => {
       // First create a new map to delete
       const createResponse = await request(app)
         .post(`/api/locations/${testLocationId}/maps`)
+        .set(getAuthHeader(testUser.token))
         .send({
           name: 'Map to Delete',
           data: validBase64Image,
@@ -206,7 +215,8 @@ describe('Location Maps API Contract Tests', () => {
 
       // Delete the map
       const deleteResponse = await request(app)
-        .delete(`/api/locations/${testLocationId}/maps/${mapToDelete}`);
+        .delete(`/api/locations/${testLocationId}/maps/${mapToDelete}`)
+        .set(getAuthHeader(testUser.token));
 
       expect(deleteResponse.status).toBe(200);
       expect(deleteResponse.body).toMatchObject({
@@ -217,7 +227,8 @@ describe('Location Maps API Contract Tests', () => {
 
       // Verify map is gone
       const listResponse = await request(app)
-        .get(`/api/locations/${testLocationId}/maps`);
+        .get(`/api/locations/${testLocationId}/maps`)
+        .set(getAuthHeader(testUser.token));
 
       const mapIds = listResponse.body.maps.map((m: any) => m.id);
       expect(mapIds).not.toContain(mapToDelete);
@@ -225,7 +236,8 @@ describe('Location Maps API Contract Tests', () => {
 
     it('should return 404 for non-existent map', async () => {
       const response = await request(app)
-        .delete(`/api/locations/${testLocationId}/maps/${uuidv4()}`);
+        .delete(`/api/locations/${testLocationId}/maps/${uuidv4()}`)
+        .set(getAuthHeader(testUser.token));
 
       expect(response.status).toBe(404);
       expect(response.body.error).toContain('not found');
@@ -233,7 +245,8 @@ describe('Location Maps API Contract Tests', () => {
 
     it('should return 404 for non-existent location', async () => {
       const response = await request(app)
-        .delete(`/api/locations/${uuidv4()}/maps/${uuidv4()}`);
+        .delete(`/api/locations/${uuidv4()}/maps/${uuidv4()}`)
+        .set(getAuthHeader(testUser.token));
 
       expect(response.status).toBe(404);
       expect(response.body.error).toContain('not found');

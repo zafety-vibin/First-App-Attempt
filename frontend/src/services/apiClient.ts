@@ -58,10 +58,8 @@ apiClient.interceptors.request.use(
 
     if (campaignId) {
       const viewMode = getViewMode(campaignId);
-      // Backend expects 'dm' or 'player', but we store 'dm_view' or 'player_view'
-      // Strip the '_view' suffix before sending to backend
-      const backendViewMode = viewMode.replace('_view', '');
-      config.headers['X-View-Mode'] = backendViewMode;
+      // Backend expects 'dm_view' or 'player_view' (full value with suffix)
+      config.headers['X-View-Mode'] = viewMode;
     }
 
     return config;

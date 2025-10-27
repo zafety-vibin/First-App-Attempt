@@ -10,6 +10,7 @@ import { GenericEntityForm } from '../forms/GenericEntityForm';
 import { DeleteConfirmation } from '../forms/DeleteConfirmation';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { ErrorBoundary } from '../common/ErrorBoundary';
+import LocationMapsTab from '../location/LocationMapsTab';
 import './EntityDetailPage.css';
 
 export interface EntityDetailPageProps {
@@ -40,6 +41,7 @@ export const EntityDetailPage: React.FC<EntityDetailPageProps> = ({
   const [editMode, setEditMode] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [activeTab, setActiveTab] = useState<'details' | 'maps'>('details');
 
   // Get view mode from localStorage (for DM field visibility)
   const viewMode = localStorage.getItem(`viewMode_${campaignId}`) || 'dm_view';
@@ -276,37 +278,62 @@ export const EntityDetailPage: React.FC<EntityDetailPageProps> = ({
           </div>
         </header>
 
-        {/* Universal Fields */}
-        <section className="entity-detail-section">
-          <h2 className="entity-detail-section-title">Basic Information</h2>
-          <dl className="entity-detail-fields">
-            {renderUniversalFields()}
-          </dl>
-        </section>
-
-        {/* Category-Specific Fields */}
-        <section className="entity-detail-section">
-          <h2 className="entity-detail-section-title">
-            {getCategoryLabel(category)} Details
-          </h2>
-          <dl className="entity-detail-fields">
-            {renderCategoryFields()}
-          </dl>
-        </section>
-
-        {/* Relationships */}
-        {relationships.length > 0 && (
-          <section className="entity-detail-section">
-            <h2 className="entity-detail-section-title">Relationships</h2>
-            <RelationshipLinks relationships={relationships} campaignId={campaignId} />
-          </section>
+        {/* Tab Navigation (for locations only) */}
+        {category === 'locations' && (
+          <nav className="entity-detail-tabs">
+            <button
+              className={`entity-detail-tab ${activeTab === 'details' ? 'active' : ''}`}
+              onClick={() => setActiveTab('details')}
+            >
+              Details
+            </button>
+            <button
+              className={`entity-detail-tab ${activeTab === 'maps' ? 'active' : ''}`}
+              onClick={() => setActiveTab('maps')}
+            >
+              Maps
+            </button>
+          </nav>
         )}
 
-        {/* DM-Only Fields */}
-        {renderDmFields()}
+        {/* Maps Tab Content (locations only) */}
+        {category === 'locations' && activeTab === 'maps' ? (
+          <LocationMapsTab locationId={entityId} campaignId={campaignId} />
+        ) : (
+          <>
+            {/* Universal Fields */}
+            <section className="entity-detail-section">
+              <h2 className="entity-detail-section-title">Basic Information</h2>
+              <dl className="entity-detail-fields">
+                {renderUniversalFields()}
+              </dl>
+            </section>
 
-        {/* Custom Fields */}
-        {renderCustomFields()}
+            {/* Category-Specific Fields */}
+            <section className="entity-detail-section">
+              <h2 className="entity-detail-section-title">
+                {getCategoryLabel(category)} Details
+              </h2>
+              <dl className="entity-detail-fields">
+                {renderCategoryFields()}
+              </dl>
+            </section>
+
+            {/* Relationships */}
+            {relationships.length > 0 && (
+              <section className="entity-detail-section">
+                <h2 className="entity-detail-section-title">Relationships</h2>
+                <RelationshipLinks relationships={relationships} campaignId={campaignId} />
+              </section>
+            )}
+
+            {/* DM-Only Fields */}
+            {renderDmFields()}
+
+            {/* Custom Fields */}
+            {renderCustomFields()}
+          </>
+        )}
 
         {/* Delete Confirmation Modal */}
         <DeleteConfirmation

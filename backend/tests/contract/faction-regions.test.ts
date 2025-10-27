@@ -3,6 +3,7 @@ import request from 'supertest';
 import { v4 as uuidv4 } from 'uuid';
 import express, { Application } from 'express';
 import factionRegionsRoutes from '../../src/routes/faction-regions';
+import { createTestUser, cleanupTestUser, getAuthHeader, TestUser } from '../helpers/testAuth';
 
 /**
  * Contract Tests: Faction Territory Regions API
@@ -15,6 +16,7 @@ import factionRegionsRoutes from '../../src/routes/faction-regions';
 
 describe('Faction Regions API Contract Tests', () => {
   let app: Application;
+  let testUser: TestUser;
   let testCampaignId: string;
   let testLocationId: string;
   let testFactionId: string;
@@ -28,6 +30,9 @@ describe('Faction Regions API Contract Tests', () => {
     app.use(express.json());
     app.use('/api/locations', factionRegionsRoutes);
 
+    // Create test user with auth session
+    testUser = createTestUser();
+
     // Setup test data
     testCampaignId = uuidv4();
     testLocationId = uuidv4();
@@ -37,17 +42,11 @@ describe('Faction Regions API Contract Tests', () => {
 
     const { db } = await import('../../src/services/DatabaseService');
 
-    // Create test user
-    db.prepare(`
-      INSERT OR IGNORE INTO users (user_id, username, email, created_at)
-      VALUES ('test-user', 'testuser', 'test@example.com', strftime('%s', 'now'))
-    `).run();
-
     // Create test campaign
     db.prepare(`
       INSERT INTO campaigns (id, owner_id, name, created_at, updated_at)
-      VALUES (?, 'test-user', 'Test Campaign', strftime('%s', 'now'), strftime('%s', 'now'))
-    `).run(testCampaignId);
+      VALUES (?, ?, 'Test Campaign', strftime('%s', 'now'), strftime('%s', 'now'))
+    `).run(testCampaignId, testUser.id);
 
     // Create test factions
     db.prepare(`
@@ -77,12 +76,14 @@ describe('Faction Regions API Contract Tests', () => {
   afterAll(async () => {
     const { db } = await import('../../src/services/DatabaseService');
     db.prepare('DELETE FROM campaigns WHERE id = ?').run(testCampaignId);
+    cleanupTestUser(testUser.id);
   });
 
   describe('POST /api/locations/:id/regions', () => {
     it('should create a faction region polygon', async () => {
       const response = await request(app)
         .post(`/api/locations/${testLocationId}/regions`)
+        .set(getAuthHeader(testUser.token))
         .send({
           map_id: testMapId,
           vertices: [
@@ -118,6 +119,7 @@ describe('Faction Regions API Contract Tests', () => {
     it('should create a region with minimum 3 vertices', async () => {
       const response = await request(app)
         .post(`/api/locations/${testLocationId}/regions`)
+        .set(getAuthHeader(testUser.token))
         .send({
           map_id: testMapId,
           vertices: [
@@ -136,6 +138,7 @@ describe('Faction Regions API Contract Tests', () => {
     it('should reject regions with less than 3 vertices', async () => {
       const response = await request(app)
         .post(`/api/locations/${testLocationId}/regions`)
+        .set(getAuthHeader(testUser.token))
         .send({
           map_id: testMapId,
           vertices: [
@@ -153,6 +156,7 @@ describe('Faction Regions API Contract Tests', () => {
     it('should reject vertices out of map bounds', async () => {
       const response = await request(app)
         .post(`/api/locations/${testLocationId}/regions`)
+        .set(getAuthHeader(testUser.token))
         .send({
           map_id: testMapId,
           vertices: [
@@ -171,6 +175,7 @@ describe('Faction Regions API Contract Tests', () => {
     it('should reject invalid color format', async () => {
       const response = await request(app)
         .post(`/api/locations/${testLocationId}/regions`)
+        .set(getAuthHeader(testUser.token))
         .send({
           map_id: testMapId,
           vertices: [
@@ -189,6 +194,7 @@ describe('Faction Regions API Contract Tests', () => {
     it('should return 404 for non-existent faction', async () => {
       const response = await request(app)
         .post(`/api/locations/${testLocationId}/regions`)
+        .set(getAuthHeader(testUser.token))
         .send({
           map_id: testMapId,
           vertices: [
@@ -207,6 +213,7 @@ describe('Faction Regions API Contract Tests', () => {
     it('should return 404 for non-existent map', async () => {
       const response = await request(app)
         .post(`/api/locations/${testLocationId}/regions`)
+        .set(getAuthHeader(testUser.token))
         .send({
           map_id: uuidv4(), // non-existent
           vertices: [
@@ -227,6 +234,7 @@ describe('Faction Regions API Contract Tests', () => {
     it('should list all regions sorted by z_order', async () => {
       const response = await request(app)
         .get(`/api/locations/${testLocationId}/regions`)
+        .set(getAuthHeader(testUser.token))
         .set('X-View-Mode', 'dm_view');
 
       expect(response.status).toBe(200);
@@ -246,6 +254,7 @@ describe('Faction Regions API Contract Tests', () => {
     it('should filter regions by map_id', async () => {
       const response = await request(app)
         .get(`/api/locations/${testLocationId}/regions`)
+        .set(getAuthHeader(testUser.token))
         .query({ map_id: testMapId });
 
       expect(response.status).toBe(200);
@@ -267,6 +276,7 @@ describe('Faction Regions API Contract Tests', () => {
       // Create region for dm_only faction
       await request(app)
         .post(`/api/locations/${testLocationId}/regions`)
+        .set(getAuthHeader(testUser.token))
         .send({
           map_id: testMapId,
           vertices: [
@@ -281,6 +291,7 @@ describe('Faction Regions API Contract Tests', () => {
       // Player view should not see regions of dm_only factions
       const response = await request(app)
         .get(`/api/locations/${testLocationId}/regions`)
+        .set(getAuthHeader(testUser.token))
         .set('X-View-Mode', 'player_view');
 
       expect(response.status).toBe(200);
@@ -290,7 +301,8 @@ describe('Faction Regions API Contract Tests', () => {
 
     it('should return 404 for non-existent location', async () => {
       const response = await request(app)
-        .get(`/api/locations/${uuidv4()}/regions`);
+        .get(`/api/locations/${uuidv4()}/regions`)
+        .set(getAuthHeader(testUser.token));
 
       expect(response.status).toBe(404);
       expect(response.body.error).toContain('not found');
@@ -301,6 +313,7 @@ describe('Faction Regions API Contract Tests', () => {
     it('should update region vertices', async () => {
       const response = await request(app)
         .put(`/api/locations/${testLocationId}/regions/${testRegionId}`)
+        .set(getAuthHeader(testUser.token))
         .send({
           vertices: [
             { x: 150, y: 150 },
@@ -324,6 +337,7 @@ describe('Faction Regions API Contract Tests', () => {
     it('should update region visual properties', async () => {
       const response = await request(app)
         .put(`/api/locations/${testLocationId}/regions/${testRegionId}`)
+        .set(getAuthHeader(testUser.token))
         .send({
           color: '#10B981',
           label: 'Updated Territory',
@@ -341,6 +355,7 @@ describe('Faction Regions API Contract Tests', () => {
     it('should update faction association', async () => {
       const response = await request(app)
         .put(`/api/locations/${testLocationId}/regions/${testRegionId}`)
+        .set(getAuthHeader(testUser.token))
         .send({
           faction_id: testFaction2Id
         });
@@ -352,6 +367,7 @@ describe('Faction Regions API Contract Tests', () => {
     it('should reject invalid updates', async () => {
       const response = await request(app)
         .put(`/api/locations/${testLocationId}/regions/${testRegionId}`)
+        .set(getAuthHeader(testUser.token))
         .send({
           vertices: [
             { x: 100, y: 100 },
@@ -366,6 +382,7 @@ describe('Faction Regions API Contract Tests', () => {
     it('should return 404 for non-existent region', async () => {
       const response = await request(app)
         .put(`/api/locations/${testLocationId}/regions/${uuidv4()}`)
+        .set(getAuthHeader(testUser.token))
         .send({ color: '#FF0000' });
 
       expect(response.status).toBe(404);
@@ -378,6 +395,7 @@ describe('Faction Regions API Contract Tests', () => {
       // Create a region to delete
       const createResponse = await request(app)
         .post(`/api/locations/${testLocationId}/regions`)
+        .set(getAuthHeader(testUser.token))
         .send({
           map_id: testMapId,
           vertices: [
@@ -393,7 +411,8 @@ describe('Faction Regions API Contract Tests', () => {
 
       // Delete the region
       const deleteResponse = await request(app)
-        .delete(`/api/locations/${testLocationId}/regions/${regionToDelete}`);
+        .delete(`/api/locations/${testLocationId}/regions/${regionToDelete}`)
+        .set(getAuthHeader(testUser.token));
 
       expect(deleteResponse.status).toBe(200);
       expect(deleteResponse.body).toMatchObject({
@@ -402,7 +421,8 @@ describe('Faction Regions API Contract Tests', () => {
 
       // Verify region is gone
       const listResponse = await request(app)
-        .get(`/api/locations/${testLocationId}/regions`);
+        .get(`/api/locations/${testLocationId}/regions`)
+        .set(getAuthHeader(testUser.token));
 
       const regionIds = listResponse.body.regions.map((r: any) => r.id);
       expect(regionIds).not.toContain(regionToDelete);
@@ -410,7 +430,8 @@ describe('Faction Regions API Contract Tests', () => {
 
     it('should return 404 for non-existent region', async () => {
       const response = await request(app)
-        .delete(`/api/locations/${testLocationId}/regions/${uuidv4()}`);
+        .delete(`/api/locations/${testLocationId}/regions/${uuidv4()}`)
+        .set(getAuthHeader(testUser.token));
 
       expect(response.status).toBe(404);
       expect(response.body.error).toContain('not found');
@@ -418,7 +439,8 @@ describe('Faction Regions API Contract Tests', () => {
 
     it('should return 404 for non-existent location', async () => {
       const response = await request(app)
-        .delete(`/api/locations/${uuidv4()}/regions/${uuidv4()}`);
+        .delete(`/api/locations/${uuidv4()}/regions/${uuidv4()}`)
+        .set(getAuthHeader(testUser.token));
 
       expect(response.status).toBe(404);
       expect(response.body.error).toContain('not found');

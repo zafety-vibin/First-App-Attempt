@@ -62,7 +62,7 @@ const sessionImportService = createSessionImportService(db, changeDetectionServi
 
 // Middleware
 app.use(corsMiddleware);
-app.use(express.json());
+app.use(express.json({ limit: '50mb' })); // Feature 021: Support large base64 map images
 
 // Routes
 app.use('/health', healthRoutes);
@@ -138,7 +138,7 @@ const externalApp = express();
 const EXTERNAL_PORT = process.env.EXTERNAL_API_PORT || 3002;
 
 // Middleware (minimal - CORS and body parsing handled in routes)
-externalApp.use(express.json());
+externalApp.use(express.json({ limit: '50mb' })); // Feature 021: Support large base64 map images
 
 // Mount external API routes at /api/v1/external
 externalApp.use('/api/v1/external', externalApiRoutes);

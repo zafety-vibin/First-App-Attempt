@@ -204,6 +204,11 @@ export class ViewModeService {
 
     // Player view - filter by linked entity visibility
     return pins.filter(pin => {
+      // Visual-only pins (no entity link) are always visible
+      if (!pin.linked_entity_type || !pin.linked_entity_id) {
+        return true;
+      }
+
       const table = pin.linked_entity_type === 'location' ? 'locations' : 'npcs';
       const entity = db
         .prepare(`SELECT player_knowledge FROM ${table} WHERE id = ?`)

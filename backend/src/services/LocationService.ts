@@ -389,8 +389,10 @@ export class LocationService extends BaseCategoryService<Location> {
       throw new Error('Pin coordinates out of map bounds');
     }
 
-    // Validate linked entity exists
-    this.validateLinkedEntity(location.campaign_id, pinData.linked_entity_type, pinData.linked_entity_id);
+    // Validate linked entity exists (only if entity linking provided)
+    if (pinData.linked_entity_type && pinData.linked_entity_id) {
+      this.validateLinkedEntity(location.campaign_id, pinData.linked_entity_type, pinData.linked_entity_id);
+    }
 
     // Parse existing pins
     const mapPins = row.map_pins ? JSON.parse(row.map_pins) : [];
@@ -401,11 +403,11 @@ export class LocationService extends BaseCategoryService<Location> {
       map_id: mapId,
       x: pinData.x,
       y: pinData.y,
-      linked_entity_type: pinData.linked_entity_type,
-      linked_entity_id: pinData.linked_entity_id,
-      icon: pinData.icon || null,
-      color: pinData.color || null,
-      label: pinData.label || null,
+      linked_entity_type: pinData.linked_entity_type ?? null,
+      linked_entity_id: pinData.linked_entity_id ?? null,
+      icon: pinData.icon ?? null,
+      color: pinData.color ?? null,
+      label: pinData.label ?? null,
       created_at: Math.floor(Date.now() / 1000),
     };
 
@@ -742,8 +744,8 @@ export interface MapPin {
   map_id: string;
   x: number;
   y: number;
-  linked_entity_type: 'location' | 'npc';
-  linked_entity_id: string;
+  linked_entity_type: 'location' | 'npc' | null;
+  linked_entity_id: string | null;
   icon: string | null;
   color: string | null;
   label: string | null;
@@ -753,8 +755,8 @@ export interface MapPin {
 export interface MapPinInput {
   x: number;
   y: number;
-  linked_entity_type: 'location' | 'npc';
-  linked_entity_id: string;
+  linked_entity_type?: 'location' | 'npc';
+  linked_entity_id?: string;
   icon?: string | null;
   color?: string | null;
   label?: string | null;

@@ -58,8 +58,8 @@ export const MapPinSchema = z.object({
   map_id: z.string().uuid(),
   x: z.number().min(0),
   y: z.number().min(0),
-  linked_entity_type: z.enum(['location', 'npc']),
-  linked_entity_id: z.string().uuid(),
+  linked_entity_type: z.enum(['location', 'npc']).nullable(),
+  linked_entity_id: z.string().uuid().nullable(),
   icon: PinIconEnum.nullable(),
   color: z.string().regex(/^#[0-9A-F]{6}$/i, {
     message: 'Must be a valid hex color code (e.g., #FF0000)'
@@ -70,23 +70,48 @@ export const MapPinSchema = z.object({
 
 /**
  * MapPinInput Schema (for create/update)
+ * Entity linking is optional - pins can be visual markers without linking to entities
  */
 export const MapPinInputSchema = z.object({
   x: z.number().min(0),
   y: z.number().min(0),
-  linked_entity_type: z.enum(['location', 'npc']),
-  linked_entity_id: z.string().uuid(),
+  linked_entity_type: z.enum(['location', 'npc']).optional(),
+  linked_entity_id: z.string().uuid().optional(),
   icon: PinIconEnum.nullable().optional(),
   color: z.string().regex(/^#[0-9A-F]{6}$/i, {
     message: 'Must be a valid hex color code (e.g., #FF0000)'
   }).nullable().optional(),
   label: z.string().max(50).nullable().optional(),
-});
+}).refine(
+  (data) => {
+    // If one is provided, both must be provided (or both omitted)
+    if (data.linked_entity_type && !data.linked_entity_id) return false;
+    if (data.linked_entity_id && !data.linked_entity_type) return false;
+    return true;
+  },
+  { message: 'If linking to an entity, both type and ID must be provided' }
+);
 
 /**
  * MapPinUpdate Schema (partial update)
  */
-export const MapPinUpdateSchema = MapPinInputSchema.partial();
+export const MapPinUpdateSchema = z.object({
+  x: z.number().min(0).optional(),
+  y: z.number().min(0).optional(),
+  linked_entity_type: z.enum(['location', 'npc']).optional(),
+  linked_entity_id: z.string().uuid().optional(),
+  icon: PinIconEnum.nullable().optional(),
+  color: z.string().regex(/^#[0-9A-F]{6}$/i).nullable().optional(),
+  label: z.string().max(50).nullable().optional(),
+}).refine(
+  (data) => {
+    // If one is provided, both must be provided (or both omitted)
+    if (data.linked_entity_type && !data.linked_entity_id) return false;
+    if (data.linked_entity_id && !data.linked_entity_type) return false;
+    return true;
+  },
+  { message: 'If linking to an entity, both type and ID must be provided' }
+);
 
 /**
  * FactionRegion Schema

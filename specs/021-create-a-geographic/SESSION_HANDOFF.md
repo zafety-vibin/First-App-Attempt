@@ -1,14 +1,15 @@
 # Session Handoff: Feature 021 - Geographic Map System
 
-**Date**: 2025-10-26
+**Date**: 2025-10-27 (Updated)
 **Branch**: `021-create-a-geographic`
-**Progress**: 20/48 tasks complete (42% - Backend MVP done)
-**Next Session**: Frontend implementation (canvas, widget, navigator)
+**Progress**: 34/48 tasks complete (71% - Frontend MVP done)
+**Next Session**: Geographic Navigator (tree view) + E2E tests
 
 ---
 
 ## 🎯 What Was Accomplished This Session
 
+### **SESSION 1 (2025-10-26)**
 ### **✅ Complete Planning Phase**
 - Specification created (72 functional requirements)
 - Planning artifacts generated (6 documents, 2,976 lines)
@@ -53,9 +54,39 @@
 - Cascade deletion (delete map → delete pins/regions)
 - Foreign key validation (linked entities must exist)
 
+### **SESSION 2 (2025-10-27)**
+### **✅ Phase 3.4: Frontend Canvas Components (T021-T027)**
+- MapCanvas component with Konva Stage, 3-layer architecture, pan/zoom
+- MapPin component with 20 icon types, hover tooltips, click navigation
+- FactionRegion component for territory polygons with z-order
+- MapControls with zoom buttons, imperative ref API for external control
+- MapUploader with file preview, base64 conversion, 10MB validation
+- PinEditor with optional entity linking, icon/color pickers
+- RegionEditor with faction search, editable polygon vertices
+
+### **✅ Phase 3.5: Location Integration (T028-T031)**
+- LocationMapsTab: Complete map management UI (canvas, editors, lists)
+- EntityDetailPage: Added Details/Maps tab navigation (locations only)
+- useLocationMaps hook: CRUD operations with state management
+- locationService: 11 new API functions (maps, pins, regions)
+
+### **✅ Phase 3.6: Dashboard Widget (T032-T034)**
+- MapViewportWidget: Size-adaptive rendering (2x2, 3x3, 4x4)
+- WidgetRegistry: Registered as 9th widget type
+- useMapViewportWidget: Location selection and map loading
+
+### **✅ Critical Fixes**
+- Test authentication: Created testAuth helper, fixed all contract tests
+- Visual-only pins: Made entity linking optional (perfect for landmarks)
+- X-View-Mode header: Fixed "player" → "player_view" (apiClient.ts)
+- Upload size limits: Increased to 50mb for base64 images
+- Location API: Increased limit 100 → 1000 for bulk queries
+- Zoom controls: Fixed imperative ref connections
+- Custom wizard: Added default label fallback
+
 ---
 
-## 📦 Files Created/Modified (20 tasks)
+## 📦 Files Created/Modified (58 total - 38 this session)
 
 ### **Created** (14 files):
 **Backend**:

@@ -81,6 +81,8 @@ export const GeographicNavigatorPage: React.FC = () => {
   const [stagePosition, setStagePosition] = useState({ x: 60, y: 80 }); // Pan right and down to center ellipse
   const stageRef = useRef<any>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [selectedMapIndex, setSelectedMapIndex] = useState(0); // For map selector
+  const mapCanvasRef = useRef<{ resetView: () => void; zoomIn: () => void; zoomOut: () => void } | null>(null);
 
   /**
    * Load nodes at current scale
@@ -295,13 +297,28 @@ export const GeographicNavigatorPage: React.FC = () => {
           /* MAP MODE: Parent map with children as pins */
           <DroppableMapArea>
             <div className="spatial-map-mode">
+            {/* Map Selector (if multiple maps) */}
+            {parentLocation!.maps.length > 1 && (
+              <div className="spatial-map-selector">
+                {parentLocation!.maps.map((map, idx) => (
+                  <button
+                    key={map.id}
+                    className={`spatial-map-tab ${idx === selectedMapIndex ? 'active' : ''}`}
+                    onClick={() => setSelectedMapIndex(idx)}
+                  >
+                    {map.name || `Map ${idx + 1}`}
+                  </button>
+                ))}
+              </div>
+            )}
             <MapCanvas
-              mapData={parentLocation!.maps[0]}
+              mapData={parentLocation!.maps[selectedMapIndex] || parentLocation!.maps[0]}
               pins={[]}
               regions={parentLocation!.regions}
               width={canvasWidth}
               height={canvasHeight}
               editMode={false}
+              canvasRef={mapCanvasRef}
             />
             {/* Overlay pinned children as custom markers */}
             <Stage width={canvasWidth} height={canvasHeight} className="spatial-overlay-canvas">

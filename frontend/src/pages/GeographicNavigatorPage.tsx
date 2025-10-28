@@ -13,6 +13,7 @@ import { useParams } from 'react-router-dom';
 import { apiClient } from '../services/apiClient';
 import { Stage, Layer, Circle, Text, Image as KonvaImage } from 'react-konva';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
+import MapCanvas from '../components/maps/MapCanvas';
 import './GeographicNavigatorPage.css';
 
 interface ScaleNode {
@@ -26,6 +27,20 @@ interface ScaleNode {
   child_count: number;
 }
 
+interface ParentLocation {
+  id: string;
+  name: string;
+  maps: Array<{
+    id: string;
+    name: string;
+    data: string;
+    width: number;
+    height: number;
+  }>;
+  pins: any[];
+  regions: any[];
+}
+
 export const GeographicNavigatorPage: React.FC = () => {
   const { campaignId } = useParams<{ campaignId: string }>();
   const [loading, setLoading] = useState(true);
@@ -33,6 +48,7 @@ export const GeographicNavigatorPage: React.FC = () => {
   const [currentNodes, setCurrentNodes] = useState<ScaleNode[]>([]);
   const [currentParentId, setCurrentParentId] = useState<string | null>(null);
   const [currentScaleName, setCurrentScaleName] = useState('Plane View');
+  const [parentLocation, setParentLocation] = useState<ParentLocation | null>(null);
 
   /**
    * Load nodes at current scale
@@ -51,6 +67,7 @@ export const GeographicNavigatorPage: React.FC = () => {
 
         const response = await apiClient.get(endpoint);
         setCurrentNodes(response.data.scale_nodes || []);
+        setParentLocation(response.data.parent_location || null);
       } catch (err: any) {
         if (err.response?.status === 404) {
           setError('Geographic knowledge graph not found. Create geographic nodes in your knowledge graphs first.');
@@ -128,7 +145,17 @@ export const GeographicNavigatorPage: React.FC = () => {
 
   const canvasWidth = 1400;
   const canvasHeight = 900;
-  const nodePositions = calculateRingPositions(currentNodes, canvasWidth, canvasHeight);
+
+  // Check if we should use map mode
+  const hasParentMap = parentLocation && parentLocation.maps && parentLocation.maps.length > 0;
+
+  // Separate pinned vs unpinned children
+  const pinnedChildren = hasParentMap ? currentNodes.filter(n => n.map_pin_x !== null && n.map_pin_y !== null) : [];
+  const unpinnedChildren = hasParentMap ? currentNodes.filter(n => n.map_pin_x === null || n.map_pin_y === null) : [];
+
+  // Ring distribution for unpinned nodes or when no map
+  const nodesToRender = hasParentMap ? unpinnedChildren : currentNodes;
+  const nodePositions = calculateRingPositions(nodesToRender, canvasWidth, canvasHeight);
 
   return (
     <div className="geographic-navigator-page">
@@ -147,7 +174,62 @@ export const GeographicNavigatorPage: React.FC = () => {
 
       {/* Main Canvas */}
       <div className="spatial-canvas-wrapper">
-        {currentNodes.length > 0 ? (
+        {hasParentMap ? (
+          /* MAP MODE: Parent map with children as pins */
+          <div className="spatial-map-mode">
+            <MapCanvas
+              mapData={parentLocation!.maps[0]}
+              pins={[]}
+              regions={parentLocation!.regions}
+              width={canvasWidth}
+              height={canvasHeight}
+              editMode={false}
+            />
+            {/* Overlay pinned children as custom markers */}
+            <Stage width={canvasWidth} height={canvasHeight} className="spatial-overlay-canvas">
+              <Layer>
+                {pinnedChildren.map((node) => (
+                  <React.Fragment key={node.id}>
+                    <Circle
+                      x={node.map_pin_x!}
+                      y={node.map_pin_y!}
+                      radius={30}
+                      fill="#10b981"
+                      stroke="#065f46"
+                      strokeWidth={3}
+                      shadowColor="black"
+                      shadowBlur={8}
+                      shadowOpacity={0.4}
+                      onClick={() => handleNodeClick(node)}
+                      onMouseEnter={(e) => {
+                        const container = e.target.getStage()?.container();
+                        if (container) container.style.cursor = 'pointer';
+                      }}
+                      onMouseLeave={(e) => {
+                        const container = e.target.getStage()?.container();
+                        if (container) container.style.cursor = 'default';
+                      }}
+                    />
+                    <Text
+                      x={node.map_pin_x!}
+                      y={node.map_pin_y! + 40}
+                      text={node.name}
+                      fontSize={12}
+                      fontStyle="bold"
+                      fill="#ffffff"
+                      stroke="#000000"
+                      strokeWidth={2}
+                      align="center"
+                      width={100}
+                      offsetX={50}
+                    />
+                  </React.Fragment>
+                ))}
+              </Layer>
+            </Stage>
+          </div>
+        ) : currentNodes.length > 0 ? (
+          /* RING MODE: Circular distribution */
           <Stage width={canvasWidth} height={canvasHeight}>
             <Layer>
               {/* Render nodes in ring */}
@@ -242,7 +324,20 @@ export const GeographicNavigatorPage: React.FC = () => {
       {/* Info Panel */}
       <div className="spatial-info-panel">
         <h3>Scale: {currentScaleName}</h3>
-        <p>{currentNodes.length} node{currentNodes.length !== 1 ? 's' : ''} at this level</p>
+        {hasParentMap ? (
+          <>
+            <p className="spatial-mode-label">🗺️ Map Mode</p>
+            <p>{pinnedChildren.length} pinned on map</p>
+            {unpinnedChildren.length > 0 && (
+              <p>{unpinnedChildren.length} unpinned (in sidebar)</p>
+            )}
+          </>
+        ) : (
+          <>
+            <p className="spatial-mode-label">⭕ Ring Mode</p>
+            <p>{currentNodes.length} node{currentNodes.length !== 1 ? 's' : ''} at this level</p>
+          </>
+        )}
 
         {currentParentId && (
           <button className="spatial-back-button" onClick={() => { setCurrentParentId(null); setCurrentScaleName('Plane View'); }}>

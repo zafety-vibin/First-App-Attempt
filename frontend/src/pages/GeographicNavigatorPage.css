@@ -223,25 +223,32 @@
   z-index: 10;
 }
 
-/* Info Panel */
+/* Info Panel - Compact */
 .spatial-info-panel {
-  padding: 1rem;
+  padding: 0.75rem 1rem;
   background: white;
   border-radius: 0.5rem;
   border: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .spatial-info-panel h3 {
-  margin: 0 0 0.5rem 0;
-  font-size: 1.125rem;
+  margin: 0;
+  font-size: 1rem;
   font-weight: 600;
   color: #111827;
+  flex-shrink: 0;
 }
 
 .spatial-info-panel p {
-  margin: 0.25rem 0;
-  font-size: 0.875rem;
+  margin: 0;
+  font-size: 0.8125rem;
   color: #6b7280;
+  flex-shrink: 0;
 }
 
 .spatial-mode-label {
@@ -251,57 +258,20 @@
 }
 
 .spatial-back-button {
-  margin-top: 1rem;
-  padding: 0.5rem 1rem;
+  padding: 0.375rem 0.75rem;
   background: #f3f4f6;
   border: 1px solid #d1d5db;
   border-radius: 0.375rem;
   color: #374151;
   cursor: pointer;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   transition: all 0.2s;
+  margin-left: auto;
 }
 
 .spatial-back-button:hover {
   background: #e5e7eb;
-}
-
-.spatial-upload-hint {
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid #e5e7eb;
-}
-
-.spatial-hint-text {
-  font-size: 0.8125rem !important;
-  color: #4b5563 !important;
-  margin-bottom: 0.75rem !important;
-  line-height: 1.4;
-}
-
-.spatial-upload-button {
-  width: 100%;
-  padding: 0.625rem 1rem;
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  border: none;
-  border-radius: 0.375rem;
-  color: white;
-  cursor: pointer;
-  font-size: 0.875rem;
-  font-weight: 600;
-  transition: all 0.2s;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-}
-
-.spatial-upload-button:hover {
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  transform: translateY(-1px);
-}
-
-.spatial-upload-button:active {
-  transform: translateY(0);
 }
 
 .spatial-empty-state {
@@ -329,8 +299,8 @@
   line-height: 1.5;
 }
 
-/* Floating Zoom Controls */
-.spatial-zoom-controls {
+/* Floating Controls Group */
+.spatial-controls-group {
   position: absolute;
   top: 1rem;
   left: 1rem;
@@ -339,6 +309,28 @@
   border-radius: 0.5rem;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   padding: 0.5rem;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.spatial-upload-icon-btn {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border: none;
+  border-radius: 0.375rem;
+  color: white;
+  cursor: pointer;
+  padding: 0.5rem 0.75rem;
+  font-size: 1.25rem;
+  transition: all 0.2s;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  line-height: 1;
+}
+
+.spatial-upload-icon-btn:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
 }
 
 /* Droppable Map Area */

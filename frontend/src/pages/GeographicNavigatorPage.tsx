@@ -126,9 +126,9 @@ export const GeographicNavigatorPage: React.FC = () => {
     const centerX = canvasWidth / 2;
     const centerY = canvasHeight / 2;
 
-    // Ellipse radii - use more horizontal space
+    // Ellipse radii - use more horizontal space, less vertical
     const radiusX = Math.max(300, canvasWidth / 2 - padding); // Horizontal radius (wider)
-    const radiusY = Math.max(200, canvasHeight / 2 - padding); // Vertical radius (narrower)
+    const radiusY = Math.max(150, canvasHeight / 3 - padding); // Vertical radius (much flatter)
 
     // Node with most children goes last (positioned at bottom)
     const angleStep = (2 * Math.PI) / nodes.length;
@@ -278,13 +278,23 @@ export const GeographicNavigatorPage: React.FC = () => {
       {/* Main Canvas */}
       <div className="spatial-canvas-wrapper">
         {/* Zoom Controls (floating) */}
-        <div className="spatial-zoom-controls">
+        <div className="spatial-controls-group">
           <MapControls
             zoomLevel={zoom}
             onZoomIn={handleZoomIn}
             onZoomOut={handleZoomOut}
             onResetView={handleResetView}
           />
+          {/* Upload map button - only if parent location exists */}
+          {currentParentId && parentLocation && (
+            <button
+              className="spatial-upload-icon-btn"
+              onClick={() => navigate(`/campaigns/${campaignId}/locations/${parentLocation.id}`)}
+              title="Upload map to this location"
+            >
+              📤
+            </button>
+          )}
         </div>
         {hasParentMap ? (
           /* MAP MODE: Parent map with children as pins */
@@ -462,19 +472,6 @@ export const GeographicNavigatorPage: React.FC = () => {
           <>
             <p className="spatial-mode-label">⭕ Ellipse Mode</p>
             <p>{currentNodes.length} node{currentNodes.length !== 1 ? 's' : ''} at this level</p>
-            {currentParentId && parentLocation && (
-              <div className="spatial-upload-hint">
-                <p className="spatial-hint-text">
-                  💡 Upload a map to {currentScaleName.replace(' View', '')} to enable Map Mode
-                </p>
-                <button
-                  className="spatial-upload-button"
-                  onClick={() => navigate(`/campaigns/${campaignId}/locations/${parentLocation.id}`)}
-                >
-                  📤 Upload Map
-                </button>
-              </div>
-            )}
           </>
         )}
 

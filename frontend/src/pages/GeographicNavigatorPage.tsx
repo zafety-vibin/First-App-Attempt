@@ -89,6 +89,7 @@ export const GeographicNavigatorPage: React.FC = () => {
   const [allNodes, setAllNodes] = useState<ScaleNode[]>([]); // Cache all geographic nodes
   const [graphId, setGraphId] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0); // Force refresh when incremented
+  const [locationCache, setLocationCache] = useState<Map<string, ParentLocation>>(new Map()); // Cache parent locations with maps
 
   /**
    * Load entire geographic hierarchy once on mount
@@ -119,8 +120,12 @@ export const GeographicNavigatorPage: React.FC = () => {
         const nodes = flattenTree(response.data.tree || []);
         setAllNodes(nodes);
 
-        // Set initial view (root nodes)
-        updateCurrentView(null, nodes);
+        // If we have a current position, maintain it; otherwise show root
+        if (currentParentId) {
+          updateCurrentView(currentParentId, nodes);
+        } else {
+          updateCurrentView(null, nodes);
+        }
       } catch (err: any) {
         if (err.response?.status === 404) {
           setError('Geographic knowledge graph not found. Create geographic nodes in your knowledge graphs first.');
@@ -159,7 +164,11 @@ export const GeographicNavigatorPage: React.FC = () => {
 
     // Count children for each node and check if location exists
     const childrenWithCounts = children.map(child => {
-      const locationExists = childrenLocations.some((loc: any) => loc.name === child.name);
+      // Match by name (case-insensitive, trimmed)
+      const locationExists = childrenLocations.some((loc: any) =>
+        loc.name?.trim().toLowerCase() === child.name?.trim().toLowerCase()
+      );
+      console.log(`Checking "${child.name}":`, locationExists ? '✓ exists' : '✗ not found');
       return {
         ...child,
         child_count: nodes.filter(n => n.parent_location_id === child.id).length,
@@ -172,13 +181,23 @@ export const GeographicNavigatorPage: React.FC = () => {
 
     setCurrentNodes(childrenWithCounts);
 
-    // Fetch parent location data if needed
+    // Fetch parent location data if needed (with caching)
     if (parentId) {
-      try {
-        const response = await apiClient.get(`/campaigns/${campaignId}/geographic/scale/${parentId}`);
-        setParentLocation(response.data.parent_location || null);
-      } catch (err) {
-        setParentLocation(null);
+      // Check cache first
+      if (locationCache.has(parentId)) {
+        setParentLocation(locationCache.get(parentId) || null);
+      } else {
+        // Fetch and cache
+        try {
+          const response = await apiClient.get(`/campaigns/${campaignId}/geographic/scale/${parentId}`);
+          const parentLoc = response.data.parent_location || null;
+          if (parentLoc) {
+            setLocationCache(new Map(locationCache.set(parentId, parentLoc)));
+          }
+          setParentLocation(parentLoc);
+        } catch (err) {
+          setParentLocation(null);
+        }
       }
     } else {
       setParentLocation(null);

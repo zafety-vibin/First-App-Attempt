@@ -88,6 +88,7 @@ export const GeographicNavigatorPage: React.FC = () => {
   const [activeNode, setActiveNode] = useState<ScaleNode | null>(null); // Currently dragging node
   const [allNodes, setAllNodes] = useState<ScaleNode[]>([]); // Cache all geographic nodes
   const [graphId, setGraphId] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0); // Force refresh when incremented
 
   /**
    * Load entire geographic hierarchy once on mount
@@ -132,7 +133,7 @@ export const GeographicNavigatorPage: React.FC = () => {
     }
 
     loadGeographicData();
-  }, [campaignId]);
+  }, [campaignId, refreshKey]); // Reload when refreshKey changes
 
   /**
    * Update current view based on parent (client-side, instant)
@@ -392,6 +393,14 @@ export const GeographicNavigatorPage: React.FC = () => {
               📤
             </button>
           )}
+          {/* Refresh button - reload data after creating locations elsewhere */}
+          <button
+            className="spatial-refresh-btn"
+            onClick={() => setRefreshKey(k => k + 1)}
+            title="Refresh geographic data"
+          >
+            🔄
+          </button>
         </div>
         {hasParentMap ? (
           /* MAP MODE: Parent map with children as pins */

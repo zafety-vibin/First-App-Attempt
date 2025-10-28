@@ -20,7 +20,7 @@ import { DndContext, DragEndEvent, DragStartEvent, DragOverlay, useDroppable } f
 import './GeographicNavigatorPage.css';
 
 interface ScaleNode {
-  id: string;
+  id: string; // Graph node ID
   name: string;
   location_type: string;
   parent_location_id: string | null;
@@ -29,6 +29,7 @@ interface ScaleNode {
   has_map: boolean;
   child_count: number;
   location_exists?: boolean; // Whether this node has a corresponding location in database
+  location_id?: string | null; // Actual location table ID (different from graph node ID)
 }
 
 interface ParentLocation {
@@ -167,14 +168,16 @@ export const GeographicNavigatorPage: React.FC = () => {
     // Count children for each node and check if location exists
     const childrenWithCounts = children.map(child => {
       // Match by name (case-insensitive, trimmed)
-      const locationExists = childrenLocations.some((loc: any) =>
+      const matchedLocation = childrenLocations.find((loc: any) =>
         loc.name?.trim().toLowerCase() === child.name?.trim().toLowerCase()
       );
+      const locationExists = !!matchedLocation;
       console.log(`Checking "${child.name}":`, locationExists ? '✓ exists' : '✗ not found');
       return {
         ...child,
         child_count: nodes.filter(n => n.parent_location_id === child.id).length,
         location_exists: locationExists,
+        location_id: matchedLocation?.id || null, // Store actual location table ID
       };
     });
 
@@ -304,7 +307,7 @@ export const GeographicNavigatorPage: React.FC = () => {
     if (!node || !parentLocation || !parentLocation.maps[0]) return;
 
     // Check if node exists in locations database
-    if (node.location_exists === false) {
+    if (node.location_exists === false || !node.location_id) {
       alert(`"${node.name}" exists in your geographic graph but not in the Locations database.\n\nCreate it in Locations → Realms first, then try pinning again.`);
       return;
     }
@@ -328,10 +331,11 @@ export const GeographicNavigatorPage: React.FC = () => {
     const mapY = Math.max(0, Math.round(canvasY));
 
     console.log('Dropping node:', node.name, 'at coordinates:', mapX, mapY);
+    console.log('Using location ID:', node.location_id);
 
     try {
-      // Save coordinates to backend
-      await apiClient.put(`/locations/${node.id}/pin-coordinates`, {
+      // Save coordinates to backend using location table ID (not graph node ID!)
+      await apiClient.put(`/locations/${node.location_id}/pin-coordinates`, {
         x: mapX,
         y: mapY,
       });

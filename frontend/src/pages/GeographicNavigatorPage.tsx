@@ -78,7 +78,7 @@ export const GeographicNavigatorPage: React.FC = () => {
   const [currentScaleName, setCurrentScaleName] = useState('Plane View');
   const [parentLocation, setParentLocation] = useState<ParentLocation | null>(null);
   const [zoom, setZoom] = useState(0.83); // Start zoomed out to fit all nodes
-  const [stagePosition, setStagePosition] = useState({ x: 0, y: 80 }); // Pan down to center ring vertically
+  const [stagePosition, setStagePosition] = useState({ x: 60, y: 80 }); // Pan right and down to center ellipse
   const stageRef = useRef<any>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
@@ -154,7 +154,7 @@ export const GeographicNavigatorPage: React.FC = () => {
   const handleZoomOut = () => setZoom(Math.max(zoom / 1.2, 0.1));
   const handleResetView = () => {
     setZoom(0.83); // Reset to default zoomed-out view
-    setStagePosition({ x: 0, y: 80 }); // Center ring vertically
+    setStagePosition({ x: 60, y: 80 }); // Center ellipse (right and down)
   };
 
   const handleWheel = (e: any) => {
@@ -179,7 +179,7 @@ export const GeographicNavigatorPage: React.FC = () => {
     setCurrentScaleName(`${node.name} View`);
     // Reset zoom and center when transitioning scales
     setZoom(0.83);
-    setStagePosition({ x: 0, y: 80 });
+    setStagePosition({ x: 60, y: 80 });
   };
 
   /**

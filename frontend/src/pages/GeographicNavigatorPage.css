@@ -217,7 +217,9 @@
 .spatial-map-mode {
   position: relative;
   width: 1400px;
-  height: 480px;
+  max-height: 480px;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Map Selector Tabs */
@@ -232,6 +234,8 @@
   padding: 0.25rem;
   display: flex;
   gap: 0.25rem;
+  max-width: 400px;
+  flex-wrap: wrap;
 }
 
 .spatial-map-tab {
@@ -244,6 +248,10 @@
   font-size: 0.8125rem;
   font-weight: 500;
   transition: all 0.2s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
 }
 
 .spatial-map-tab:hover {
@@ -260,8 +268,13 @@
   position: absolute !important;
   top: 0;
   left: 0;
-  pointer-events: all;
+  pointer-events: none; /* Allow clicks to pass through to map below */
   z-index: 10;
+}
+
+/* But make the circles clickable */
+.spatial-overlay-canvas circle {
+  pointer-events: all;
 }
 
 /* Info Panel - Compact */

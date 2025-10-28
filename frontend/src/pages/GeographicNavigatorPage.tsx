@@ -246,7 +246,7 @@ export const GeographicNavigatorPage: React.FC = () => {
   }
 
   const canvasWidth = 1400;
-  const canvasHeight = 900;
+  const canvasHeight = 700; // Reduced to fit with info panel below
 
   // Check if we should use map mode
   const hasParentMap = parentLocation && parentLocation.maps && parentLocation.maps.length > 0;
@@ -262,19 +262,6 @@ export const GeographicNavigatorPage: React.FC = () => {
   return (
     <DndContext onDragEnd={handleNodeDrop}>
       <div className="geographic-navigator-page">
-      {/* Breadcrumb */}
-      <div className="spatial-breadcrumb">
-        <button onClick={() => { setCurrentParentId(null); setCurrentScaleName('Plane View'); }}>
-          Plane View
-        </button>
-        {currentScaleName !== 'Plane View' && (
-          <>
-            <span> → </span>
-            <span className="spatial-breadcrumb-current">{currentScaleName}</span>
-          </>
-        )}
-      </div>
-
       {/* Main Canvas */}
       <div className="spatial-canvas-wrapper">
         {/* Zoom Controls (floating) */}
@@ -457,29 +444,41 @@ export const GeographicNavigatorPage: React.FC = () => {
         )}
       </div>
 
-      {/* Info Panel */}
+      {/* Info Panel with Breadcrumb */}
       <div className="spatial-info-panel">
-        <h3>Scale: {currentScaleName}</h3>
-        {hasParentMap ? (
-          <>
-            <p className="spatial-mode-label">🗺️ Map Mode</p>
-            <p>{pinnedChildren.length} pinned on map</p>
-            {unpinnedChildren.length > 0 && (
-              <p>{unpinnedChildren.length} unpinned (in sidebar)</p>
-            )}
-          </>
-        ) : (
-          <>
-            <p className="spatial-mode-label">⭕ Ellipse Mode</p>
-            <p>{currentNodes.length} node{currentNodes.length !== 1 ? 's' : ''} at this level</p>
-          </>
-        )}
-
-        {currentParentId && (
-          <button className="spatial-back-button" onClick={() => { setCurrentParentId(null); setCurrentScaleName('Plane View'); }}>
-            ↑ Back to Plane View
+        {/* Breadcrumb */}
+        <div className="spatial-breadcrumb-inline">
+          <button
+            className="spatial-breadcrumb-btn"
+            onClick={() => { setCurrentParentId(null); setCurrentScaleName('Plane View'); }}
+          >
+            Plane View
           </button>
-        )}
+          {currentScaleName !== 'Plane View' && (
+            <>
+              <span className="spatial-breadcrumb-sep"> → </span>
+              <span className="spatial-breadcrumb-current">{currentScaleName}</span>
+            </>
+          )}
+        </div>
+
+        {/* Mode and Stats */}
+        <div className="spatial-stats">
+          {hasParentMap ? (
+            <>
+              <span className="spatial-mode-label">🗺️ Map Mode</span>
+              <span className="spatial-stat-item">{pinnedChildren.length} pinned</span>
+              {unpinnedChildren.length > 0 && (
+                <span className="spatial-stat-item">{unpinnedChildren.length} unpinned</span>
+              )}
+            </>
+          ) : (
+            <>
+              <span className="spatial-mode-label">⭕ Ellipse</span>
+              <span className="spatial-stat-item">{currentNodes.length} node{currentNodes.length !== 1 ? 's' : ''}</span>
+            </>
+          )}
+        </div>
       </div>
 
         {/* Unpinned Sidebar (only show in map mode with unpinned children) */}

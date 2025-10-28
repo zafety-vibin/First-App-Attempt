@@ -130,10 +130,11 @@ export const EntityDetailPage: React.FC<EntityDetailPageProps> = ({
   const renderCategoryFields = () => {
     if (!entity) return null;
 
-    // Exclude universal fields, DM fields, system fields
+    // Exclude universal fields, DM fields, system fields, and map data (shown in Maps tab)
     const excludedFields = new Set([
       'id', 'campaign_id', 'name', 'description', 'core_status',
       'player_knowledge', 'tags', 'created_at', 'updated_at', 'custom_fields',
+      'map_images', 'map_pins', 'faction_regions', 'map_pin_x', 'map_pin_y', // Feature 021: Map data shown in Maps tab
       ...dmFields,
     ]);
 

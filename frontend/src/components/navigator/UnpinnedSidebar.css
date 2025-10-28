@@ -175,3 +175,20 @@
   font-size: 0.875rem;
   line-height: 1.5;
 }
+
+/* Not in database indicator */
+.unpinned-node-item.not-in-db {
+  opacity: 0.6;
+  border-color: #fbbf24;
+  background: #fef3c7;
+}
+
+.unpinned-node-item.not-in-db:hover {
+  border-color: #f59e0b;
+  cursor: not-allowed;
+}
+
+.not-in-db-label {
+  color: #d97706;
+  font-weight: 600;
+}

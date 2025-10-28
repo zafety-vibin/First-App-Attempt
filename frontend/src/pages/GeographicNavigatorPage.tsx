@@ -28,6 +28,7 @@ interface ScaleNode {
   map_pin_y: number | null;
   has_map: boolean;
   child_count: number;
+  location_exists?: boolean; // Whether this node has a corresponding location in database
 }
 
 interface ParentLocation {
@@ -140,11 +141,30 @@ export const GeographicNavigatorPage: React.FC = () => {
     // Filter to children of current parent
     const children = nodes.filter(n => n.parent_location_id === (parentId || null));
 
-    // Count children for each node
-    const childrenWithCounts = children.map(child => ({
-      ...child,
-      child_count: nodes.filter(n => n.parent_location_id === child.id).length,
-    }));
+    // Fetch location data for these children to check which exist in database
+    let childrenLocations: any[] = [];
+    if (children.length > 0) {
+      try {
+        const locationIds = children.map(c => c.id);
+        // Batch check which nodes have corresponding locations
+        const locResponse = await apiClient.get(`/campaigns/${campaignId}/locations`, {
+          params: { limit: 1000 }
+        });
+        childrenLocations = locResponse.data.data || [];
+      } catch (err) {
+        console.warn('Could not fetch locations for existence check');
+      }
+    }
+
+    // Count children for each node and check if location exists
+    const childrenWithCounts = children.map(child => {
+      const locationExists = childrenLocations.some((loc: any) => loc.name === child.name);
+      return {
+        ...child,
+        child_count: nodes.filter(n => n.parent_location_id === child.id).length,
+        location_exists: locationExists,
+      };
+    });
 
     // Sort: most children last (bottom of ring)
     childrenWithCounts.sort((a, b) => a.child_count - b.child_count);
@@ -260,6 +280,12 @@ export const GeographicNavigatorPage: React.FC = () => {
 
     const node = active.data.current?.node as ScaleNode;
     if (!node || !parentLocation || !parentLocation.maps[0]) return;
+
+    // Check if node exists in locations database
+    if (node.location_exists === false) {
+      alert(`"${node.name}" exists in your geographic graph but not in the Locations database.\n\nCreate it in Locations → Realms first, then try pinning again.`);
+      return;
+    }
 
     // Get mouse position from the drop event
     const mouseEvent = activatorEvent as MouseEvent;
@@ -630,6 +656,7 @@ export const GeographicNavigatorPage: React.FC = () => {
               name: n.name,
               location_type: n.location_type,
               child_count: n.child_count || 0,
+              location_exists: n.location_exists,
             }))}
             isOpen={sidebarOpen}
             onToggle={() => setSidebarOpen(!sidebarOpen)}

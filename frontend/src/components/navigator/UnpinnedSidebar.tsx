@@ -15,6 +15,7 @@ interface UnpinnedNode {
   name: string;
   location_type: string;
   child_count: number;
+  location_exists?: boolean;
 }
 
 interface UnpinnedSidebarProps {
@@ -44,16 +45,18 @@ function DraggableNodeItem({ node }: DraggableNodeItemProps) {
     <div
       ref={setNodeRef}
       style={style}
-      className={`unpinned-node-item ${isDragging ? 'dragging' : ''}`}
+      className={`unpinned-node-item ${isDragging ? 'dragging' : ''} ${node.location_exists === false ? 'not-in-db' : ''}`}
       {...listeners}
       {...attributes}
+      title={node.location_exists === false ? 'Create in Locations database first to enable pinning' : 'Drag to pin on map'}
     >
-      <div className="unpinned-node-icon">📍</div>
+      <div className="unpinned-node-icon">{node.location_exists === false ? '⚠️' : '📍'}</div>
       <div className="unpinned-node-info">
         <div className="unpinned-node-name">{node.name}</div>
         <div className="unpinned-node-meta">
           {node.location_type}
           {node.child_count > 0 && ` • ${node.child_count} children`}
+          {node.location_exists === false && <span className="not-in-db-label"> • Not in database</span>}
         </div>
       </div>
       <div className="unpinned-node-drag-handle">⋮⋮</div>

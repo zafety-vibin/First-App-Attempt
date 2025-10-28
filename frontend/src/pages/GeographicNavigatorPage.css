@@ -211,15 +211,15 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 480px;
-  max-height: 480px;
+  min-height: 650px;
+  max-height: 650px;
 }
 
 /* Map Mode: Stacked canvases */
 .spatial-map-mode {
   position: relative;
   width: 1400px;
-  max-height: 480px;
+  max-height: 650px;
   display: flex;
   flex-direction: column;
 }

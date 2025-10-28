@@ -249,7 +249,7 @@ export const GeographicNavigatorPage: React.FC = () => {
   }
 
   const canvasWidth = 1400;
-  const canvasHeight = 480; // Reduced to eliminate all scrolling
+  const canvasHeight = 650; // Balanced: large enough for maps, fits in viewport
 
   // Check if we should use map mode
   const hasParentMap = parentLocation && parentLocation.maps && parentLocation.maps.length > 0;
@@ -361,48 +361,50 @@ export const GeographicNavigatorPage: React.FC = () => {
                 ))}
               </div>
             )}
-            {/* Overlay pinned children as custom markers */}
-            <Stage width={canvasWidth} height={canvasHeight} className="spatial-overlay-canvas">
-              <Layer>
-                {pinnedChildren.map((node) => (
-                  <React.Fragment key={node.id}>
-                    <Circle
-                      x={node.map_pin_x!}
-                      y={node.map_pin_y!}
-                      radius={30}
-                      fill="#10b981"
-                      stroke="#065f46"
-                      strokeWidth={3}
-                      shadowColor="black"
-                      shadowBlur={8}
-                      shadowOpacity={0.4}
-                      onClick={() => handleNodeClick(node)}
-                      onMouseEnter={(e) => {
-                        const container = e.target.getStage()?.container();
-                        if (container) container.style.cursor = 'pointer';
-                      }}
-                      onMouseLeave={(e) => {
-                        const container = e.target.getStage()?.container();
-                        if (container) container.style.cursor = 'default';
-                      }}
-                    />
-                    <Text
-                      x={node.map_pin_x!}
-                      y={node.map_pin_y! + 40}
-                      text={node.name}
-                      fontSize={12}
-                      fontStyle="bold"
-                      fill="#ffffff"
-                      stroke="#000000"
-                      strokeWidth={2}
-                      align="center"
-                      width={100}
-                      offsetX={50}
-                    />
-                  </React.Fragment>
-                ))}
-              </Layer>
-            </Stage>
+            {/* Overlay pinned children as custom markers (only if children are pinned) */}
+            {pinnedChildren.length > 0 && (
+              <Stage width={canvasWidth} height={canvasHeight} className="spatial-overlay-canvas">
+                <Layer>
+                  {pinnedChildren.map((node) => (
+                    <React.Fragment key={node.id}>
+                      <Circle
+                        x={node.map_pin_x!}
+                        y={node.map_pin_y!}
+                        radius={30}
+                        fill="#10b981"
+                        stroke="#065f46"
+                        strokeWidth={3}
+                        shadowColor="black"
+                        shadowBlur={8}
+                        shadowOpacity={0.4}
+                        onClick={() => handleNodeClick(node)}
+                        onMouseEnter={(e) => {
+                          const container = e.target.getStage()?.container();
+                          if (container) container.style.cursor = 'pointer';
+                        }}
+                        onMouseLeave={(e) => {
+                          const container = e.target.getStage()?.container();
+                          if (container) container.style.cursor = 'default';
+                        }}
+                      />
+                      <Text
+                        x={node.map_pin_x!}
+                        y={node.map_pin_y! + 40}
+                        text={node.name}
+                        fontSize={12}
+                        fontStyle="bold"
+                        fill="#ffffff"
+                        stroke="#000000"
+                        strokeWidth={2}
+                        align="center"
+                        width={100}
+                        offsetX={50}
+                      />
+                    </React.Fragment>
+                  ))}
+                </Layer>
+              </Stage>
+            )}
             </div>
           </DroppableMapArea>
         ) : currentNodes.length > 0 ? (

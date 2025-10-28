@@ -82,6 +82,7 @@ export const GeographicNavigatorPage: React.FC = () => {
   const stageRef = useRef<any>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedMapIndex, setSelectedMapIndex] = useState(0); // For map selector
+  const [viewMode, setViewMode] = useState<'single' | 'grid'>('single'); // Map view mode
   const mapCanvasRef = useRef<{ resetView: () => void; zoomIn: () => void; zoomOut: () => void } | null>(null);
 
   /**
@@ -300,26 +301,66 @@ export const GeographicNavigatorPage: React.FC = () => {
             {/* Map Selector (if multiple maps) */}
             {parentLocation!.maps.length > 1 && (
               <div className="spatial-map-selector">
-                {parentLocation!.maps.map((map, idx) => (
+                <div className="spatial-view-toggle">
                   <button
-                    key={map.id}
-                    className={`spatial-map-tab ${idx === selectedMapIndex ? 'active' : ''}`}
-                    onClick={() => setSelectedMapIndex(idx)}
+                    className={`spatial-view-btn ${viewMode === 'single' ? 'active' : ''}`}
+                    onClick={() => setViewMode('single')}
+                    title="Single map view"
                   >
-                    {map.name || `Map ${idx + 1}`}
+                    □
                   </button>
+                  <button
+                    className={`spatial-view-btn ${viewMode === 'grid' ? 'active' : ''}`}
+                    onClick={() => setViewMode('grid')}
+                    title="Grid view (all maps)"
+                  >
+                    ▦
+                  </button>
+                </div>
+                {viewMode === 'single' && (
+                  <>
+                    {parentLocation!.maps.map((map, idx) => (
+                      <button
+                        key={map.id}
+                        className={`spatial-map-tab ${idx === selectedMapIndex ? 'active' : ''}`}
+                        onClick={() => setSelectedMapIndex(idx)}
+                      >
+                        {map.name || `Map ${idx + 1}`}
+                      </button>
+                    ))}
+                  </>
+                )}
+              </div>
+            )}
+            {viewMode === 'single' ? (
+              /* Single map view */
+              <MapCanvas
+                mapData={parentLocation!.maps[selectedMapIndex] || parentLocation!.maps[0]}
+                pins={[]}
+                regions={parentLocation!.regions}
+                width={canvasWidth}
+                height={canvasHeight}
+                editMode={false}
+                canvasRef={mapCanvasRef}
+              />
+            ) : (
+              /* Grid view - all maps */
+              <div className="spatial-map-grid">
+                {parentLocation!.maps.map((map, idx) => (
+                  <div key={map.id} className="spatial-grid-item">
+                    <div className="spatial-grid-label">{map.name || `Map ${idx + 1}`}</div>
+                    <MapCanvas
+                      mapData={map}
+                      pins={[]}
+                      regions={[]}
+                      width={Math.floor(canvasWidth / 2) - 20}
+                      height={Math.floor(canvasHeight / 2) - 40}
+                      editMode={false}
+                    />
+                  </div>
                 ))}
               </div>
             )}
-            <MapCanvas
-              mapData={parentLocation!.maps[selectedMapIndex] || parentLocation!.maps[0]}
-              pins={[]}
-              regions={parentLocation!.regions}
-              width={canvasWidth}
-              height={canvasHeight}
-              editMode={false}
-              canvasRef={mapCanvasRef}
-            />
             {/* Overlay pinned children as custom markers */}
             <Stage width={canvasWidth} height={canvasHeight} className="spatial-overlay-canvas">
               <Layer>

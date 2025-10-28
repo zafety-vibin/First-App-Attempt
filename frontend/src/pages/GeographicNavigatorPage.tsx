@@ -246,7 +246,7 @@ export const GeographicNavigatorPage: React.FC = () => {
   }
 
   const canvasWidth = 1400;
-  const canvasHeight = 700; // Reduced to fit with info panel below
+  const canvasHeight = 480; // Reduced to eliminate all scrolling
 
   // Check if we should use map mode
   const hasParentMap = parentLocation && parentLocation.maps && parentLocation.maps.length > 0;
@@ -272,12 +272,20 @@ export const GeographicNavigatorPage: React.FC = () => {
             onZoomOut={handleZoomOut}
             onResetView={handleResetView}
           />
-          {/* Upload map button - only if parent location exists */}
-          {currentParentId && parentLocation && (
+          {/* Upload map button - shows when viewing children of a node */}
+          {currentParentId && (
             <button
               className="spatial-upload-icon-btn"
-              onClick={() => navigate(`/campaigns/${campaignId}/locations/${parentLocation.id}`)}
-              title="Upload map to this location"
+              onClick={() => {
+                if (parentLocation) {
+                  // Navigate to location's Maps tab
+                  navigate(`/campaigns/${campaignId}/locations/${parentLocation.id}`);
+                } else {
+                  // Location doesn't exist yet - navigate to locations list to create it
+                  alert(`"${currentScaleName.replace(' View', '')}" exists in your geographic graph but not in the Locations database.\n\nGo to Locations → Create "${currentScaleName.replace(' View', '')}" → Then upload maps from the Maps tab.`);
+                }
+              }}
+              title={parentLocation ? "Upload map to this location" : "Location not in database yet"}
             >
               📤
             </button>

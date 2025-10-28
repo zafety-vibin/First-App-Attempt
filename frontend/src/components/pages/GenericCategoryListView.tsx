@@ -225,7 +225,8 @@ export const GenericCategoryListView: React.FC<GenericCategoryListViewProps> = (
   };
 
   const handleQuickAdd = async (data: Record<string, any>): Promise<void> => {
-    await create(data);
+    // Ensure campaign_id is included
+    await create({ ...data, campaign_id: campaignId });
     // Refresh is automatic after create in useCategory hook
   };
 

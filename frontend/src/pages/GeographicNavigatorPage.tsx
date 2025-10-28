@@ -253,7 +253,7 @@ export const GeographicNavigatorPage: React.FC = () => {
    * Handle drag-drop to pin nodes to map coordinates
    */
   const handleNodeDrop = async (event: DragEndEvent) => {
-    const { active, over } = event;
+    const { active, over, activatorEvent } = event;
     setActiveNode(null); // Clear dragging state
 
     if (!over || over.id !== 'map-drop-zone') return;
@@ -261,19 +261,25 @@ export const GeographicNavigatorPage: React.FC = () => {
     const node = active.data.current?.node as ScaleNode;
     if (!node || !parentLocation || !parentLocation.maps[0]) return;
 
-    // Get the map canvas element to calculate coordinates
-    const mapContainer = document.querySelector('.spatial-map-mode');
-    if (!mapContainer) return;
+    // Get mouse position from the drop event
+    const mouseEvent = activatorEvent as MouseEvent;
+    if (!mouseEvent) return;
 
-    const rect = mapContainer.getBoundingClientRect();
+    // Get the MapCanvas container to calculate relative coordinates
+    const mapCanvas = document.querySelector('.spatial-map-mode canvas');
+    if (!mapCanvas) return;
 
-    // Get drop position relative to map container
-    const dropX = event.activatorEvent.clientX - rect.left;
-    const dropY = event.activatorEvent.clientY - rect.top;
+    const rect = mapCanvas.getBoundingClientRect();
 
-    // Calculate actual map coordinates (pixels on the original image)
-    const mapX = Math.max(0, Math.min(parentLocation.maps[selectedMapIndex || 0].width, Math.round(dropX)));
-    const mapY = Math.max(0, Math.min(parentLocation.maps[selectedMapIndex || 0].height, Math.round(dropY)));
+    // Calculate position relative to canvas
+    const canvasX = mouseEvent.clientX - rect.left;
+    const canvasY = mouseEvent.clientY - rect.top;
+
+    // Map coordinates are direct pixel positions on the image
+    const mapX = Math.max(0, Math.round(canvasX));
+    const mapY = Math.max(0, Math.round(canvasY));
+
+    console.log('Dropping node:', node.name, 'at coordinates:', mapX, mapY);
 
     try {
       // Save coordinates to backend
@@ -282,16 +288,11 @@ export const GeographicNavigatorPage: React.FC = () => {
         y: mapY,
       });
 
-      // Refresh the current scale to show updated positions
-      const endpoint = currentParentId
-        ? `/campaigns/${campaignId}/geographic/scale/${currentParentId}`
-        : `/campaigns/${campaignId}/geographic/scale`;
-
-      const response = await apiClient.get(endpoint);
-      setCurrentNodes(response.data.scale_nodes || []);
-      setParentLocation(response.data.parent_location || null);
+      // Refresh view to show pinned node
+      await updateCurrentView(currentParentId, allNodes);
     } catch (error) {
       console.error('Failed to pin node:', error);
+      alert('Failed to pin node. Check console for details.');
     }
   };
 
@@ -635,12 +636,12 @@ export const GeographicNavigatorPage: React.FC = () => {
           />
         )}
 
-        {/* Drag Overlay - renders dragged item above everything */}
+        {/* Drag Overlay - renders as pin circle to show exact placement */}
         <DragOverlay>
           {activeNode ? (
-            <div className="spatial-drag-preview">
-              <div className="spatial-drag-icon">📍</div>
-              <div className="spatial-drag-name">{activeNode.name}</div>
+            <div className="spatial-drag-pin">
+              <div className="spatial-drag-circle"></div>
+              <div className="spatial-drag-tooltip">{activeNode.name}</div>
             </div>
           ) : null}
         </DragOverlay>

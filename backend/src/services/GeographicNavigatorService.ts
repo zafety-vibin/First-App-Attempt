@@ -27,9 +27,9 @@ export interface ScaleNode {
 }
 
 export class GeographicNavigatorService {
-  private db: Database;
+  private db: Database.Database;
 
-  constructor(db: Database) {
+  constructor(db: Database.Database) {
     this.db = db;
   }
 

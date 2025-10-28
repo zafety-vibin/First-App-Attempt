@@ -151,14 +151,16 @@ export const GeographicNavigatorPage: React.FC = () => {
     let childrenLocations: any[] = [];
     if (children.length > 0) {
       try {
-        const locationIds = children.map(c => c.id);
-        // Batch check which nodes have corresponding locations
-        const locResponse = await apiClient.get(`/campaigns/${campaignId}/locations`, {
-          params: { limit: 1000 }
+        // Use correct category endpoint
+        const locResponse = await apiClient.get(`/api/locations`, {
+          params: {
+            campaign_id: campaignId,
+            limit: 1000
+          }
         });
-        childrenLocations = locResponse.data.data || [];
+        childrenLocations = locResponse.data || [];
       } catch (err) {
-        console.warn('Could not fetch locations for existence check');
+        console.warn('Could not fetch locations for existence check:', err);
       }
     }
 

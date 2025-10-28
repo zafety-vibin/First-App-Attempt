@@ -119,7 +119,13 @@ const MapCanvas: React.FC<MapCanvasProps> = ({
       const scaleX = width / mapData.width;
       const scaleY = height / mapData.height;
       const initialScale = Math.min(scaleX, scaleY, 1); // Don't scale up, only down
-      setStageScale(initialScale);
+
+      if (zoom !== undefined && onZoomChange) {
+        onZoomChange(initialScale); // Controlled
+      } else {
+        setInternalScale(initialScale); // Uncontrolled
+      }
+
       // Center the image
       setStagePosition({
         x: (width - mapData.width * initialScale) / 2,

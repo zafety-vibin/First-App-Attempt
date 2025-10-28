@@ -51,6 +51,11 @@ router.get('/campaigns/:campaignId/geographic/hierarchy', (req: Request, res: Re
  * GET /api/campaigns/:campaignId/geographic/scale/:parentId?
  * Get children at specific scale level
  * parentId=null or omitted → root nodes (Plane View)
+ *
+ * Returns:
+ * - scale_nodes: array of child nodes with coordinates and child counts
+ * - parent_location: parent location data with maps (if parentId provided)
+ * - parent_id: the parent node ID
  */
 router.get('/campaigns/:campaignId/geographic/scale/:parentId?', (req: Request, res: Response) => {
   try {
@@ -77,8 +82,32 @@ router.get('/campaigns/:campaignId/geographic/scale/:parentId?', (req: Request, 
 
     childrenWithCounts.sort((a, b) => a.child_count - b.child_count);
 
+    // If parentId provided, fetch parent location with maps
+    let parentLocation = null;
+    if (parentId) {
+      const parentGraphNode = db.prepare('SELECT name FROM graph_nodes WHERE id = ?').get(parentId) as any;
+      if (parentGraphNode) {
+        const location = db.prepare(`
+          SELECT id, name, map_images, map_pins, faction_regions
+          FROM locations
+          WHERE name = ?
+        `).get(parentGraphNode.name) as any;
+
+        if (location) {
+          parentLocation = {
+            id: location.id,
+            name: location.name,
+            maps: location.map_images ? JSON.parse(location.map_images) : [],
+            pins: location.map_pins ? JSON.parse(location.map_pins) : [],
+            regions: location.faction_regions ? JSON.parse(location.faction_regions) : [],
+          };
+        }
+      }
+    }
+
     res.status(200).json({
       scale_nodes: childrenWithCounts,
+      parent_location: parentLocation,
       parent_id: parentId || null,
     });
   } catch (error: any) {

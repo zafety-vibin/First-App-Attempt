@@ -8,12 +8,13 @@
  * - Unpinned sidebar: Drag-drop toolbox for placing nodes
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { apiClient } from '../services/apiClient';
 import { Stage, Layer, Circle, Text, Image as KonvaImage } from 'react-konva';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import MapCanvas from '../components/maps/MapCanvas';
+import MapControls from '../components/maps/MapControls';
 import './GeographicNavigatorPage.css';
 
 interface ScaleNode {
@@ -49,6 +50,9 @@ export const GeographicNavigatorPage: React.FC = () => {
   const [currentParentId, setCurrentParentId] = useState<string | null>(null);
   const [currentScaleName, setCurrentScaleName] = useState('Plane View');
   const [parentLocation, setParentLocation] = useState<ParentLocation | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const [stagePosition, setStagePosition] = useState({ x: 0, y: 0 });
+  const stageRef = useRef<any>(null);
 
   /**
    * Load nodes at current scale
@@ -85,13 +89,16 @@ export const GeographicNavigatorPage: React.FC = () => {
   /**
    * Ring distribution algorithm
    * Nodes distributed in circle, node with most children at bottom
+   * Improved with padding and safer boundaries
    */
   const calculateRingPositions = (nodes: ScaleNode[], canvasWidth: number, canvasHeight: number) => {
     if (nodes.length === 0) return [];
 
+    const padding = 120; // Space for labels and child count badges
     const centerX = canvasWidth / 2;
     const centerY = canvasHeight / 2;
-    const radius = Math.min(canvasWidth, canvasHeight) * 0.35;
+    const maxRadius = Math.min(canvasWidth, canvasHeight) / 2 - padding;
+    const radius = Math.max(200, maxRadius); // Minimum radius for readability
 
     // Node with most children goes last (positioned at bottom)
     const angleStep = (2 * Math.PI) / nodes.length;
@@ -107,6 +114,30 @@ export const GeographicNavigatorPage: React.FC = () => {
         x: Math.round(x),
         y: Math.round(y),
       };
+    });
+  };
+
+  /**
+   * Zoom controls
+   */
+  const handleZoomIn = () => setZoom(Math.min(zoom * 1.2, 5));
+  const handleZoomOut = () => setZoom(Math.max(zoom / 1.2, 0.1));
+  const handleResetView = () => {
+    setZoom(1);
+    setStagePosition({ x: 0, y: 0 });
+  };
+
+  const handleWheel = (e: any) => {
+    e.evt.preventDefault();
+    const scaleBy = 1.1;
+    const newZoom = e.evt.deltaY < 0 ? zoom * scaleBy : zoom / scaleBy;
+    setZoom(Math.max(0.1, Math.min(5, newZoom)));
+  };
+
+  const handleDragEnd = (e: any) => {
+    setStagePosition({
+      x: e.target.x(),
+      y: e.target.y(),
     });
   };
 
@@ -174,6 +205,15 @@ export const GeographicNavigatorPage: React.FC = () => {
 
       {/* Main Canvas */}
       <div className="spatial-canvas-wrapper">
+        {/* Zoom Controls (floating) */}
+        <div className="spatial-zoom-controls">
+          <MapControls
+            zoomLevel={zoom}
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
+            onResetView={handleResetView}
+          />
+        </div>
         {hasParentMap ? (
           /* MAP MODE: Parent map with children as pins */
           <div className="spatial-map-mode">
@@ -230,7 +270,18 @@ export const GeographicNavigatorPage: React.FC = () => {
           </div>
         ) : currentNodes.length > 0 ? (
           /* RING MODE: Circular distribution */
-          <Stage width={canvasWidth} height={canvasHeight}>
+          <Stage
+            width={canvasWidth}
+            height={canvasHeight}
+            scaleX={zoom}
+            scaleY={zoom}
+            x={stagePosition.x}
+            y={stagePosition.y}
+            draggable
+            onWheel={handleWheel}
+            onDragEnd={handleDragEnd}
+            ref={stageRef}
+          >
             <Layer>
               {/* Render nodes in ring */}
               {nodePositions.map(({ node, x, y }) => (
@@ -257,17 +308,18 @@ export const GeographicNavigatorPage: React.FC = () => {
                     }}
                   />
 
-                  {/* Node label */}
+                  {/* Node label (truncated if too long) */}
                   <Text
                     x={x}
                     y={y + 55}
-                    text={node.name}
+                    text={node.name.length > 20 ? node.name.substring(0, 17) + '...' : node.name}
                     fontSize={14}
                     fontStyle="bold"
                     fill="#111827"
                     align="center"
                     width={120}
                     offsetX={60}
+                    ellipsis={true}
                   />
 
                   {/* Map indicator */}

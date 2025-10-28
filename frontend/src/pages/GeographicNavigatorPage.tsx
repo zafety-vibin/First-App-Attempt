@@ -9,12 +9,14 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { apiClient } from '../services/apiClient';
 import { Stage, Layer, Circle, Text, Image as KonvaImage } from 'react-konva';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import MapCanvas from '../components/maps/MapCanvas';
 import MapControls from '../components/maps/MapControls';
+import { UnpinnedSidebar } from '../components/navigator/UnpinnedSidebar';
+import { DndContext, DragEndEvent, useDroppable } from '@dnd-kit/core';
 import './GeographicNavigatorPage.css';
 
 interface ScaleNode {
@@ -42,8 +44,33 @@ interface ParentLocation {
   regions: any[];
 }
 
+// Droppable wrapper component for map
+function DroppableMapArea({ children }: { children: React.ReactNode }) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: 'map-drop-zone',
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`droppable-map-area ${isOver ? 'drop-over' : ''}`}
+      style={{ position: 'relative', width: '100%', height: '100%' }}
+    >
+      {children}
+      {isOver && (
+        <div className="drop-indicator">
+          <div className="drop-indicator-content">
+            📍 Drop here to pin node to map
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export const GeographicNavigatorPage: React.FC = () => {
   const { campaignId } = useParams<{ campaignId: string }>();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentNodes, setCurrentNodes] = useState<ScaleNode[]>([]);
@@ -53,6 +80,7 @@ export const GeographicNavigatorPage: React.FC = () => {
   const [zoom, setZoom] = useState(0.83); // Start zoomed out to fit all nodes
   const [stagePosition, setStagePosition] = useState({ x: 0, y: 80 }); // Pan down to center ring vertically
   const stageRef = useRef<any>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   /**
    * Load nodes at current scale
@@ -87,9 +115,9 @@ export const GeographicNavigatorPage: React.FC = () => {
   }, [campaignId, currentParentId]);
 
   /**
-   * Ring distribution algorithm
-   * Nodes distributed in circle, node with most children at bottom
-   * Improved with padding and safer boundaries
+   * Ellipse distribution algorithm
+   * Nodes distributed in ellipse to use more viewport space
+   * Node with most children at bottom
    */
   const calculateRingPositions = (nodes: ScaleNode[], canvasWidth: number, canvasHeight: number) => {
     if (nodes.length === 0) return [];
@@ -97,8 +125,10 @@ export const GeographicNavigatorPage: React.FC = () => {
     const padding = 120; // Space for labels and child count badges
     const centerX = canvasWidth / 2;
     const centerY = canvasHeight / 2;
-    const maxRadius = Math.min(canvasWidth, canvasHeight) / 2 - padding;
-    const radius = Math.max(200, maxRadius); // Minimum radius for readability
+
+    // Ellipse radii - use more horizontal space
+    const radiusX = Math.max(300, canvasWidth / 2 - padding); // Horizontal radius (wider)
+    const radiusY = Math.max(200, canvasHeight / 2 - padding); // Vertical radius (narrower)
 
     // Node with most children goes last (positioned at bottom)
     const angleStep = (2 * Math.PI) / nodes.length;
@@ -106,8 +136,8 @@ export const GeographicNavigatorPage: React.FC = () => {
 
     return nodes.map((node, index) => {
       const angle = startAngle + angleStep * index;
-      const x = centerX + radius * Math.cos(angle);
-      const y = centerY + radius * Math.sin(angle);
+      const x = centerX + radiusX * Math.cos(angle);
+      const y = centerY + radiusY * Math.sin(angle);
 
       return {
         node,
@@ -152,6 +182,44 @@ export const GeographicNavigatorPage: React.FC = () => {
     setStagePosition({ x: 0, y: 80 });
   };
 
+  /**
+   * Handle drag-drop to pin nodes to map coordinates
+   */
+  const handleNodeDrop = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (!over || over.id !== 'map-drop-zone') return;
+
+    const node = active.data.current?.node as ScaleNode;
+    if (!node) return;
+
+    // Get drop coordinates (from drag delta)
+    const { x, y } = event.delta;
+
+    // Calculate map coordinates (accounting for zoom and pan)
+    const mapX = Math.round((x - stagePosition.x) / zoom);
+    const mapY = Math.round((y - stagePosition.y) / zoom);
+
+    try {
+      // Save coordinates to backend
+      await apiClient.put(`/locations/${node.id}/pin-coordinates`, {
+        x: Math.max(0, mapX),
+        y: Math.max(0, mapY),
+      });
+
+      // Refresh the current scale to show updated positions
+      const endpoint = currentParentId
+        ? `/campaigns/${campaignId}/geographic/scale/${currentParentId}`
+        : `/campaigns/${campaignId}/geographic/scale`;
+
+      const response = await apiClient.get(endpoint);
+      setCurrentNodes(response.data.scale_nodes || []);
+      setParentLocation(response.data.parent_location || null);
+    } catch (error) {
+      console.error('Failed to pin node:', error);
+    }
+  };
+
   if (!campaignId) {
     return <div className="navigator-error">Campaign ID required</div>;
   }
@@ -192,7 +260,8 @@ export const GeographicNavigatorPage: React.FC = () => {
   const nodePositions = calculateRingPositions(nodesToRender, canvasWidth, canvasHeight);
 
   return (
-    <div className="geographic-navigator-page">
+    <DndContext onDragEnd={handleNodeDrop}>
+      <div className="geographic-navigator-page">
       {/* Breadcrumb */}
       <div className="spatial-breadcrumb">
         <button onClick={() => { setCurrentParentId(null); setCurrentScaleName('Plane View'); }}>
@@ -219,7 +288,8 @@ export const GeographicNavigatorPage: React.FC = () => {
         </div>
         {hasParentMap ? (
           /* MAP MODE: Parent map with children as pins */
-          <div className="spatial-map-mode">
+          <DroppableMapArea>
+            <div className="spatial-map-mode">
             <MapCanvas
               mapData={parentLocation!.maps[0]}
               pins={[]}
@@ -270,7 +340,8 @@ export const GeographicNavigatorPage: React.FC = () => {
                 ))}
               </Layer>
             </Stage>
-          </div>
+            </div>
+          </DroppableMapArea>
         ) : currentNodes.length > 0 ? (
           /* RING MODE: Circular distribution */
           <Stage
@@ -389,8 +460,21 @@ export const GeographicNavigatorPage: React.FC = () => {
           </>
         ) : (
           <>
-            <p className="spatial-mode-label">⭕ Ring Mode</p>
+            <p className="spatial-mode-label">⭕ Ellipse Mode</p>
             <p>{currentNodes.length} node{currentNodes.length !== 1 ? 's' : ''} at this level</p>
+            {currentParentId && parentLocation && (
+              <div className="spatial-upload-hint">
+                <p className="spatial-hint-text">
+                  💡 Upload a map to {currentScaleName.replace(' View', '')} to enable Map Mode
+                </p>
+                <button
+                  className="spatial-upload-button"
+                  onClick={() => navigate(`/campaigns/${campaignId}/locations/${parentLocation.id}`)}
+                >
+                  📤 Upload Map
+                </button>
+              </div>
+            )}
           </>
         )}
 
@@ -400,6 +484,21 @@ export const GeographicNavigatorPage: React.FC = () => {
           </button>
         )}
       </div>
-    </div>
+
+        {/* Unpinned Sidebar (only show in map mode with unpinned children) */}
+        {hasParentMap && unpinnedChildren.length > 0 && (
+          <UnpinnedSidebar
+            nodes={unpinnedChildren.map(n => ({
+              id: n.id,
+              name: n.name,
+              location_type: n.location_type,
+              child_count: n.child_count || 0,
+            }))}
+            isOpen={sidebarOpen}
+            onToggle={() => setSidebarOpen(!sidebarOpen)}
+          />
+        )}
+      </div>
+    </DndContext>
   );
 };

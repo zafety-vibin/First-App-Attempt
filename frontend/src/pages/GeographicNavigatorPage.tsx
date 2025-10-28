@@ -16,7 +16,7 @@ import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import MapCanvas from '../components/maps/MapCanvas';
 import MapControls from '../components/maps/MapControls';
 import { UnpinnedSidebar } from '../components/navigator/UnpinnedSidebar';
-import { DndContext, DragEndEvent, useDroppable } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, DragStartEvent, DragOverlay, useDroppable } from '@dnd-kit/core';
 import './GeographicNavigatorPage.css';
 
 interface ScaleNode {
@@ -84,6 +84,7 @@ export const GeographicNavigatorPage: React.FC = () => {
   const [selectedMapIndex, setSelectedMapIndex] = useState(0); // For map selector
   const [viewMode, setViewMode] = useState<'single' | 'grid'>('single'); // Map view mode
   const mapCanvasRef = useRef<{ resetView: () => void; zoomIn: () => void; zoomOut: () => void } | null>(null);
+  const [activeNode, setActiveNode] = useState<ScaleNode | null>(null); // Currently dragging node
 
   /**
    * Load nodes at current scale
@@ -186,28 +187,44 @@ export const GeographicNavigatorPage: React.FC = () => {
   };
 
   /**
+   * Handle drag start - track which node is being dragged
+   */
+  const handleDragStart = (event: DragStartEvent) => {
+    const node = event.active.data.current?.node as ScaleNode;
+    setActiveNode(node);
+  };
+
+  /**
    * Handle drag-drop to pin nodes to map coordinates
    */
   const handleNodeDrop = async (event: DragEndEvent) => {
     const { active, over } = event;
+    setActiveNode(null); // Clear dragging state
 
     if (!over || over.id !== 'map-drop-zone') return;
 
     const node = active.data.current?.node as ScaleNode;
-    if (!node) return;
+    if (!node || !parentLocation || !parentLocation.maps[0]) return;
 
-    // Get drop coordinates (from drag delta)
-    const { x, y } = event.delta;
+    // Get the map canvas element to calculate coordinates
+    const mapContainer = document.querySelector('.spatial-map-mode');
+    if (!mapContainer) return;
 
-    // Calculate map coordinates (accounting for zoom and pan)
-    const mapX = Math.round((x - stagePosition.x) / zoom);
-    const mapY = Math.round((y - stagePosition.y) / zoom);
+    const rect = mapContainer.getBoundingClientRect();
+
+    // Get drop position relative to map container
+    const dropX = event.activatorEvent.clientX - rect.left;
+    const dropY = event.activatorEvent.clientY - rect.top;
+
+    // Calculate actual map coordinates (pixels on the original image)
+    const mapX = Math.max(0, Math.min(parentLocation.maps[selectedMapIndex || 0].width, Math.round(dropX)));
+    const mapY = Math.max(0, Math.min(parentLocation.maps[selectedMapIndex || 0].height, Math.round(dropY)));
 
     try {
       // Save coordinates to backend
       await apiClient.put(`/locations/${node.id}/pin-coordinates`, {
-        x: Math.max(0, mapX),
-        y: Math.max(0, mapY),
+        x: mapX,
+        y: mapY,
       });
 
       // Refresh the current scale to show updated positions
@@ -263,7 +280,7 @@ export const GeographicNavigatorPage: React.FC = () => {
   const nodePositions = calculateRingPositions(nodesToRender, canvasWidth, canvasHeight);
 
   return (
-    <DndContext onDragEnd={handleNodeDrop}>
+    <DndContext onDragStart={handleDragStart} onDragEnd={handleNodeDrop}>
       <div className="geographic-navigator-page">
       {/* Main Canvas */}
       <div className="spatial-canvas-wrapper">
@@ -562,6 +579,16 @@ export const GeographicNavigatorPage: React.FC = () => {
             onToggle={() => setSidebarOpen(!sidebarOpen)}
           />
         )}
+
+        {/* Drag Overlay - renders dragged item above everything */}
+        <DragOverlay>
+          {activeNode ? (
+            <div className="spatial-drag-preview">
+              <div className="spatial-drag-icon">📍</div>
+              <div className="spatial-drag-name">{activeNode.name}</div>
+            </div>
+          ) : null}
+        </DragOverlay>
       </div>
     </DndContext>
   );

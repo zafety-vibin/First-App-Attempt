@@ -16,6 +16,7 @@ interface UnpinnedNode {
   location_type: string;
   child_count: number;
   location_exists?: boolean;
+  location_id?: string | null;
 }
 
 interface UnpinnedSidebarProps {

@@ -691,6 +691,7 @@ export const GeographicNavigatorPage: React.FC = () => {
               location_type: n.location_type,
               child_count: n.child_count || 0,
               location_exists: n.location_exists,
+              location_id: n.location_id, // Pass through location table ID
             }))}
             isOpen={sidebarOpen}
             onToggle={() => setSidebarOpen(!sidebarOpen)}

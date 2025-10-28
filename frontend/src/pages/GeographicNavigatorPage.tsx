@@ -151,14 +151,14 @@ export const GeographicNavigatorPage: React.FC = () => {
     let childrenLocations: any[] = [];
     if (children.length > 0) {
       try {
-        // Use correct category endpoint
-        const locResponse = await apiClient.get(`/api/locations`, {
+        // Use correct category endpoint (apiClient already has /api base)
+        const locResponse = await apiClient.get(`/locations`, {
           params: {
             campaign_id: campaignId,
             limit: 1000
           }
         });
-        childrenLocations = locResponse.data || [];
+        childrenLocations = locResponse.data.data || []; // Response has data.data structure
       } catch (err) {
         console.warn('Could not fetch locations for existence check:', err);
       }

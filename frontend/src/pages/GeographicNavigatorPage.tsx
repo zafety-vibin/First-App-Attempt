@@ -383,6 +383,15 @@ export const GeographicNavigatorPage: React.FC = () => {
   const pinnedChildren = hasParentMap ? currentNodes.filter(n => n.map_pin_x !== null && n.map_pin_y !== null) : [];
   const unpinnedChildren = hasParentMap ? currentNodes.filter(n => n.map_pin_x === null || n.map_pin_y === null) : [];
 
+  // Debug logging
+  if (hasParentMap && currentNodes.length > 0) {
+    console.log('Current nodes:', currentNodes.map(n => ({ name: n.name, map_pin_x: n.map_pin_x, map_pin_y: n.map_pin_y })));
+    console.log('Pinned children count:', pinnedChildren.length);
+    console.log('Pinned children data:', pinnedChildren);
+    console.log('Unpinned children count:', unpinnedChildren.length);
+    console.log('Overlay should render:', pinnedChildren.length > 0);
+  }
+
   // Ring distribution for unpinned nodes or when no map
   const nodesToRender = hasParentMap ? unpinnedChildren : currentNodes;
   const nodePositions = calculateRingPositions(nodesToRender, canvasWidth, canvasHeight);
@@ -495,48 +504,24 @@ export const GeographicNavigatorPage: React.FC = () => {
               </div>
             )}
             {/* Overlay pinned children as custom markers (only if children are pinned) */}
-            {pinnedChildren.length > 0 && (
-              <Stage width={canvasWidth} height={canvasHeight} className="spatial-overlay-canvas">
-                <Layer>
-                  {pinnedChildren.map((node) => (
-                    <React.Fragment key={node.id}>
-                      <Circle
-                        x={node.map_pin_x!}
-                        y={node.map_pin_y!}
-                        radius={30}
-                        fill="#10b981"
-                        stroke="#065f46"
-                        strokeWidth={3}
-                        shadowColor="black"
-                        shadowBlur={8}
-                        shadowOpacity={0.4}
-                        onClick={() => handleNodeClick(node)}
-                        onMouseEnter={(e) => {
-                          const container = e.target.getStage()?.container();
-                          if (container) container.style.cursor = 'pointer';
-                        }}
-                        onMouseLeave={(e) => {
-                          const container = e.target.getStage()?.container();
-                          if (container) container.style.cursor = 'default';
-                        }}
-                      />
-                      <Text
-                        x={node.map_pin_x!}
-                        y={node.map_pin_y! + 40}
-                        text={node.name}
-                        fontSize={12}
-                        fontStyle="bold"
-                        fill="#ffffff"
-                        stroke="#000000"
-                        strokeWidth={2}
-                        align="center"
-                        width={100}
-                        offsetX={50}
-                      />
-                    </React.Fragment>
-                  ))}
-                </Layer>
-              </Stage>
+            {pinnedChildren.length > 0 && viewMode === 'single' && (
+              <div className="spatial-pins-overlay">
+                {pinnedChildren.map((node) => (
+                  <div
+                    key={node.id}
+                    className="spatial-pin-marker"
+                    style={{
+                      left: `${node.map_pin_x}px`,
+                      top: `${node.map_pin_y}px`,
+                    }}
+                    onClick={() => handleNodeClick(node)}
+                    title={node.name}
+                  >
+                    <div className="spatial-pin-circle"></div>
+                    <div className="spatial-pin-label">{node.name}</div>
+                  </div>
+                ))}
+              </div>
             )}
             </div>
           </DroppableMapArea>

@@ -87,6 +87,8 @@ export const GeographicNavigatorPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<'single' | 'grid'>('single'); // Map view mode
   const mapCanvasRef = useRef<{ resetView: () => void; zoomIn: () => void; zoomOut: () => void } | null>(null);
   const [activeNode, setActiveNode] = useState<ScaleNode | null>(null); // Currently dragging node
+  const [mapZoom, setMapZoom] = useState(1); // Track MapCanvas zoom for pin overlay sync
+  const [mapPosition, setMapPosition] = useState({ x: 0, y: 0 }); // Track MapCanvas position
   const [allNodes, setAllNodes] = useState<ScaleNode[]>([]); // Cache all geographic nodes
   const [graphId, setGraphId] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0); // Force refresh when incremented
@@ -484,6 +486,8 @@ export const GeographicNavigatorPage: React.FC = () => {
                 height={canvasHeight}
                 editMode={false}
                 canvasRef={mapCanvasRef}
+                zoom={mapZoom}
+                onZoomChange={setMapZoom}
               />
             ) : (
               /* Grid view - all maps */
@@ -504,23 +508,44 @@ export const GeographicNavigatorPage: React.FC = () => {
               </div>
             )}
             {/* Overlay pinned children as custom markers (only if children are pinned) */}
-            {pinnedChildren.length > 0 && viewMode === 'single' && (
-              <div className="spatial-pins-overlay">
-                {pinnedChildren.map((node) => (
-                  <div
-                    key={node.id}
-                    className="spatial-pin-marker"
-                    style={{
-                      left: `${node.map_pin_x}px`,
-                      top: `${node.map_pin_y}px`,
-                    }}
-                    onClick={() => handleNodeClick(node)}
-                    title={node.name}
-                  >
-                    <div className="spatial-pin-circle"></div>
-                    <div className="spatial-pin-label">{node.name}</div>
-                  </div>
-                ))}
+            {pinnedChildren.length > 0 && viewMode === 'single' && parentLocation && (
+              <div
+                className="spatial-pins-overlay"
+                style={{
+                  transform: `scale(${mapZoom})`,
+                  transformOrigin: '0 0',
+                }}
+              >
+                {pinnedChildren.map((node) => {
+                  // Calculate pin position accounting for MapCanvas centering
+                  const map = parentLocation.maps[selectedMapIndex] || parentLocation.maps[0];
+                  const scaleX = canvasWidth / map.width;
+                  const scaleY = canvasHeight / map.height;
+                  const fitScale = Math.min(scaleX, scaleY, 1);
+                  const imageWidth = map.width * fitScale;
+                  const imageHeight = map.height * fitScale;
+                  const offsetX = (canvasWidth - imageWidth) / 2;
+                  const offsetY = (canvasHeight - imageHeight) / 2;
+
+                  const displayX = offsetX + (node.map_pin_x! * fitScale);
+                  const displayY = offsetY + (node.map_pin_y! * fitScale);
+
+                  return (
+                    <div
+                      key={node.id}
+                      className="spatial-pin-marker"
+                      style={{
+                        left: `${displayX}px`,
+                        top: `${displayY}px`,
+                      }}
+                      onClick={() => handleNodeClick(node)}
+                      title={node.name}
+                    >
+                      <div className="spatial-pin-circle"></div>
+                      <div className="spatial-pin-label">{node.name}</div>
+                    </div>
+                  );
+                })}
               </div>
             )}
             </div>

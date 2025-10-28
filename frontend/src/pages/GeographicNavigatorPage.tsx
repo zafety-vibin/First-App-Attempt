@@ -340,8 +340,8 @@ export const GeographicNavigatorPage: React.FC = () => {
         y: mapY,
       });
 
-      // Refresh view to show pinned node
-      await updateCurrentView(currentParentId, allNodes);
+      // Force reload of geographic hierarchy to get updated coordinates
+      setRefreshKey(k => k + 1);
     } catch (error) {
       console.error('Failed to pin node:', error);
       alert('Failed to pin node. Check console for details.');

@@ -85,25 +85,40 @@ export const GeographicNavigatorPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<'single' | 'grid'>('single'); // Map view mode
   const mapCanvasRef = useRef<{ resetView: () => void; zoomIn: () => void; zoomOut: () => void } | null>(null);
   const [activeNode, setActiveNode] = useState<ScaleNode | null>(null); // Currently dragging node
+  const [allNodes, setAllNodes] = useState<ScaleNode[]>([]); // Cache all geographic nodes
+  const [graphId, setGraphId] = useState<string | null>(null);
 
   /**
-   * Load nodes at current scale
+   * Load entire geographic hierarchy once on mount
    */
   useEffect(() => {
-    async function loadScale() {
+    async function loadGeographicData() {
       if (!campaignId) return;
 
       setLoading(true);
       setError(null);
 
       try {
-        const endpoint = currentParentId
-          ? `/campaigns/${campaignId}/geographic/scale/${currentParentId}`
-          : `/campaigns/${campaignId}/geographic/scale`;
+        const response = await apiClient.get(`/campaigns/${campaignId}/geographic/hierarchy`);
+        setGraphId(response.data.graph_id);
 
-        const response = await apiClient.get(endpoint);
-        setCurrentNodes(response.data.scale_nodes || []);
-        setParentLocation(response.data.parent_location || null);
+        // Flatten tree to get all nodes
+        const flattenTree = (nodes: any[]): ScaleNode[] => {
+          let result: ScaleNode[] = [];
+          for (const item of nodes) {
+            result.push(item.node);
+            if (item.children && item.children.length > 0) {
+              result = result.concat(flattenTree(item.children));
+            }
+          }
+          return result;
+        };
+
+        const nodes = flattenTree(response.data.tree || []);
+        setAllNodes(nodes);
+
+        // Set initial view (root nodes)
+        updateCurrentView(null, nodes);
       } catch (err: any) {
         if (err.response?.status === 404) {
           setError('Geographic knowledge graph not found. Create geographic nodes in your knowledge graphs first.');
@@ -115,8 +130,48 @@ export const GeographicNavigatorPage: React.FC = () => {
       }
     }
 
-    loadScale();
-  }, [campaignId, currentParentId]);
+    loadGeographicData();
+  }, [campaignId]);
+
+  /**
+   * Update current view based on parent (client-side, instant)
+   */
+  const updateCurrentView = async (parentId: string | null, nodes: ScaleNode[] = allNodes) => {
+    // Filter to children of current parent
+    const children = nodes.filter(n => n.parent_location_id === (parentId || null));
+
+    // Count children for each node
+    const childrenWithCounts = children.map(child => ({
+      ...child,
+      child_count: nodes.filter(n => n.parent_location_id === child.id).length,
+    }));
+
+    // Sort: most children last (bottom of ring)
+    childrenWithCounts.sort((a, b) => a.child_count - b.child_count);
+
+    setCurrentNodes(childrenWithCounts);
+
+    // Fetch parent location data if needed
+    if (parentId) {
+      try {
+        const response = await apiClient.get(`/campaigns/${campaignId}/geographic/scale/${parentId}`);
+        setParentLocation(response.data.parent_location || null);
+      } catch (err) {
+        setParentLocation(null);
+      }
+    } else {
+      setParentLocation(null);
+    }
+  };
+
+  /**
+   * Update view when parent changes (most navigation is instant now)
+   */
+  useEffect(() => {
+    if (allNodes.length > 0) {
+      updateCurrentView(currentParentId, allNodes);
+    }
+  }, [currentParentId]);
 
   /**
    * Ellipse distribution algorithm

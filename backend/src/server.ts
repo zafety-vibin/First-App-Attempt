@@ -12,6 +12,7 @@ import { createSessionImportService } from './services/SessionImportService';
 import authRoutes from './routes/auth';
 import campaignRoutes from './routes/campaigns';
 import campaignWizardRoutes from './routes/campaign-wizard'; // Feature 016
+import campaignBibleRoutes from './routes/campaign-bible'; // Campaign Bible Enhancement
 import settingRoutes from './routes/settings';
 import cardRoutes from './routes/cards';
 import databaseCardRoutes from './routes/database-cards';
@@ -41,6 +42,7 @@ import locationMapsRoutes from './routes/location-maps';
 import locationPinsRoutes from './routes/location-pins';
 import factionRegionsRoutes from './routes/faction-regions';
 import hierarchyNavigatorRoutes from './routes/hierarchy-navigator';
+import spatialNavigatorRoutes from './routes/spatial-navigator';
 // Feature 006 knowledge graph routes
 import knowledgeGraphRoutes from './routes/knowledge-graphs';
 import graphNodeRoutes from './routes/graph-nodes';
@@ -68,6 +70,7 @@ app.use(express.json({ limit: '50mb' })); // Feature 021: Support large base64 m
 app.use('/health', healthRoutes);
 app.use('/api/auth', authRoutes);
 app.use(campaignWizardRoutes); // Feature 016 - wizard routes (must be before general campaign routes for specificity)
+app.use('/api', campaignBibleRoutes); // Campaign Bible Enhancement
 app.use('/api/campaigns', campaignRoutes);
 app.use('/api/settings', settingRoutes);
 app.use('/api/information-levels', informationLevelRoutes); // Feature 004
@@ -99,6 +102,7 @@ app.use('/api/locations', locationMapsRoutes);
 app.use('/api/locations', locationPinsRoutes);
 app.use('/api/locations', factionRegionsRoutes);
 app.use('/api', hierarchyNavigatorRoutes);
+app.use('/api', spatialNavigatorRoutes); // Spatial Navigator (Geographic Graph)
 
 // Feature 015: Canvas configuration routes
 app.use('/api/dashboard-configs', dashboardConfigRoutes);

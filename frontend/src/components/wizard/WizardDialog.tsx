@@ -25,10 +25,14 @@ interface WizardDialogProps {
 function WizardDialogContent({ onClose, campaignId }: Omit<WizardDialogProps, 'open'>) {
   const { state, dispatch } = useWizard();
   const { completeWizard, submitting } = useWizardCompletion();
+  const [isCompleting, setIsCompleting] = React.useState(false);
 
-  // Beforeunload warning if wizard in progress
+  // Beforeunload warning if wizard in progress (but not during successful completion)
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      // Don't warn if wizard is successfully completing
+      if (isCompleting) return;
+
       if (state.currentStep > 1) {
         e.preventDefault();
         e.returnValue = 'Wizard progress is not saved. Are you sure you want to leave?';
@@ -37,7 +41,7 @@ function WizardDialogContent({ onClose, campaignId }: Omit<WizardDialogProps, 'o
 
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [state.currentStep]);
+  }, [state.currentStep, isCompleting]);
 
   const handleNext = () => {
     if (state.currentStep < 4) {
@@ -53,6 +57,7 @@ function WizardDialogContent({ onClose, campaignId }: Omit<WizardDialogProps, 'o
 
   const handleFinish = async () => {
     try {
+      setIsCompleting(true); // Disable beforeunload warning
       dispatch({ type: 'SET_SUBMITTING', payload: true });
 
       // Get theme labels (either custom or from selected theme)
@@ -90,28 +95,27 @@ function WizardDialogContent({ onClose, campaignId }: Omit<WizardDialogProps, 'o
         enabledCategories: Array.from(state.step2.enabledCategories)
       };
 
-      // Add World-Foundations answers if user chose "setup_now"
-      if (state.step3.worldFoundationsChoice === 'setup_now' && state.step4.answers.size > 0) {
-        wizardData.worldFoundationsAnswers = Array.from(state.step4.answers.entries()).map(([questionId, answer]) => ({
-          questionId,
-          answer
-        }));
-      }
+      // Always include Campaign Bible questionnaire answers (even if empty)
+      wizardData.worldFoundationsAnswers = Array.from(state.step4.answers.entries()).map(([questionId, answer]) => ({
+        questionId,
+        answer
+      }));
 
       // Submit to backend
       await completeWizard(campaignId, wizardData);
 
-      // Success - close wizard
+      // Success - close wizard (beforeunload warning is disabled via isCompleting flag)
       onClose();
     } catch (error: any) {
       console.error('Wizard completion failed:', error);
+      setIsCompleting(false); // Re-enable warning if submission failed
       dispatch({ type: 'SET_ERROR', payload: error.response?.data?.error || 'Failed to complete wizard. Please try again.' });
       dispatch({ type: 'SET_SUBMITTING', payload: false });
     }
   };
 
-  // Calculate total steps (3 if skipping Step 4, otherwise 4)
-  const totalSteps = state.step4.isSkipped ? 3 : 4;
+  // Total steps - always 4 (Campaign Bible questionnaire always shown)
+  const totalSteps = 4;
 
   return (
     <Dialog.Root open={true} modal={true}>
@@ -173,7 +177,7 @@ function WizardDialogContent({ onClose, campaignId }: Omit<WizardDialogProps, 'o
             {state.currentStep === 1 && <Step1StyleSelection />}
             {state.currentStep === 2 && <Step2CategoryToggles />}
             {state.currentStep === 3 && <Step3GraphSelection />}
-            {state.currentStep === 4 && !state.step4.isSkipped && <Step4WorldFoundations />}
+            {state.currentStep === 4 && <Step4WorldFoundations />}
           </div>
 
           <WizardNavigation

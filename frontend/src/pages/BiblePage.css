@@ -1,0 +1,194 @@
+/**
+ * Campaign Bible Page Styles
+ * Feature: Campaign Bible Enhancement
+ */
+
+.bible-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.bible-page-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  color: #6b7280;
+  font-size: 1rem;
+}
+
+.bible-page-header {
+  margin-bottom: 2rem;
+}
+
+.bible-back-button {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  margin-bottom: 1rem;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  color: #6b7280;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.bible-back-button:hover {
+  background: #f9fafb;
+  border-color: #3b82f6;
+  color: #3b82f6;
+}
+
+.bible-header-title h1 {
+  margin: 0 0 0.5rem 0;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.bible-header-title p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.bible-header-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin-top: 1rem;
+}
+
+.bible-saving-indicator {
+  font-size: 0.875rem;
+  color: #3b82f6;
+  font-style: italic;
+}
+
+.bible-saved-indicator {
+  font-size: 0.875rem;
+  color: #10b981;
+}
+
+.bible-save-button {
+  padding: 0.5rem 1rem;
+  background: #3b82f6;
+  border: 1px solid #3b82f6;
+  border-radius: 0.5rem;
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.bible-save-button:hover:not(:disabled) {
+  background: #2563eb;
+  border-color: #2563eb;
+}
+
+.bible-save-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.bible-error {
+  padding: 1rem;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 0.5rem;
+  color: #991b1b;
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+}
+
+.bible-editor-wrapper {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  padding: 2rem;
+  min-height: 600px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.bible-editor-content {
+  outline: none;
+  min-height: 500px;
+}
+
+.bible-editor-content h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 1.5rem 0 1rem 0;
+  color: #111827;
+  border-bottom: 2px solid #e5e7eb;
+  padding-bottom: 0.5rem;
+}
+
+.bible-editor-content h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 1.25rem 0 0.75rem 0;
+  color: #1f2937;
+}
+
+.bible-editor-content h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 1rem 0 0.5rem 0;
+  color: #374151;
+}
+
+.bible-editor-content p {
+  margin: 0.5rem 0;
+  line-height: 1.7;
+  color: #374151;
+}
+
+.bible-editor-content ul,
+.bible-editor-content ol {
+  margin: 0.75rem 0;
+  padding-left: 2rem;
+  line-height: 1.7;
+  color: #374151;
+}
+
+.bible-editor-content li {
+  margin: 0.25rem 0;
+}
+
+.bible-editor-content strong {
+  font-weight: 600;
+  color: #111827;
+}
+
+.bible-editor-content em {
+  font-style: italic;
+  color: #6b7280;
+}
+
+.bible-editor-content .is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #9ca3af;
+  pointer-events: none;
+  height: 0;
+}
+
+.bible-help {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  color: #1e40af;
+  line-height: 1.6;
+}
+
+.bible-help strong {
+  font-weight: 600;
+}

@@ -53,6 +53,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ campaignId }) => {
     navigate(`/campaigns/${campaignId}/graphs`);
   };
 
+  const handleBibleClick = (): void => {
+    setActiveCategory(null);
+    navigate(`/campaigns/${campaignId}/bible`);
+  };
+
+  const handleNavigatorClick = (): void => {
+    setActiveCategory('locations');
+    navigate(`/campaigns/${campaignId}/locations/navigator`);
+  };
+
   // Check if category is active based on current route
   const isCategoryActive = (category: CategoryName): boolean => {
     return location.pathname.includes(`/${category}`);
@@ -68,6 +78,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ campaignId }) => {
 
   const isGraphsActive = (): boolean => {
     return location.pathname.includes('/graphs');
+  };
+
+  const isBibleActive = (): boolean => {
+    return location.pathname.includes('/bible');
+  };
+
+  const isNavigatorActive = (): boolean => {
+    return location.pathname.includes('/locations/navigator');
   };
 
   return (
@@ -86,6 +104,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ campaignId }) => {
           onClick={handleGraphsClick}
         >
           Graphs
+        </button>
+        <button
+          type="button"
+          className={`sidebar-item sidebar-bible ${isBibleActive() ? 'active' : ''}`}
+          onClick={handleBibleClick}
+        >
+          📖 Bible
         </button>
         <button
           type="button"
@@ -123,16 +148,31 @@ export const Sidebar: React.FC<SidebarProps> = ({ campaignId }) => {
                     const label = getCategoryLabel(category);
 
                     return (
-                      <li key={category}>
-                        <button
-                          type="button"
-                          className={`sidebar-item ${isActive ? 'active' : ''}`}
-                          onClick={() => handleCategoryClick(category)}
-                          aria-current={isActive ? 'page' : undefined}
-                        >
-                          {label}
-                        </button>
-                      </li>
+                      <React.Fragment key={category}>
+                        <li>
+                          <button
+                            type="button"
+                            className={`sidebar-item ${isActive && !isNavigatorActive() ? 'active' : ''}`}
+                            onClick={() => handleCategoryClick(category)}
+                            aria-current={isActive && !isNavigatorActive() ? 'page' : undefined}
+                          >
+                            {label}
+                          </button>
+                        </li>
+
+                        {/* Feature 021: Geographic Navigator (locations only) */}
+                        {category === 'locations' && (
+                          <li className="sidebar-sub-item">
+                            <button
+                              type="button"
+                              className={`sidebar-item sidebar-sub ${isNavigatorActive() ? 'active' : ''}`}
+                              onClick={handleNavigatorClick}
+                            >
+                              🗺️ Geographic Navigator
+                            </button>
+                          </li>
+                        )}
+                      </React.Fragment>
                     );
                   })}
                 </ul>

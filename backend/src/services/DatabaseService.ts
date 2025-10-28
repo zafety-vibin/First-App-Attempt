@@ -206,6 +206,28 @@ export function runMigrations(): void {
     }
   });
 
+  // Migration 22: Campaign Bible (Campaign Wizard Enhancement)
+  runMigration(22, () => {
+    const migrationsDir = path.join(__dirname, '../db/migrations');
+    const filePath = path.join(migrationsDir, '022-campaign-bible.sql');
+    if (fs.existsSync(filePath)) {
+      const sql = fs.readFileSync(filePath, 'utf-8');
+      db.exec(sql);
+      if (!isMCPMode) console.error(`  ✓ Applied 022-campaign-bible.sql`);
+    }
+  });
+
+  // Migration 23: Spatial Navigator (Geographic Navigator Redesign)
+  runMigration(23, () => {
+    const migrationsDir = path.join(__dirname, '../db/migrations');
+    const filePath = path.join(migrationsDir, '023-spatial-navigator.sql');
+    if (fs.existsSync(filePath)) {
+      const sql = fs.readFileSync(filePath, 'utf-8');
+      db.exec(sql);
+      if (!isMCPMode) console.error(`  ✓ Applied 023-spatial-navigator.sql`);
+    }
+  });
+
   if (!isMCPMode) console.error('✓ Database initialized');
   logDatabaseInfo();
 }

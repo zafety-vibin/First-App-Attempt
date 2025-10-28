@@ -71,8 +71,8 @@ export function CampaignHomepage() {
     // After wizard completes, it calls onClose which triggers this handler
     setShowWizard(false);
 
-    // Reload campaign to reflect new settings
-    await loadCampaign(id);
+    // Navigate to Bible page to show generated Campaign Bible
+    navigate(`/campaigns/${id}/bible`);
   };
 
   const loadCampaign = async (campaignId: string) => {

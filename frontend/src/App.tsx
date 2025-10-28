@@ -57,6 +57,8 @@ import { GeographicGraphPage } from './pages/GeographicGraphPage';
 import { PoliticalWebPage } from './pages/PoliticalWebPage';
 import { CampaignStoryPage } from './pages/CampaignStoryPage';
 import { WorldFoundationsPage } from './pages/WorldFoundationsPage';
+import { BiblePage } from './pages/BiblePage';
+import { GeographicNavigatorPage } from './pages/GeographicNavigatorPage';
 
 /**
  * CampaignLayout - Wraps campaign pages with Sidebar and DashboardProvider
@@ -474,6 +476,28 @@ function AppContent() {
           element={
             <ProtectedRoute>
               <SettingsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/campaigns/:campaignId/bible"
+          element={
+            <ProtectedRoute>
+              <CampaignLayoutWrapper>
+                <BiblePage />
+              </CampaignLayoutWrapper>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Feature 021: Geographic Navigator - T042 */}
+        <Route
+          path="/campaigns/:campaignId/locations/navigator"
+          element={
+            <ProtectedRoute>
+              <CampaignLayoutWrapper>
+                <GeographicNavigatorPage />
+              </CampaignLayoutWrapper>
             </ProtectedRoute>
           }
         />

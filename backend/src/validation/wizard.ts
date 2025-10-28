@@ -17,7 +17,7 @@ export const categoryLabelsMapSchema = z.object({
   planar_forces: categoryLabelSchema,
   items: categoryLabelSchema,
   creatures: categoryLabelSchema,
-  lore: categoryLabelSchema,
+  lore_entries: categoryLabelSchema,
   world_rules: categoryLabelSchema,
   session_prep: categoryLabelSchema,
   session_recaps: categoryLabelSchema,
@@ -47,10 +47,10 @@ export const graphSelectionSchema = z.object({
   worldFoundationsChoice: z.enum(['setup_now', 'setup_later'])
 });
 
-// World-Foundations answer schema
+// Campaign Bible questionnaire answer schema (11 questions)
 export const worldFoundationsAnswerSchema = z.object({
-  questionId: z.number().int().min(1).max(4),
-  answer: z.string().max(1000, 'Answer must be 1000 characters or less')
+  questionId: z.number().int().min(1).max(11),
+  answer: z.string().max(5000, 'Answer must be 5000 characters or less')
 });
 
 export const worldFoundationsSchema = z.object({

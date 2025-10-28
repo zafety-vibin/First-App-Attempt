@@ -13,7 +13,7 @@ export interface CategoryLabelsMap {
   planar_forces: string;
   items: string;
   creatures: string;
-  lore: string;
+  lore_entries: string;
   world_rules: string;
   session_prep: string;
   session_recaps: string;

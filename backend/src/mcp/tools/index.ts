@@ -57,6 +57,11 @@ import {
   handleCreateMapPin
 } from './map-tools';
 
+import {
+  bibleTool,
+  handleGetCampaignBible
+} from './campaign-bible-tools';
+
 /**
  * Tool definitions for NEW category tools (Feature 014 integration)
  */
@@ -686,7 +691,8 @@ export const TOOL_REGISTRY = [
   ...recapToolDefinitions,
   ...infoLevelToolDefinitions,
   ...categoryToolDefinitions,  // NEW: Feature 014 category database tools
-  ...mapToolDefinitions
+  ...mapToolDefinitions,
+  bibleTool  // Campaign Bible access
 ];
 
 /**
@@ -759,6 +765,10 @@ export async function dispatchToolCall(name: string, params: any): Promise<any> 
       return await handleListMapPins(params);
     case 'create_map_pin':
       return await handleCreateMapPin(params);
+
+    // Campaign Bible tool
+    case 'get_campaign_bible':
+      return await handleGetCampaignBible(params);
 
     default:
       throw new Error(`Unknown tool: ${name}`);

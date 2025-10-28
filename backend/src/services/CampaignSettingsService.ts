@@ -8,6 +8,7 @@ import crypto from 'crypto';
 import { db } from './DatabaseService';
 import { CampaignSettings, ThemeOption, CategoryLabelsMap } from '../models/CampaignSettings';
 import { CampaignService } from './CampaignService';
+import { BibleGenerationService, BibleQuestionAnswer } from './BibleGenerationService';
 
 // Theme descriptors (static data)
 const HIGH_FANTASY_LABELS: CategoryLabelsMap = {
@@ -17,7 +18,7 @@ const HIGH_FANTASY_LABELS: CategoryLabelsMap = {
   planar_forces: 'Pantheon',
   items: 'Artifacts',
   creatures: 'Beasts',
-  lore: 'Lore',
+  lore_entries: 'Lore',
   world_rules: 'World Rules',
   session_prep: 'Session Prep',
   session_recaps: 'Session Recaps',
@@ -33,7 +34,7 @@ const CYBERPUNK_LABELS: CategoryLabelsMap = {
   planar_forces: 'Planar Forces',
   items: 'Gear',
   creatures: 'Creatures',
-  lore: 'Lore',
+  lore_entries: 'Lore',
   world_rules: 'World Rules',
   session_prep: 'Session Prep',
   session_recaps: 'Session Recaps',
@@ -49,7 +50,7 @@ const SCI_FI_LABELS: CategoryLabelsMap = {
   planar_forces: 'Cosmic Forces',
   items: 'Tech',
   creatures: 'Xenofauna',
-  lore: 'Archives',
+  lore_entries: 'Archives',
   world_rules: 'Physics',
   session_prep: 'Session Prep',
   session_recaps: 'Session Recaps',
@@ -65,7 +66,7 @@ const MODERN_LABELS: CategoryLabelsMap = {
   planar_forces: 'Beliefs',
   items: 'Equipment',
   creatures: 'Creatures',
-  lore: 'Background',
+  lore_entries: 'Background',
   world_rules: 'World Rules',
   session_prep: 'Session Prep',
   session_recaps: 'Session Recaps',
@@ -81,7 +82,7 @@ const CUSTOM_LABELS_DEFAULT: CategoryLabelsMap = {
   planar_forces: 'Planar Forces',
   items: 'Items',
   creatures: 'Creatures',
-  lore: 'Lore',
+  lore_entries: 'Lore',
   world_rules: 'World Rules',
   session_prep: 'Session Prep',
   session_recaps: 'Session Recaps',
@@ -189,13 +190,12 @@ export class CampaignSettingsService {
 
   /**
    * Complete wizard with atomic transaction
-   * Creates: campaign_settings + optional knowledge_graph + optional world_rules
+   * Creates: campaign_settings with generated campaign bible
    */
   static completeWizard(campaignId: string, userId: string, data: WizardCompleteData): {
     success: boolean;
     settings: CampaignSettings;
-    worldFoundationsGraph?: any;
-    worldRulesCreated: number;
+    bible: string;
   } {
     // Verify user owns campaign
     const campaign = CampaignService.getCampaignById(campaignId);
@@ -222,12 +222,24 @@ export class CampaignSettingsService {
 
     const now = Math.floor(Date.now() / 1000);
 
+    // Generate Campaign Bible from questionnaire answers
+    const campaignName = campaign.name;
+    let campaignBible: string;
+
+    if (data.worldFoundationsAnswers && data.worldFoundationsAnswers.length > 0) {
+      // Generate from questionnaire
+      campaignBible = BibleGenerationService.generateFromQuestionnaire(campaignName, data.worldFoundationsAnswers);
+    } else {
+      // Generate default based on theme
+      campaignBible = BibleGenerationService.generateDefault(campaignName, data.theme);
+    }
+
     // Atomic transaction
     const transaction = db.transaction(() => {
-      // 1. Insert campaign settings (with questionnaire answers for later reference)
+      // 1. Insert campaign settings with generated bible
       const settingsResult = db.prepare(`
-        INSERT INTO campaign_settings (campaign_id, theme, category_labels, enabled_categories, wizard_answers, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO campaign_settings (campaign_id, theme, category_labels, enabled_categories, wizard_answers, campaign_bible, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         RETURNING *
       `).get(
         campaignId,
@@ -235,6 +247,7 @@ export class CampaignSettingsService {
         JSON.stringify(categoryLabels),
         JSON.stringify(data.enabledCategories),
         data.worldFoundationsAnswers ? JSON.stringify(data.worldFoundationsAnswers) : null,
+        campaignBible,
         now,
         now
       ) as any;
@@ -249,74 +262,10 @@ export class CampaignSettingsService {
         updated_at: settingsResult.updated_at
       };
 
-      let worldFoundationsGraph = undefined;
-      let worldRulesCreated = 0;
+      // 2. Bible has been generated and stored in settings
+      // No additional database entries needed - bible is the single source of truth
 
-      // 2. Create World-Foundations graph if answers provided
-      if (data.worldFoundationsAnswers && data.worldFoundationsAnswers.length > 0) {
-        const graphId = crypto.randomUUID();
-
-        db.prepare(`
-          INSERT INTO knowledge_graphs (id, campaign_id, graph_type, graph_name, toggle_state, decay_rate, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(
-          graphId,
-          campaignId,
-          'World-Foundations',
-          'World Foundations',
-          1, // enabled
-          0.0, // no decay for World-Foundations
-          now,
-          now
-        );
-
-        worldFoundationsGraph = { id: graphId, graph_type: 'World-Foundations' };
-
-        // 3. Create world_rules entries for each answer
-        const questionTypeMap: Record<number, string> = {
-          1: 'magic_system',
-          2: 'technology_level',
-          3: 'cosmology',
-          4: 'social_structure'
-        };
-
-        const questionNameMap: Record<number, string> = {
-          1: 'Magic System Rules',
-          2: 'Technology Level',
-          3: 'Cosmology',
-          4: 'Social Structures'
-        };
-
-        for (const answer of data.worldFoundationsAnswers) {
-          if (answer.answer && answer.answer.trim()) {
-            const ruleId = crypto.randomUUID();
-
-            db.prepare(`
-              INSERT INTO world_rules (
-                id, campaign_id, name, description, rule_type,
-                player_knowledge, core_status, tags, custom_fields,
-                created_at, updated_at
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `).run(
-              ruleId,
-              campaignId,
-              questionNameMap[answer.questionId],
-              answer.answer.trim(),
-              questionTypeMap[answer.questionId],
-              'common_knowledge',
-              'active',
-              '[]',
-              '{}',
-              now,
-              now
-            );
-
-            worldRulesCreated++;
-          }
-        }
-      }
-
-      return { success: true, settings, worldFoundationsGraph, worldRulesCreated };
+      return { success: true, settings, bible: campaignBible };
     });
 
     // Execute transaction with 10s timeout
@@ -327,5 +276,38 @@ export class CampaignSettingsService {
       console.error('Wizard completion transaction failed:', error);
       throw new Error('Transaction failed: ' + error.message);
     }
+  }
+
+  /**
+   * Get campaign bible markdown
+   */
+  static getCampaignBible(campaignId: string, userId: string): string | null {
+    const campaign = CampaignService.getCampaignById(campaignId);
+    if (!campaign || campaign.ownerId !== userId) {
+      throw new Error('Forbidden');
+    }
+
+    const row = db.prepare('SELECT campaign_bible FROM campaign_settings WHERE campaign_id = ?')
+      .get(campaignId) as { campaign_bible: string | null } | undefined;
+
+    return row?.campaign_bible || null;
+  }
+
+  /**
+   * Update campaign bible markdown
+   */
+  static updateCampaignBible(campaignId: string, userId: string, bibleMarkdown: string): void {
+    const campaign = CampaignService.getCampaignById(campaignId);
+    if (!campaign || campaign.ownerId !== userId) {
+      throw new Error('Forbidden');
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+
+    db.prepare(`
+      UPDATE campaign_settings
+      SET campaign_bible = ?, updated_at = ?
+      WHERE campaign_id = ?
+    `).run(bibleMarkdown, now, campaignId);
   }
 }

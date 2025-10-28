@@ -68,7 +68,7 @@ router.get('/campaigns/:campaignId/locations/hierarchy', (req: Request, res: Res
 
     // Fetch all locations for campaign (filtered by view mode)
     const locations = db
-      .prepare(`SELECT * FROM ${whereClause}`)
+      .prepare(`SELECT * FROM locations WHERE ${whereClause}`)
       .all(campaignId) as any[];
 
     // Parse JSON fields

@@ -21,10 +21,10 @@ export default function Step4WorldFoundations() {
   return (
     <div>
       <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#e2e8f0', marginBottom: '0.5rem' }}>
-        World Foundations
+        Campaign Bible
       </h3>
       <p style={{ fontSize: '0.875rem', color: '#94a3b8', marginBottom: '1.5rem' }}>
-        Answer these questions to create initial world rules. All questions are optional.
+        Define your campaign's tone, boundaries, and worldbuilding constants. Your answers will generate a Campaign Bible document that establishes meta-level governance for your campaign. All questions are optional.
       </p>
 
       <div style={{
@@ -35,7 +35,7 @@ export default function Step4WorldFoundations() {
         marginBottom: '1.5rem'
       }}>
         <span style={{ fontSize: '0.875rem', fontWeight: '600', color: '#a855f7' }}>
-          {answeredCount} world rule{answeredCount !== 1 ? 's' : ''} will be created
+          {answeredCount} of 11 questions answered • Bible will be editable after wizard
         </span>
       </div>
 

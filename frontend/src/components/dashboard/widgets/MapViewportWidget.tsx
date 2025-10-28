@@ -51,16 +51,16 @@ export const MapViewportWidget: React.FC<BaseWidgetProps & { config?: MapViewpor
   const isMedium = size === '3x3';
   const isDetailed = size === '4x4' || size === '4x3';
 
-  // Calculate widget dimensions based on size
+  // Calculate widget dimensions based on size (generous viewport for maps)
+  // Maps need horizontal space - make them wide, not square
   const getWidgetDimensions = () => {
-    const cellSize = 120; // Approximate grid cell size
     const sizes: Record<string, { width: number; height: number }> = {
-      '2x2': { width: cellSize * 2, height: cellSize * 2 },
-      '3x3': { width: cellSize * 3, height: cellSize * 3 },
-      '4x3': { width: cellSize * 4, height: cellSize * 3 },
-      '4x4': { width: cellSize * 4, height: cellSize * 4 },
+      '2x2': { width: 550, height: 400 },    // Compact - wider than tall
+      '3x3': { width: 800, height: 650 },    // Medium - good balance
+      '4x3': { width: 1100, height: 750 },   // Wide - lots of horizontal space
+      '4x4': { width: 1100, height: 950 },   // Detailed - maximum space
     };
-    return sizes[size] || { width: cellSize * 2, height: cellSize * 2 };
+    return sizes[size] || { width: 550, height: 400 };
   };
 
   const { width, height } = getWidgetDimensions();

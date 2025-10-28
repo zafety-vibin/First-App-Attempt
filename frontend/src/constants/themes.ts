@@ -152,7 +152,9 @@ export const THEME_DESCRIPTORS: ThemeDescriptor[] = [
 export interface WorldFoundationsQuestion {
   id: number;
   question: string;
-  rule_type: 'cosmology' | 'magic_system' | 'technology_level' | 'social_structure';
+  rule_type: 'setting_identity' | 'technology_level' | 'magical_reality' | 'fundamental_nature' |
+    'narrative_tone' | 'content_boundaries' | 'player_agency' |
+    'historical_events' | 'religions' | 'political_structures' | 'economic_systems';
   input_type: 'multiple_choice' | 'short_text' | 'long_text';
   options?: string[];
   placeholder?: string;
@@ -160,45 +162,97 @@ export interface WorldFoundationsQuestion {
 }
 
 export const WORLD_FOUNDATIONS_QUESTIONS: WorldFoundationsQuestion[] = [
+  // CORE SETTING IDENTITY (Questions 1-4)
   {
     id: 1,
-    question: 'Does magic exist in your world? If yes, describe how it works.',
-    rule_type: 'magic_system',
+    question: 'What is your setting\'s core genre and narrative tone?',
+    rule_type: 'setting_identity',
     input_type: 'long_text',
-    placeholder: 'e.g., Magic flows through ley lines, mages channel energy...',
+    placeholder: 'e.g., High fantasy with epic quests, Cyberpunk dystopia, Retro-futuristic with cosmic horror...',
     required: false
   },
   {
     id: 2,
-    question: 'What is the technology level of your world?',
+    question: 'What is the technology level?',
     rule_type: 'technology_level',
-    input_type: 'multiple_choice',
-    options: [
-      'Stone Age / Primitive',
-      'Medieval / Renaissance',
-      'Industrial Revolution',
-      'Modern / Contemporary',
-      'Near-Future / Cyberpunk',
-      'Far-Future / Space Age',
-      'Post-Apocalyptic',
-      'Mixed (varies by region)'
-    ],
+    input_type: 'long_text',
+    placeholder: 'e.g., Medieval baseline, Industrial revolution, Hyper-futuristic with cybernetics, Mixed/regional variation...',
     required: false
   },
   {
     id: 3,
-    question: 'Describe the cosmology or planar structure (e.g., multiple planes, single material world, etc.)',
-    rule_type: 'cosmology',
+    question: 'How does magic work in your world?',
+    rule_type: 'magical_reality',
     input_type: 'long_text',
-    placeholder: 'e.g., Material plane connected to Feywild and Shadowfell...',
+    placeholder: 'e.g., Common and institutionalized, Rare and mysterious, Non-existent, Chaotic force from magical epicenter...',
     required: false
   },
   {
     id: 4,
-    question: 'What are the major social structures or governance systems?',
-    rule_type: 'social_structure',
+    question: 'Describe the fundamental nature of reality in your setting',
+    rule_type: 'fundamental_nature',
     input_type: 'long_text',
-    placeholder: 'e.g., Feudal kingdoms, democratic city-states, corporate oligarchy...',
+    placeholder: 'e.g., Planes of existence, Deterministic vs chaotic, Divine influence, Laws of physics...',
+    required: false
+  },
+
+  // UNIVERSAL CAMPAIGN RULES (Questions 5-7)
+  {
+    id: 5,
+    question: 'What narrative tone, themes, and storytelling philosophy define your campaign?',
+    rule_type: 'narrative_tone',
+    input_type: 'long_text',
+    placeholder: 'e.g., Mystery and ambition, Grey morality, Political intrigue, Cosmic horror and dread...',
+    required: false
+  },
+  {
+    id: 6,
+    question: 'What are your content boundaries? (violence, mature themes, player comfort)',
+    rule_type: 'content_boundaries',
+    input_type: 'long_text',
+    placeholder: 'e.g., Violence: Allowed. Avoid: Sexual violence, torture-porn. Include: Body horror, theological dread...',
+    required: false
+  },
+  {
+    id: 7,
+    question: 'What player agency principles guide your game?',
+    rule_type: 'player_agency',
+    input_type: 'long_text',
+    placeholder: 'e.g., Players reshape the world, Actions have consequences, Multiple solutions encouraged, Reactive not passive world...',
+    required: false
+  },
+
+  // KEY WORLDBUILDING CONSTANTS (Questions 8-11)
+  {
+    id: 8,
+    question: 'What are 3-5 major historical events that shaped this world?',
+    rule_type: 'historical_events',
+    input_type: 'long_text',
+    placeholder: 'e.g., The Shattering (500 years ago): Catastrophe destroyed civilization and created magic. Dark Ages (500-250): Strife and power vacuums...',
+    required: false
+  },
+  {
+    id: 9,
+    question: 'How do religion, gods, and belief systems function?',
+    rule_type: 'religions',
+    input_type: 'long_text',
+    placeholder: 'e.g., Gods are real and active, Organized religion rare, Worship as transaction with powerful beings...',
+    required: false
+  },
+  {
+    id: 10,
+    question: 'What political structures exist in your world?',
+    rule_type: 'political_structures',
+    input_type: 'long_text',
+    placeholder: 'e.g., No global powers, Feudal fractured power, Magical city-states, Technocratic enclaves, Pirate havens...',
+    required: false
+  },
+  {
+    id: 11,
+    question: 'How does the economy work?',
+    rule_type: 'economic_systems',
+    input_type: 'long_text',
+    placeholder: 'e.g., Gold standard, Barter common, No capitalism, Communities self-sufficient, Trade networks emerging...',
     required: false
   }
 ];

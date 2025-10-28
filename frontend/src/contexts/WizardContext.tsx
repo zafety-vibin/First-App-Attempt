@@ -20,14 +20,14 @@ interface CategoryToggleState {
 }
 
 interface GraphSelectionState {
-  worldFoundationsChoice: 'setup_now' | 'setup_later';
+  // Simplified - no user choice needed, always proceed to Step 4
   isValid: boolean;
 }
 
 interface WorldFoundationsState {
   answers: Map<number, string>;
   isValid: boolean;
-  isSkipped: boolean;
+  // isSkipped removed - Step 4 is always shown
 }
 
 interface WizardState {
@@ -47,7 +47,6 @@ type WizardAction =
   | { type: 'SELECT_THEME'; payload: ThemeOption }
   | { type: 'SET_CUSTOM_LABELS'; payload: CategoryLabelsMap }
   | { type: 'TOGGLE_CATEGORY'; payload: string }
-  | { type: 'SELECT_GRAPH_CHOICE'; payload: 'setup_now' | 'setup_later' }
   | { type: 'SET_ANSWER'; payload: { questionId: number; answer: string } }
   | { type: 'SET_ERROR'; payload: string | null }
   | { type: 'SET_SUBMITTING'; payload: boolean }
@@ -64,20 +63,18 @@ const initialState: WizardState = {
   step2: {
     enabledCategories: new Set([
       'npcs', 'locations', 'factions', 'planar_forces', 'items',
-      'lore', 'world_rules', 'session_prep', 'session_recaps',
+      'lore_entries', 'world_rules', 'session_prep', 'session_recaps',
       'quests', 'player_characters', 'custom_mechanics'
       // NOTE: 'creatures' NOT included - disabled by default per spec
     ]), // 12 categories (Creatures disabled by default)
     isValid: true
   },
   step3: {
-    worldFoundationsChoice: 'setup_now',
     isValid: true
   },
   step4: {
     answers: new Map(),
-    isValid: true,
-    isSkipped: false
+    isValid: true
   },
   canProceed: false,
   isSubmitting: false,
@@ -127,19 +124,6 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
         }
       };
     }
-
-    case 'SELECT_GRAPH_CHOICE':
-      return {
-        ...state,
-        step3: {
-          worldFoundationsChoice: action.payload,
-          isValid: true
-        },
-        step4: {
-          ...state.step4,
-          isSkipped: action.payload === 'setup_later'
-        }
-      };
 
     case 'SET_ANSWER': {
       const newAnswers = new Map(state.step4.answers);

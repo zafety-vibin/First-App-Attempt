@@ -1,0 +1,10 @@
+/**
+ * LocationTree Styles
+ * Feature: 021-create-a-geographic
+ */
+
+.location-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}

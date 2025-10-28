@@ -281,9 +281,7 @@ npm test tests/contract/external-api.test.ts     # Feature 018: 49/49 passing
 2. Open http://localhost:3000
 3. Click Login → Register → Create setting → Create campaign → Create cards
 4. Settings → Information Levels → Create custom level → Use painter's easel palette → Toggle view mode (⋮)
-5. Campaign Homepage → Import AI tab → Upload session recap → Chat with AI → Approve → View knowledge graphs
-6. Campaign Homepage → Planning AI tab → Chat about session plans → View immediate graph updates → Toggle active filter
-7. **Feature 018**: `curl http://localhost:3002/api/v1/external/health` - Test external API for Claude Desktop integration
+5. **Feature 018**: `curl http://localhost:3002/api/v1/external/health` - Test external API for Claude Desktop integration
 
 <!-- MANUAL ADDITIONS START -->
 <!-- Add project-specific notes, gotchas, or team agreements here -->

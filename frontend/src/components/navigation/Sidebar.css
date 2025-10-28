@@ -119,6 +119,17 @@
   overflow-wrap: break-word;
 }
 
+/* Feature 021: Sub-item styling for Geographic Navigator */
+.sidebar-sub-item {
+  margin-left: 1rem;
+}
+
+.sidebar-item.sidebar-sub {
+  padding-left: 2.5rem;
+  font-size: 0.813rem;
+  opacity: 0.9;
+}
+
 .sidebar-item:hover {
   background-color: var(--color-sidebar-hover, #383838);
   color: white;

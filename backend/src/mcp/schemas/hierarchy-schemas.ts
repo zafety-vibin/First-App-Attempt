@@ -7,7 +7,7 @@ import { z } from 'zod';
 
 // get_card_path schemas
 export const GetCardPathInputSchema = z.object({
-  card_id: z.number().int().positive(),
+  card_id: z.string().uuid(),
   campaign_id: z.string().min(1)
 });
 
@@ -22,7 +22,7 @@ export const GetCardPathOutputSchema = z.object({
 
 // get_subtree schemas
 export const GetSubtreeInputSchema = z.object({
-  card_id: z.number().int().positive(),
+  card_id: z.string().uuid(),
   campaign_id: z.string().min(1),
   max_depth: z.number().int().positive().max(10).optional().default(3),
   include_content: z.boolean().optional().default(false)
@@ -47,7 +47,7 @@ export const GetSubtreeOutputSchema = z.object({
 
 // list_children schemas
 export const ListChildrenInputSchema = z.object({
-  parent_id: z.number().int().nullable(),
+  parent_id: z.string().uuid().nullable(),
   campaign_id: z.string().min(1)
 });
 
@@ -65,7 +65,7 @@ export const ListChildrenOutputSchema = z.object({
 
 // get_siblings schemas
 export const GetSiblingsInputSchema = z.object({
-  card_id: z.number().int().positive(),
+  card_id: z.string().uuid(),
   campaign_id: z.string().min(1)
 });
 
@@ -77,12 +77,12 @@ export const GetSiblingsOutputSchema = z.object({
     position: z.number().int(),
     is_current: z.boolean()
   })),
-  parent_id: z.number().int().nullable()
+  parent_id: z.string().uuid().nullable()
 });
 
 // get_ancestor schemas
 export const GetAncestorInputSchema = z.object({
-  card_id: z.number().int().positive(),
+  card_id: z.string().uuid(),
   campaign_id: z.string().min(1),
   ancestor_type: z.enum(['text', 'database', 'map'])
 });

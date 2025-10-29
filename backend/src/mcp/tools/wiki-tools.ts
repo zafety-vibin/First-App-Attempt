@@ -146,70 +146,41 @@ Creates a child card that renders INSIDE a parent page. Cards stack vertically w
 **CHILD CARDS** = Content blocks rendered vertically INSIDE that page
 
 When you view a page, you see its child cards stacked vertically:
-```
-Parent Page URL: /campaigns/123/cards/abc
-├─ Text card: "Introduction paragraph..." (inline content)
-├─ Text card: "Another paragraph..." (inline content)
-├─ Page card: "📚 Subpage" (clickable link → navigates to /cards/def)
-└─ Text card: "Footer text..." (inline content)
-```
+
+  Parent Page URL: /campaigns/123/cards/abc
+  ├─ Text card: "Introduction paragraph..." (inline content)
+  ├─ Text card: "Another paragraph..." (inline content)
+  ├─ Page card: "📚 Subpage" (clickable link → navigates to /cards/def)
+  └─ Text card: "Footer text..." (inline content)
 
 ## NOTION-LIKE STRUCTURE - THE RIGHT WAY:
 
 **ANTI-PATTERN (What Desktop Did Wrong):**
-```
-Create ONE card with ALL content in ProseMirror JSON:
-{
-  title: "Campaign Hub",
-  content: {
-    type: "doc",
-    content: [
-      heading("TROPEIA"),
-      paragraph("intro"),
-      heading("World Lore"),
-      paragraph("dragon system"),
-      heading("Geography"),
-      paragraph("8 regions"),
-      ...
-    ]
-  }
-}
-```
-This creates a monolithic document - hard to navigate, not hierarchical.
+
+  Create ONE card with ALL content in ProseMirror JSON:
+  - title: "Campaign Hub"
+  - content with: heading("TROPEIA") + paragraph("intro") + heading("World Lore") + paragraph("dragon system")...
+
+  This creates a monolithic document - hard to navigate, not hierarchical.
 
 **CORRECT PATTERN (Hierarchical Pages):**
-```
-Step 1: Create parent page with brief intro
-{
-  parent_id: null,  // Root level
-  title: "Tropeia Campaign Hub",
-  card_type: "text",
-  content: {type: "doc", content: [paragraph("Welcome to Tropeia...")]}
-}
 
-Step 2: Inside that parent, create PAGE child cards (clickable navigation)
-{
-  parent_id: "parent-page-uuid",
-  title: "📚 World Lore & History",
-  card_type: "page",  // Creates clickable link
-  content: {type: "doc", content: [paragraph("The dragon lore...")]}
-}
+  Step 1: Create parent page with brief intro
+    parent_id: null (root level)
+    title: "Tropeia Campaign Hub"
+    card_type: "text"
+    content: one paragraph welcoming
 
-{
-  parent_id: "parent-page-uuid",
-  title: "🗺️ Geography",
-  card_type: "page",
-  content: {type: "doc", content: [paragraph("8 regions...")]}
-}
+  Step 2: Inside that parent, create PAGE child cards (clickable navigation)
+    parent_id: "parent-page-uuid"
+    title: "📚 World Lore & History"
+    card_type: "page" (creates clickable link)
 
-Step 3: Inside "World Lore" page, create text cards for content
-{
-  parent_id: "world-lore-page-uuid",
-  title: "Three-Headed Dragon",
-  card_type: "text",  // Inline content block
-  content: {type: "doc", content: [paragraph("Details about dragon...")]}
-}
-```
+  Step 3: Inside World Lore page, create separate TEXT cards
+    Each formatting block = separate card:
+    - Text card: heading "Three-Headed Dragon"
+    - Text card: paragraph about dragon
+    - Text card: bullet list with 3 items
 
 ## CARD TYPE SELECTION:
 
@@ -252,31 +223,16 @@ Each card = one semantic formatting block stacked vertically in the page.
 ## HIERARCHICAL WORKFLOW EXAMPLE:
 
 Building a "Campaign Lore" section:
-```
-1. Create PAGE card: "Campaign Lore" (parent_id: null)
-   → This gets URL /cards/abc, shows on root
 
-2. Inside "Campaign Lore", create PAGE children:
-   create_card({
-     parent_id: "campaign-lore-uuid",
-     title: "World History",
-     card_type: "page"  // Clickable
-   })
+  1. Create PAGE card: "Campaign Lore" (parent_id: null)
+     → This gets URL /cards/abc, shows on root
 
-   create_card({
-     parent_id: "campaign-lore-uuid",
-     title: "Magic System",
-     card_type: "page"  // Clickable
-   })
+  2. Inside "Campaign Lore", create PAGE children for major topics
 
-3. Inside "World History" page, create TEXT children:
-   create_card({
-     parent_id: "world-history-uuid",
-     title: null,  // Inline blocks often untitled
-     card_type: "text",  // Inline content
-     content: paragraph("The ancient empire...")
-   })
-```
+  3. Inside "World History" page, create TEXT children (one per formatting block)
+     - Text card: heading "Ancient Empires"
+     - Text card: paragraph "The elven empire ruled..."
+     - Text card: bullet list with 3 items
 
 Result: Clean hierarchy with clickable navigation, not giant documents.
 
@@ -1757,7 +1713,7 @@ async function handleGetCardPath(params: any) {
     const validated = GetCardPathInputSchema.parse(params);
 
     const path: any[] = [];
-    let currentCardId: number | null = validated.card_id;
+    let currentCardId: string | null = validated.card_id;
 
     // Traverse up the hierarchy
     while (currentCardId !== null) {
@@ -1823,7 +1779,7 @@ async function handleGetSubtree(params: any) {
     const maxDepth = validated.max_depth || 3;
 
     // Recursive function to build tree
-    const buildSubtree = (cardId: number, currentDepth: number): any => {
+    const buildSubtree = (cardId: string, currentDepth: number): any => {
       if (currentDepth > maxDepth) {
         return null;
       }
@@ -1847,7 +1803,7 @@ async function handleGetSubtree(params: any) {
       `).all(cardId, validated.campaign_id) as CardRow[];
 
       const children = currentDepth < maxDepth
-        ? childRows.map(childRow => buildSubtree(parseInt(childRow.id), currentDepth + 1)).filter(Boolean)
+        ? childRows.map(childRow => buildSubtree(childRow.id, currentDepth + 1)).filter(Boolean)
         : [];
 
       return {
@@ -2053,7 +2009,7 @@ async function handleGetAncestor(params: any) {
   try {
     const validated = GetAncestorInputSchema.parse(params);
 
-    let currentCardId: number | null = validated.card_id;
+    let currentCardId: string | null = validated.card_id;
     let depth = 0;
 
     // Traverse up the hierarchy looking for ancestor of specified type

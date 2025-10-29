@@ -327,9 +327,21 @@ export const GeographicNavigatorPage: React.FC = () => {
         y: null,
       });
 
-      // Reload to show unpinned node back in sidebar
-      setRefreshKey(k => k + 1);
+      // Update local state directly (no refresh = map position preserved)
+      setCurrentNodes(currentNodes.map(n =>
+        n.id === node.id
+          ? { ...n, map_pin_x: null, map_pin_y: null }
+          : n
+      ));
+
+      setAllNodes(allNodes.map(n =>
+        n.id === node.id
+          ? { ...n, map_pin_x: null, map_pin_y: null }
+          : n
+      ));
+
       setEditPinsMode(false);
+      console.log('✅ Pin removed - map position preserved');
     } catch (error) {
       console.error('Failed to unpin node:', error);
       alert('Failed to unpin. Check console.');
@@ -370,24 +382,41 @@ export const GeographicNavigatorPage: React.FC = () => {
     const finalX = mouseEvent.clientX + delta.x;
     const finalY = mouseEvent.clientY + delta.y;
 
-    // Get the MapCanvas container to calculate relative coordinates
+    // Get the MapCanvas to calculate coordinates
     const mapCanvas = document.querySelector('.spatial-map-mode canvas');
     if (!mapCanvas) return;
 
     const rect = mapCanvas.getBoundingClientRect();
 
-    // Calculate position relative to canvas at drop location
+    // Position relative to canvas element
     const canvasX = finalX - rect.left;
     const canvasY = finalY - rect.top;
 
-    // Map coordinates are direct pixel positions on the image
-    const mapX = Math.max(0, Math.round(canvasX));
-    const mapY = Math.max(0, Math.round(canvasY));
+    // Convert from canvas display coordinates to actual map image pixels
+    // MapCanvas scales images to fit, we need to reverse that transform
+    const map = parentLocation.maps[selectedMapIndex] || parentLocation.maps[0];
+    const scaleX = canvasWidth / map.width;
+    const scaleY = canvasHeight / map.height;
+    const fitScale = Math.min(scaleX, scaleY, 1);
 
-    console.log('Drop position - clientX:', finalX, 'clientY:', finalY);
+    // Image is centered in viewport
+    const scaledWidth = map.width * fitScale;
+    const scaledHeight = map.height * fitScale;
+    const offsetX = (canvasWidth - scaledWidth) / 2;
+    const offsetY = (canvasHeight - scaledHeight) / 2;
+
+    // Convert canvas position to image pixel coordinates
+    const imageX = (canvasX - offsetX) / fitScale;
+    const imageY = (canvasY - offsetY) / fitScale;
+
+    // Clamp to image bounds
+    const mapX = Math.max(0, Math.min(map.width, Math.round(imageX)));
+    const mapY = Math.max(0, Math.min(map.height, Math.round(imageY)));
+
+    console.log('Drop at screen:', finalX, finalY);
     console.log('Canvas relative:', canvasX, canvasY);
-    console.log('Final map coordinates:', mapX, mapY);
-    console.log('Using location ID:', node.location_id);
+    console.log('Image pixel coords:', mapX, mapY);
+    console.log('fitScale:', fitScale, 'offsets:', offsetX, offsetY);
 
     try {
       // Save coordinates to backend using location table ID (not graph node ID!)
@@ -396,8 +425,21 @@ export const GeographicNavigatorPage: React.FC = () => {
         y: mapY,
       });
 
-      // Force reload of geographic hierarchy to get updated coordinates
-      setRefreshKey(k => k + 1);
+      // Update local state directly instead of refreshing (preserves map pan/zoom)
+      setCurrentNodes(currentNodes.map(n =>
+        n.id === node.id
+          ? { ...n, map_pin_x: mapX, map_pin_y: mapY }
+          : n
+      ));
+
+      // Also update cached allNodes
+      setAllNodes(allNodes.map(n =>
+        n.id === node.id
+          ? { ...n, map_pin_x: mapX, map_pin_y: mapY }
+          : n
+      ));
+
+      console.log('✅ Pin placed successfully - map position preserved');
     } catch (error) {
       console.error('Failed to pin node:', error);
       alert('Failed to pin node. Check console for details.');

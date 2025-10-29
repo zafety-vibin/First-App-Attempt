@@ -138,20 +138,140 @@ Supported marks: bold, italic, code, link
     description: `Create a new card in the campaign wiki hierarchy.
 
 ## WHAT THIS IS FOR:
-Creates a new wiki page (card) in your campaign's organizational structure.
-Cards can be nested to create a hierarchy like folders and documents.
-Each card can contain rich text, link to a database view, or embed a map.
+Creates a child card that renders INSIDE a parent page. Cards stack vertically within their parent.
 
-## RECOMMENDED WORKFLOW for organizing campaign content:
-1. search_cards to understand existing structure
-2. list_children on parent to see siblings
-3. create_card with appropriate parent_id
-4. Consider move_card later if organization changes
+## CRITICAL: PAGES vs CHILD CARDS
+
+**A PAGE** = Container with unique URL (like /campaigns/123/cards/abc)
+**CHILD CARDS** = Content blocks rendered vertically INSIDE that page
+
+When you view a page, you see its child cards stacked vertically:
+```
+Parent Page URL: /campaigns/123/cards/abc
+├─ Text card: "Introduction paragraph..." (inline content)
+├─ Text card: "Another paragraph..." (inline content)
+├─ Page card: "📚 Subpage" (clickable link → navigates to /cards/def)
+└─ Text card: "Footer text..." (inline content)
+```
+
+## NOTION-LIKE STRUCTURE - THE RIGHT WAY:
+
+**ANTI-PATTERN (What Desktop Did Wrong):**
+```
+Create ONE card with ALL content in ProseMirror JSON:
+{
+  title: "Campaign Hub",
+  content: {
+    type: "doc",
+    content: [
+      heading("TROPEIA"),
+      paragraph("intro"),
+      heading("World Lore"),
+      paragraph("dragon system"),
+      heading("Geography"),
+      paragraph("8 regions"),
+      ...
+    ]
+  }
+}
+```
+This creates a monolithic document - hard to navigate, not hierarchical.
+
+**CORRECT PATTERN (Hierarchical Pages):**
+```
+Step 1: Create parent page with brief intro
+{
+  parent_id: null,  // Root level
+  title: "Tropeia Campaign Hub",
+  card_type: "text",
+  content: {type: "doc", content: [paragraph("Welcome to Tropeia...")]}
+}
+
+Step 2: Inside that parent, create PAGE child cards (clickable navigation)
+{
+  parent_id: "parent-page-uuid",
+  title: "📚 World Lore & History",
+  card_type: "page",  // Creates clickable link
+  content: {type: "doc", content: [paragraph("The dragon lore...")]}
+}
+
+{
+  parent_id: "parent-page-uuid",
+  title: "🗺️ Geography",
+  card_type: "page",
+  content: {type: "doc", content: [paragraph("8 regions...")]}
+}
+
+Step 3: Inside "World Lore" page, create text cards for content
+{
+  parent_id: "world-lore-page-uuid",
+  title: "Three-Headed Dragon",
+  card_type: "text",  // Inline content block
+  content: {type: "doc", content: [paragraph("Details about dragon...")]}
+}
+```
 
 ## CARD TYPE SELECTION:
-- **text** (90% of cards): Narrative content, notes, lore, rules
-- **database** (5%): Link to view NPCs, Locations, etc. (creates schema_id)
-- **map** (5%): Interactive map canvas for locations (enables map tools)
+
+- **text**: Inline content blocks (paragraphs, lists, quotes)
+  - Renders inside parent page
+  - NOT clickable
+  - Use for: paragraph content, lists, short sections
+
+- **page**: Navigable sub-pages (clickable links)
+  - Has its own URL: /campaigns/{id}/cards/{page-id}
+  - Clickable from parent page
+  - Use for: major sections, chapters, categories
+  - Can have its own child cards
+
+- **database**: Embedded database view (table of NPCs, etc.)
+  - Renders database table inline
+  - Use sparingly for overview tables
+
+## WHEN TO CREATE A PAGE vs TEXT CARD:
+
+**Create a PAGE card when:**
+- Content has its own subsections (needs children)
+- You want users to click to navigate deeper
+- It's a major topic worth its own URL
+- Example: "Geography", "NPC Roster", "Session Recaps"
+
+**Create a TEXT card when:**
+- It's inline content within current page
+- Short paragraph or list
+- Doesn't need sub-navigation
+- Example: intro paragraph, bullet list, single fact
+
+## HIERARCHICAL WORKFLOW EXAMPLE:
+
+Building a "Campaign Lore" section:
+```
+1. Create PAGE card: "Campaign Lore" (parent_id: null)
+   → This gets URL /cards/abc, shows on root
+
+2. Inside "Campaign Lore", create PAGE children:
+   create_card({
+     parent_id: "campaign-lore-uuid",
+     title: "World History",
+     card_type: "page"  // Clickable
+   })
+
+   create_card({
+     parent_id: "campaign-lore-uuid",
+     title: "Magic System",
+     card_type: "page"  // Clickable
+   })
+
+3. Inside "World History" page, create TEXT children:
+   create_card({
+     parent_id: "world-history-uuid",
+     title: null,  // Inline blocks often untitled
+     card_type: "text",  // Inline content
+     content: paragraph("The ancient empire...")
+   })
+```
+
+Result: Clean hierarchy with clickable navigation, not giant documents.
 
 ## PARENT_ID BEHAVIOR:
 - **null**: Creates card at campaign root (top level)

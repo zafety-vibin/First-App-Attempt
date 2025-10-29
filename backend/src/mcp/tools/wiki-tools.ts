@@ -359,23 +359,32 @@ Note: ONLY one paragraph, nothing else!
 Note: ONLY the list, nothing else!
 </example>
 
+<example description="Create a PAGE card for clickable navigation (use for major sections)">
+{
+  "campaign_id": "1ceec234-523b-4e25-a0b5-097c71018be5",
+  "parent_id": "parent-page-uuid",
+  "title": "📚 World Lore & History",
+  "card_type": "page",
+  "content": {
+    "type": "doc",
+    "content": [
+      {
+        "type": "paragraph",
+        "content": [{"type": "text", "text": "Click to explore world lore"}]
+      }
+    ]
+  }
+}
+Note: card_type: "page" makes this CLICKABLE - navigates to its own URL!
+</example>
+
 <example description="Create a database view card for NPCs">
 {
   "campaign_id": "1ceec234-523b-4e25-a0b5-097c71018be5",
-  "parent_id": 5,
+  "parent_id": "parent-page-uuid",
   "title": "Major NPCs",
   "card_type": "database",
   "content": {"type": "database", "category": "npcs"}
-}
-</example>
-
-<example description="Create a map card for a city">
-{
-  "campaign_id": "1ceec234-523b-4e25-a0b5-097c71018be5",
-  "parent_id": 8,
-  "title": "Waterdeep City Map",
-  "card_type": "map",
-  "content": {"type": "map", "map_enabled": true}
 }
 </example>
 

@@ -125,8 +125,17 @@ router.put('/locations/:locationId/pin-coordinates', (req: Request, res: Respons
     const { locationId } = req.params;
     const { x, y } = req.body;
 
+    // Allow null to unpin (remove coordinates)
+    if (x === null && y === null) {
+      db.prepare('UPDATE locations SET map_pin_x = NULL, map_pin_y = NULL, updated_at = ? WHERE id = ?')
+        .run(Math.floor(Date.now() / 1000), locationId);
+
+      res.status(200).json({ success: true, x: null, y: null, message: 'Unpinned' });
+      return;
+    }
+
     if (typeof x !== 'number' || typeof y !== 'number') {
-      res.status(400).json({ error: 'x and y coordinates are required as numbers' });
+      res.status(400).json({ error: 'x and y coordinates must be numbers or both null to unpin' });
       return;
     }
 

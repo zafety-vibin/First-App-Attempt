@@ -18,12 +18,79 @@ import { db } from '../../services/DatabaseService';
 export const graphToolDefinitions = [
   {
     name: 'query_graph',
-    description: 'Query knowledge graph nodes and edges with optional filters',
+    description: `Query knowledge graph nodes and edges with optional filters.
+
+## WHAT THIS IS FOR:
+Knowledge graphs visualize relationships and connections in your campaign (Feature 006).
+Think of these as interactive relationship maps, not structured data tables.
+
+## 4 GRAPH TYPES:
+
+**Geographical** - Geographic and spatial relationships:
+- Location hierarchies (Plane → World → Continent → Region)
+- Parent-child geographic nesting
+- Use with: Geographic Navigator (Feature 021)
+- Example nodes: "Material Plane", "World of Geux", "Solus Continent"
+
+**Political-Web** - Social and faction relationships:
+- NPC connections (allies, enemies, neutral)
+- Faction relationships and power dynamics
+- Organizational hierarchies
+- Active filtering: Decays over time (last 5 sessions + tagged nodes)
+- Example edges: "Galik → ally → Elara", "Accord → rival → Zhentarim"
+
+**World-Foundations** - Campaign rules and constants:
+- World rules, magic systems, cosmology
+- Never decays (permanent campaign facts)
+- Created from wizard questionnaire
+- Example nodes: "The Good Wall", "Three-Headed Dragon System"
+
+**Campaign-Story** - Plot and narrative structure:
+- Story arcs, plot threads, quest chains
+- Active filtering: Recent story (decays faster than Political-Web)
+- Example nodes: "The Shadowfell Incursion", "Mystery of the Distortion"
+
+## GRAPHS vs WIKI vs DATABASES:
+- **Graphs**: Relationship visualization (edges between nodes)
+- **Wiki**: Narrative pages (hierarchical documents)
+- **Databases**: Structured entities (NPCs, Locations with fields)
+
+Example: "Galik Emberfuse" could exist in:
+- Political-Web graph node: Connections to allies/enemies
+- Wiki card: Rich text bio page
+- NPC database entry: Stats, level, faction_id
+
+<example description="Find all NPCs connected to Galik in Political-Web">
+{
+  "campaign_id": "1ceec234-523b-4e25-a0b5-097c71018be5",
+  "graph_type": "Political-Web",
+  "node_name": "Galik Emberfuse"
+}
+Returns: Node + all edges + connected nodes
+</example>
+
+<example description="Get Geographical hierarchy for World of Geux">
+{
+  "campaign_id": "1ceec234-...",
+  "graph_type": "Geographical",
+  "node_name": "World of Geux"
+}
+Returns: Node + child locations (continents, regions)
+</example>
+
+<example description="Filter by relationship type in Political-Web">
+{
+  "campaign_id": "1ceec234-...",
+  "graph_type": "Political-Web",
+  "relationship_type": "ally"
+}
+Returns: All ally relationships across entire graph
+</example>`,
     inputSchema: {
       type: 'object',
       properties: {
         campaign_id: { type: 'string' },
-        graph_type: { type: 'string', enum: ['geographical', 'political-web', 'world-foundations', 'campaign-story'] },
+        graph_type: { type: 'string', enum: ['Geographical', 'Political-Web', 'World-Foundations', 'Campaign-Story'] },
         node_name: { type: 'string' },
         relationship_type: { type: 'string' }
       },
@@ -32,19 +99,85 @@ export const graphToolDefinitions = [
   },
   {
     name: 'list_graph_nodes',
-    description: 'List all nodes in a specific knowledge graph',
+    description: `List all nodes in a specific knowledge graph.
+
+## WHEN TO USE:
+- Get complete overview of graph structure
+- Before adding new nodes (avoid duplicates)
+- Understanding existing relationships
+- Export graph for analysis
+
+## ACTIVE FILTERING (Political-Web & Campaign-Story):
+These graphs auto-hide old nodes based on recency:
+- Nodes from last 5 sessions: Always visible
+- Older nodes: Hidden unless explicitly pinned
+- Pinned nodes: Always visible regardless of age
+- World-Foundations & Geographical: Never filter (permanent)
+
+<example description="List all locations in Geographical graph">
+{
+  "campaign_id": "1ceec234-...",
+  "graph_type": "Geographical"
+}
+Returns: All 51 geographic nodes (planes, worlds, continents, regions)
+</example>
+
+<example description="List active Political-Web relationships">
+{
+  "campaign_id": "1ceec234-...",
+  "graph_type": "Political-Web"
+}
+Returns: NPCs and factions from recent sessions + pinned important nodes
+</example>
+
+<example description="List world rules (never filtered)">
+{
+  "campaign_id": "1ceec234-...",
+  "graph_type": "World-Foundations"
+}
+Returns: All campaign constants and world rules (no active filtering)
+</example>`,
     inputSchema: {
       type: 'object',
       properties: {
         campaign_id: { type: 'string' },
-        graph_type: { type: 'string', enum: ['geographical', 'political-web', 'world-foundations', 'campaign-story'] }
+        graph_type: { type: 'string', enum: ['Geographical', 'Political-Web', 'World-Foundations', 'Campaign-Story'] }
       },
       required: ['campaign_id', 'graph_type']
     }
   },
   {
     name: 'get_node_relationships',
-    description: 'Get all relationships (edges) connected to a specific node',
+    description: `Get all relationships (edges) connected to a specific node.
+
+## USE CASES:
+- Find who an NPC is connected to (Political-Web)
+- See child locations of a region (Geographical)
+- Discover plot threads involving a quest (Campaign-Story)
+
+## RETURNS:
+- Incoming edges (nodes pointing TO this node)
+- Outgoing edges (nodes this node points TO)
+- Edge attributes (relationship_type, strength, metadata)
+
+<example description="Get all of Galik's relationships">
+{
+  "node_id": 123,
+  "campaign_id": "1ceec234-..."
+}
+Returns: {
+  incoming: [{from: "Elara", type: "ally", strength: 0.9}],
+  outgoing: [{to: "Zhentarim", type: "enemy", strength: 0.7}]
+}
+</example>
+
+<example description="Find child locations of Solus Continent">
+{
+  "node_id": 456,
+  "campaign_id": "1ceec234-..."
+}
+Returns: All regions under Solus (North Region, South Region, etc.)
+</example>`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -56,12 +189,80 @@ export const graphToolDefinitions = [
   },
   {
     name: 'update_graph',
-    description: 'Atomically update graph nodes and edges (all-or-nothing)',
+    description: `Atomically update graph nodes and edges (all-or-nothing transaction).
+
+## ATOMIC OPERATIONS:
+All operations in one call succeed together or fail together.
+If ANY operation fails, NONE are applied (database rollback).
+
+## 6 OPERATION TYPES:
+- create_node: Add new entity to graph
+- update_node: Modify node name/attributes/pinned status
+- delete_node: Remove node (also deletes connected edges)
+- create_edge: Add relationship between two nodes
+- update_edge: Modify edge type/strength/metadata
+- delete_edge: Remove specific relationship
+
+## RECOMMENDED WORKFLOW:
+1. list_graph_nodes or query_graph to see current state
+2. Build operations array with creates/updates/deletes
+3. Call update_graph with all operations
+4. Atomic commit or rollback
+
+## COMMON USE CASE - AI Import Session:
+AI suggests 20 new NPCs with 35 relationships.
+Single update_graph call with:
+- 20 create_node operations
+- 35 create_edge operations
+If any fails (duplicate name, invalid edge), entire batch rolls back.
+
+<example description="Add NPC and relationships atomically">
+{
+  "campaign_id": "1ceec234-...",
+  "graph_type": "Political-Web",
+  "operations": [
+    {
+      "operation": "create_node",
+      "data": {
+        "name": "Lord Vex",
+        "attributes": {"faction": "Zhentarim", "role": "spy"}
+      }
+    },
+    {
+      "operation": "create_edge",
+      "data": {
+        "source_node_name": "Lord Vex",
+        "target_node_name": "Galik Emberfuse",
+        "relationship_type": "rival",
+        "strength": 0.6
+      }
+    }
+  ]
+}
+All or nothing: Both succeed or both fail
+</example>
+
+<example description="Pin important nodes to prevent decay">
+{
+  "campaign_id": "1ceec234-...",
+  "graph_type": "Political-Web",
+  "operations": [
+    {
+      "operation": "update_node",
+      "data": {
+        "node_id": 42,
+        "pinned": true
+      }
+    }
+  ]
+}
+Pinned nodes always visible in active filtering
+</example>`,
     inputSchema: {
       type: 'object',
       properties: {
         campaign_id: { type: 'string' },
-        graph_type: { type: 'string', enum: ['geographical', 'political-web', 'world-foundations', 'campaign-story'] },
+        graph_type: { type: 'string', enum: ['Geographical', 'Political-Web', 'World-Foundations', 'Campaign-Story'] },
         operations: {
           type: 'array',
           items: {

@@ -127,7 +127,7 @@ Supported marks: bold, italic, code, link
     inputSchema: {
       type: 'object',
       properties: {
-        card_id: { type: 'number' },
+        card_id: { type: 'string' },
         campaign_id: { type: 'string' }
       },
       required: ['card_id', 'campaign_id']
@@ -266,7 +266,7 @@ Returns the created card with auto-generated fields:
       type: 'object',
       properties: {
         campaign_id: { type: 'string' },
-        parent_id: { type: ['number', 'null'] },
+        parent_id: { type: ['string', 'null'] },
         title: { type: 'string' },
         card_type: { type: 'string', enum: ['text', 'database', 'map'] },
         content: { type: 'object' },
@@ -388,7 +388,7 @@ Returns the complete updated card:
     inputSchema: {
       type: 'object',
       properties: {
-        card_id: { type: 'number' },
+        card_id: { type: 'string' },
         campaign_id: { type: 'string' },
         title: { type: 'string' },
         content: { type: 'object' },
@@ -469,7 +469,7 @@ Step 2: {
     inputSchema: {
       type: 'object',
       properties: {
-        card_id: { type: 'number' },
+        card_id: { type: 'string' },
         campaign_id: { type: 'string' }
       },
       required: ['card_id', 'campaign_id']
@@ -693,9 +693,9 @@ Makes card 67 a root-level card at position 2
     inputSchema: {
       type: 'object',
       properties: {
-        card_id: { type: 'number' },
+        card_id: { type: 'string' },
         campaign_id: { type: 'string' },
-        new_parent_id: { type: ['number', 'null'] },
+        new_parent_id: { type: ['string', 'null'] },
         new_position: { type: 'number' }
       },
       required: ['card_id', 'campaign_id', 'new_parent_id', 'new_position']
@@ -784,7 +784,7 @@ Returns an array of ancestor cards from root to target:
     inputSchema: {
       type: 'object',
       properties: {
-        card_id: { type: 'number' },
+        card_id: { type: 'string' },
         campaign_id: { type: 'string' }
       },
       required: ['card_id', 'campaign_id']
@@ -896,7 +896,7 @@ Uses default max_depth of 3
     inputSchema: {
       type: 'object',
       properties: {
-        card_id: { type: 'number' },
+        card_id: { type: 'string' },
         campaign_id: { type: 'string' },
         max_depth: { type: 'number', minimum: 1, maximum: 10 }
       },
@@ -993,7 +993,7 @@ If count = 0, safe to delete without losing content
     inputSchema: {
       type: 'object',
       properties: {
-        parent_id: { type: ['number', 'null'] },
+        parent_id: { type: ['string', 'null'] },
         campaign_id: { type: 'string' }
       },
       required: ['campaign_id']
@@ -1079,7 +1079,7 @@ If card 1 is at root, returns all other root cards
     inputSchema: {
       type: 'object',
       properties: {
-        card_id: { type: 'number' },
+        card_id: { type: 'string' },
         campaign_id: { type: 'string' }
       },
       required: ['card_id', 'campaign_id']
@@ -1161,7 +1161,7 @@ a card belongs to, or finding the containing chapter/act structure.
     inputSchema: {
       type: 'object',
       properties: {
-        card_id: { type: 'number' },
+        card_id: { type: 'string' },
         campaign_id: { type: 'string' },
         ancestor_type: { type: 'string', enum: ['text', 'database', 'map'] }
       },
@@ -1201,9 +1201,9 @@ async function handleReadCard(params: any) {
       content: [{
         type: 'text',
         text: JSON.stringify({
-          id: parseInt(card.id),
+          id: card.id,
           campaign_id: card.campaignId,
-          parent_id: card.parentId ? parseInt(card.parentId) : null,
+          parent_id: card.parentId ? card.parentId : null,
           title: card.title,
           card_type: card.type === 'page' ? 'map' : card.type,
           content: card.content,
@@ -1268,9 +1268,9 @@ async function handleCreateCard(params: any) {
       content: [{
         type: 'text',
         text: JSON.stringify({
-          id: parseInt(card.id),
+          id: card.id,
           campaign_id: card.campaignId,
-          parent_id: card.parentId ? parseInt(card.parentId) : null,
+          parent_id: card.parentId ? card.parentId : null,
           title: card.title,
           card_type: card.type === 'page' ? 'map' : card.type,
           content: card.content,
@@ -1358,9 +1358,9 @@ async function handleUpdateCard(params: any) {
       content: [{
         type: 'text',
         text: JSON.stringify({
-          id: parseInt(card.id),
+          id: card.id,
           campaign_id: card.campaignId,
-          parent_id: card.parentId ? parseInt(card.parentId) : null,
+          parent_id: card.parentId ? card.parentId : null,
           title: card.title,
           card_type: card.type === 'page' ? 'map' : card.type,
           content: card.content,
@@ -1591,9 +1591,9 @@ async function handleMoveCard(params: any) {
         text: JSON.stringify({
           success: true,
           card: {
-            id: parseInt(card.id),
+            id: card.id,
             campaign_id: card.campaignId,
-            parent_id: card.parentId ? parseInt(card.parentId) : null,
+            parent_id: card.parentId ? card.parentId : null,
             title: card.title,
             card_type: card.type === 'page' ? 'map' : card.type,
             content: card.content,
@@ -1656,13 +1656,13 @@ async function handleGetCardPath(params: any) {
 
       const card = rowToCard(row);
       path.unshift({
-        id: parseInt(card.id),
+        id: card.id,
         title: card.title,
         card_type: card.type === 'page' ? 'map' : card.type,
         information_level_id: card.informationLevelId === 'system' ? null : parseInt(card.informationLevelId)
       });
 
-      currentCardId = card.parentId ? parseInt(card.parentId) : null;
+      currentCardId = card.parentId ? card.parentId : null;
     }
 
     return {
@@ -1724,7 +1724,7 @@ async function handleGetSubtree(params: any) {
         : [];
 
       return {
-        id: parseInt(card.id),
+        id: card.id,
         title: card.title,
         card_type: card.type === 'page' ? 'map' : card.type,
         information_level_id: card.informationLevelId === 'system' ? null : parseInt(card.informationLevelId),
@@ -1820,7 +1820,7 @@ async function handleListChildren(params: any) {
     const children = childRows.map(row => {
       const card = rowToCard(row);
       return {
-        id: parseInt(card.id),
+        id: card.id,
         title: card.title,
         card_type: card.type === 'page' ? 'map' : card.type,
         information_level_id: card.informationLevelId === 'system' ? null : parseInt(card.informationLevelId),
@@ -1889,7 +1889,7 @@ async function handleGetSiblings(params: any) {
     const siblings = siblingRows.map(row => {
       const card = rowToCard(row);
       return {
-        id: parseInt(card.id),
+        id: card.id,
         title: card.title,
         card_type: card.type === 'page' ? 'map' : card.type,
         information_level_id: card.informationLevelId === 'system' ? null : parseInt(card.informationLevelId),
@@ -1961,7 +1961,7 @@ async function handleGetAncestor(params: any) {
             type: 'text',
             text: JSON.stringify({
               ancestor: {
-                id: parseInt(card.id),
+                id: card.id,
                 title: card.title,
                 card_type: cardType,
                 depth
@@ -1972,7 +1972,7 @@ async function handleGetAncestor(params: any) {
         };
       }
 
-      currentCardId = card.parentId ? parseInt(card.parentId) : null;
+      currentCardId = card.parentId ? card.parentId : null;
       depth++;
     }
 

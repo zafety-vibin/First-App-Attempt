@@ -238,9 +238,31 @@ Step 3: Inside "World Lore" page, create text cards for content
 
 **Create a TEXT card when:**
 - It's inline content within current page
-- Short paragraph or list
+- **ONE formatting block** (one paragraph, OR one list, OR one heading)
 - Doesn't need sub-navigation
-- Example: intro paragraph, bullet list, single fact
+- Example: single paragraph, single bullet list, single heading
+
+**IMPORTANT - GRANULAR BLOCKS:**
+Each formatting change = new text card!
+
+**WRONG (monolithic):**
+```
+One text card with:
+- Heading
+- Paragraph
+- Bullet list
+- Another paragraph
+```
+
+**RIGHT (granular):**
+```
+Text card 1: Heading "Three-Headed Dragon"
+Text card 2: Paragraph "The dragon ruled from Hopewind..."
+Text card 3: Bullet list with 3 items about the heads
+Text card 4: Paragraph "Every 100 years they voted..."
+```
+
+Each card = one semantic block. Change formatting? New card.
 
 ## HIERARCHICAL WORKFLOW EXAMPLE:
 
@@ -262,16 +284,35 @@ Building a "Campaign Lore" section:
      card_type: "page"  // Clickable
    })
 
-3. Inside "World History" page, create TEXT children:
+3. Inside "World History" page, create TEXT children (one per formatting block):
+   // First text card: heading
    create_card({
      parent_id: "world-history-uuid",
-     title: null,  // Inline blocks often untitled
-     card_type: "text",  // Inline content
-     content: paragraph("The ancient empire...")
+     title: null,
+     card_type: "text",
+     content: {type: "doc", content: [heading("Ancient Empires")]}
+   })
+
+   // Second text card: paragraph
+   create_card({
+     parent_id: "world-history-uuid",
+     title: null,
+     card_type: "text",
+     content: {type: "doc", content: [paragraph("The elven empire ruled...")]}
+   })
+
+   // Third text card: bullet list
+   create_card({
+     parent_id: "world-history-uuid",
+     title: null,
+     card_type: "text",
+     content: {type: "doc", content: [bulletList(["Item 1", "Item 2"])]}
    })
 ```
 
-Result: Clean hierarchy with clickable navigation, not giant documents.
+Each formatting block = separate text card stacked vertically in the page.
+
+Result: True Notion-like granular blocks, not monolithic documents.
 
 ## PARENT_ID BEHAVIOR:
 - **null**: Creates card at campaign root (top level)

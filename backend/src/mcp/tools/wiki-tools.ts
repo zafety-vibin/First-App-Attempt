@@ -1235,8 +1235,23 @@ async function handleCreateCard(params: any) {
     const validated = CreateCardInputSchema.parse(params);
     const cardService = new CardService();
 
-    // Get user context (would come from MCP session in production)
-    const userId = 'system';
+    // MCP context: Get campaign owner to bypass ownership check
+    // MCP tools don't have user sessions, so we use the campaign owner
+    const campaign = db.prepare('SELECT owner_id FROM campaigns WHERE id = ?').get(validated.campaign_id) as { owner_id: string } | undefined;
+
+    if (!campaign) {
+      return {
+        content: [{
+          type: 'text',
+          text: JSON.stringify({
+            error: 'CAMPAIGN_NOT_FOUND',
+            message: `Campaign not found: ${validated.campaign_id}`
+          })
+        }]
+      };
+    }
+
+    const userId = campaign.owner_id;
 
     // Create card using CardService
     const card = await cardService.createCard({
@@ -1530,8 +1545,22 @@ async function handleMoveCard(params: any) {
     const validated = MoveCardInputSchema.parse(params);
     const cardService = new CardService();
 
-    // Get user context
-    const userId = 'system';
+    // MCP context: Get campaign owner
+    const campaign = db.prepare('SELECT owner_id FROM campaigns WHERE id = ?').get(validated.campaign_id) as { owner_id: string } | undefined;
+
+    if (!campaign) {
+      return {
+        content: [{
+          type: 'text',
+          text: JSON.stringify({
+            error: 'CAMPAIGN_NOT_FOUND',
+            message: `Campaign not found: ${validated.campaign_id}`
+          })
+        }]
+      };
+    }
+
+    const userId = campaign.owner_id;
 
     // Move card using CardService
     const card = await cardService.moveCard(

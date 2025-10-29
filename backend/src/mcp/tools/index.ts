@@ -4,23 +4,19 @@
  */
 
 import {
-  cardToolDefinitions,
+  wikiToolDefinitions,
   handleReadCard,
   handleCreateCard,
   handleUpdateCard,
   handleDeleteCard,
   handleSearchCards,
-  handleMoveCard
-} from './card-tools';
-
-import {
-  hierarchyToolDefinitions,
+  handleMoveCard,
   handleGetCardPath,
   handleGetSubtree,
   handleListChildren,
   handleGetSiblings,
   handleGetAncestor
-} from './hierarchy-tools';
+} from './wiki-tools';
 
 import {
   graphToolDefinitions,
@@ -31,18 +27,12 @@ import {
 } from './graph-tools';
 
 import {
-  recapToolDefinitions,
-  handleGetSessionRecaps,
-  handleGetTimelineEvents
-} from './recap-tools';
-
-import {
   infoLevelToolDefinitions,
   handleListInformationLevels,
   handleGetInformationLevelByName
 } from './info-level-tools';
 
-// NEW: Category tools for Feature 014 database tables
+// Category tools for Feature 014 database tables
 import {
   handleQueryCategory,
   handleCreateCategoryEntry,
@@ -50,12 +40,6 @@ import {
   handleDeleteCategoryEntry,
   handleNavigateHierarchy
 } from './category-tools';
-
-import {
-  mapToolDefinitions,
-  handleListMapPins,
-  handleCreateMapPin
-} from './map-tools';
 
 import {
   bibleTool,
@@ -681,17 +665,14 @@ CONSTRAINT_VIOLATION with "references non-existent":
 
 /**
  * Complete registry of all MCP tools
- * Card tools (6) + Hierarchy tools (5) + Graph tools (4) + Recap tools (2) +
- * Info-level tools (2) + Category tools (5 NEW) + Map tools (2) = 26 total
+ * Wiki tools (11: 6 card + 5 hierarchy) + Graph tools (4) +
+ * Info-level tools (2) + Category tools (5) + Campaign Bible (1) = 23 total
  */
 export const TOOL_REGISTRY = [
-  ...cardToolDefinitions,
-  ...hierarchyToolDefinitions,
+  ...wikiToolDefinitions,  // 11 tools: 6 card CRUD + 5 hierarchy navigation
   ...graphToolDefinitions,
-  ...recapToolDefinitions,
   ...infoLevelToolDefinitions,
-  ...categoryToolDefinitions,  // NEW: Feature 014 category database tools
-  ...mapToolDefinitions,
+  ...categoryToolDefinitions,  // Feature 014 category database tools
   bibleTool  // Campaign Bible access
 ];
 
@@ -700,7 +681,8 @@ export const TOOL_REGISTRY = [
  */
 export async function dispatchToolCall(name: string, params: any): Promise<any> {
   switch (name) {
-    // Card tools (6) - Feature 003 card-based content
+    // Wiki tools (11) - Feature 003 Notion-style wiki system
+    // Card CRUD operations
     case 'read_card':
       return await handleReadCard(params);
     case 'create_card':
@@ -713,8 +695,7 @@ export async function dispatchToolCall(name: string, params: any): Promise<any> 
       return await handleSearchCards(params);
     case 'move_card':
       return await handleMoveCard(params);
-
-    // Hierarchy tools (5) - Feature 003 card hierarchy
+    // Hierarchy navigation
     case 'get_card_path':
       return await handleGetCardPath(params);
     case 'get_subtree':
@@ -736,19 +717,13 @@ export async function dispatchToolCall(name: string, params: any): Promise<any> 
     case 'update_graph':
       return await handleUpdateGraph(params);
 
-    // Recap tools (2) - Feature 014 session recaps
-    case 'get_session_recaps':
-      return await handleGetSessionRecaps(params);
-    case 'get_timeline_events':
-      return await handleGetTimelineEvents(params);
-
     // Information level tools (2) - Feature 004 filtering
     case 'list_information_levels':
       return await handleListInformationLevels(params);
     case 'get_information_level_by_name':
       return await handleGetInformationLevelByName(params);
 
-    // Category tools (5 NEW) - Feature 014 category tables
+    // Category tools (5) - Feature 014 category tables
     case 'query_category':
       return await handleQueryCategory(params);
     case 'create_category_entry':
@@ -759,12 +734,6 @@ export async function dispatchToolCall(name: string, params: any): Promise<any> 
       return await handleDeleteCategoryEntry(params);
     case 'navigate_category_hierarchy':
       return await handleNavigateHierarchy(params);
-
-    // Map tools (2) - Feature 007 interactive maps
-    case 'list_map_pins':
-      return await handleListMapPins(params);
-    case 'create_map_pin':
-      return await handleCreateMapPin(params);
 
     // Campaign Bible tool
     case 'get_campaign_bible':

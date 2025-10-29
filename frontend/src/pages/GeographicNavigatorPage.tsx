@@ -79,6 +79,9 @@ export const GeographicNavigatorPage: React.FC = () => {
   const [currentParentId, setCurrentParentId] = useState<string | null>(null);
   const [currentScaleName, setCurrentScaleName] = useState('Plane View');
   const [parentLocation, setParentLocation] = useState<ParentLocation | null>(null);
+  const [breadcrumbPath, setBreadcrumbPath] = useState<Array<{ id: string | null; name: string; type: string }>>([
+    { id: null, name: 'Plane View', type: 'root' }
+  ]);
   const [zoom, setZoom] = useState(0.83); // Start zoomed out to fit all nodes
   const [stagePosition, setStagePosition] = useState({ x: 60, y: 80 }); // Pan right and down to center ellipse
   const stageRef = useRef<any>(null);
@@ -281,9 +284,31 @@ export const GeographicNavigatorPage: React.FC = () => {
    * Handle node click - zoom into that scale
    */
   const handleNodeClick = (node: ScaleNode) => {
+    console.log('Clicking node:', node.name, 'child_count:', node.child_count);
+
     setCurrentParentId(node.id);
     setCurrentScaleName(`${node.name} View`);
+
+    // Update breadcrumb path
+    setBreadcrumbPath([...breadcrumbPath, {
+      id: node.id,
+      name: node.name,
+      type: node.location_type
+    }]);
+
     // Reset zoom and center when transitioning scales
+    setZoom(0.83);
+    setStagePosition({ x: 60, y: 80 });
+  };
+
+  /**
+   * Navigate to specific breadcrumb level
+   */
+  const handleBreadcrumbClick = (index: number) => {
+    const target = breadcrumbPath[index];
+    setCurrentParentId(target.id);
+    setCurrentScaleName(target.name === 'Plane View' ? 'Plane View' : `${target.name} View`);
+    setBreadcrumbPath(breadcrumbPath.slice(0, index + 1));
     setZoom(0.83);
     setStagePosition({ x: 60, y: 80 });
   };
@@ -502,7 +527,9 @@ export const GeographicNavigatorPage: React.FC = () => {
                 onPinClick={(pin) => {
                   // Find the node and navigate to it
                   const node = pinnedChildren.find(n => n.id === pin.id);
-                  if (node && node.child_count > 0) {
+                  console.log('Pin clicked:', pin.label, 'Found node:', node, 'Has children:', node?.child_count);
+                  if (node) {
+                    // Allow navigation even if no children (shows empty view)
                     handleNodeClick(node);
                   }
                 }}
@@ -634,20 +661,27 @@ export const GeographicNavigatorPage: React.FC = () => {
 
       {/* Info Panel with Breadcrumb */}
       <div className="spatial-info-panel">
-        {/* Breadcrumb */}
+        {/* Full Path Breadcrumb */}
         <div className="spatial-breadcrumb-inline">
-          <button
-            className="spatial-breadcrumb-btn"
-            onClick={() => { setCurrentParentId(null); setCurrentScaleName('Plane View'); }}
-          >
-            Plane View
-          </button>
-          {currentScaleName !== 'Plane View' && (
-            <>
-              <span className="spatial-breadcrumb-sep"> → </span>
-              <span className="spatial-breadcrumb-current">{currentScaleName}</span>
-            </>
-          )}
+          {breadcrumbPath.map((crumb, index) => (
+            <React.Fragment key={index}>
+              {index > 0 && <span className="spatial-breadcrumb-sep"> → </span>}
+              {index === breadcrumbPath.length - 1 ? (
+                <span className="spatial-breadcrumb-current">
+                  {crumb.name}
+                  {crumb.type !== 'root' && <span className="spatial-breadcrumb-type"> ({crumb.type})</span>}
+                </span>
+              ) : (
+                <button
+                  className="spatial-breadcrumb-btn"
+                  onClick={() => handleBreadcrumbClick(index)}
+                >
+                  {crumb.name}
+                  {crumb.type !== 'root' && <span className="spatial-breadcrumb-type"> ({crumb.type})</span>}
+                </button>
+              )}
+            </React.Fragment>
+          ))}
         </div>
 
         {/* Mode and Stats */}

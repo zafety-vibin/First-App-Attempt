@@ -203,6 +203,12 @@
   font-weight: 600;
 }
 
+.spatial-breadcrumb-type {
+  color: #6b7280;
+  font-weight: 400;
+  font-size: 0.8125rem;
+}
+
 .spatial-canvas-wrapper {
   position: relative;
   background: #f3f4f6;

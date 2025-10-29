@@ -92,6 +92,8 @@ export const GeographicNavigatorPage: React.FC = () => {
   const [activeNode, setActiveNode] = useState<ScaleNode | null>(null); // Currently dragging node
   const [mapZoom, setMapZoom] = useState(1); // Track MapCanvas zoom for pin overlay sync
   const [mapPosition, setMapPosition] = useState({ x: 0, y: 0 }); // Track MapCanvas position
+  const [editPinsMode, setEditPinsMode] = useState(false); // Edit mode for repositioning pins
+  const [selectedPinForEdit, setSelectedPinForEdit] = useState<ScaleNode | null>(null);
   const [allNodes, setAllNodes] = useState<ScaleNode[]>([]); // Cache all geographic nodes
   const [graphId, setGraphId] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0); // Force refresh when incremented
@@ -314,6 +316,27 @@ export const GeographicNavigatorPage: React.FC = () => {
   };
 
   /**
+   * Unpin a node (remove coordinates, return to sidebar)
+   */
+  const handleUnpinNode = async (node: ScaleNode) => {
+    if (!node.location_id) return;
+
+    try {
+      await apiClient.put(`/locations/${node.location_id}/pin-coordinates`, {
+        x: null,
+        y: null,
+      });
+
+      // Reload to show unpinned node back in sidebar
+      setRefreshKey(k => k + 1);
+      setEditPinsMode(false);
+    } catch (error) {
+      console.error('Failed to unpin node:', error);
+      alert('Failed to unpin. Check console.');
+    }
+  };
+
+  /**
    * Handle drag start - track which node is being dragged
    */
   const handleDragStart = (event: DragStartEvent) => {
@@ -462,6 +485,16 @@ export const GeographicNavigatorPage: React.FC = () => {
           >
             🔄
           </button>
+          {/* Edit pins button - toggle repositioning mode */}
+          {hasParentMap && pinnedChildren.length > 0 && (
+            <button
+              className={`spatial-edit-pins-btn ${editPinsMode ? 'active' : ''}`}
+              onClick={() => setEditPinsMode(!editPinsMode)}
+              title={editPinsMode ? "Done editing" : "Edit pin positions"}
+            >
+              {editPinsMode ? '✓' : '✏️'}
+            </button>
+          )}
         </div>
         {hasParentMap ? (
           /* MAP MODE: Parent map with children as pins */
@@ -503,37 +536,56 @@ export const GeographicNavigatorPage: React.FC = () => {
             )}
             {viewMode === 'single' ? (
               /* Single map view */
-              <MapCanvas
-                mapData={parentLocation!.maps[selectedMapIndex] || parentLocation!.maps[0]}
-                pins={pinnedChildren.map(node => ({
-                  id: node.id,
-                  map_id: parentLocation!.maps[selectedMapIndex]?.id || parentLocation!.maps[0].id,
-                  x: node.map_pin_x!,
-                  y: node.map_pin_y!,
-                  linked_entity_type: 'location' as const,
-                  linked_entity_id: node.location_id || node.id,
-                  icon: null,
-                  color: '#10b981',
-                  label: node.name,
-                  created_at: Date.now(),
-                }))}
-                regions={parentLocation!.regions}
-                width={canvasWidth}
-                height={canvasHeight}
-                editMode={false}
-                canvasRef={mapCanvasRef}
-                zoom={mapZoom}
-                onZoomChange={setMapZoom}
-                onPinClick={(pin) => {
-                  // Find the node and navigate to it
-                  const node = pinnedChildren.find(n => n.id === pin.id);
-                  console.log('Pin clicked:', pin.label, 'Found node:', node, 'Has children:', node?.child_count);
-                  if (node) {
-                    // Allow navigation even if no children (shows empty view)
-                    handleNodeClick(node);
-                  }
-                }}
-              />
+              <>
+                <MapCanvas
+                  mapData={parentLocation!.maps[selectedMapIndex] || parentLocation!.maps[0]}
+                  pins={pinnedChildren.map(node => ({
+                    id: node.id,
+                    map_id: parentLocation!.maps[selectedMapIndex]?.id || parentLocation!.maps[0].id,
+                    x: node.map_pin_x!,
+                    y: node.map_pin_y!,
+                    linked_entity_type: 'location' as const,
+                    linked_entity_id: node.location_id || node.id,
+                    icon: null,
+                    color: '#10b981',
+                    label: node.name,
+                    created_at: Date.now(),
+                  }))}
+                  regions={parentLocation!.regions}
+                  width={canvasWidth}
+                  height={canvasHeight}
+                  editMode={editPinsMode}
+                  canvasRef={mapCanvasRef}
+                  zoom={mapZoom}
+                  onZoomChange={setMapZoom}
+                  onPinClick={(pin) => {
+                    const node = pinnedChildren.find(n => n.id === pin.id);
+                    if (editPinsMode) {
+                      // Edit mode: click pin to delete or reposition
+                      if (node && confirm(`Remove "${node.name}" pin from map?\n\nThis will unpin it (move to sidebar). It won't delete the location.`)) {
+                        handleUnpinNode(node);
+                      }
+                    } else {
+                      // Navigate mode: click to go to child scale
+                      console.log('Pin clicked:', pin.label, 'Found node:', node, 'Has children:', node?.child_count);
+                      if (node) {
+                        handleNodeClick(node);
+                      }
+                    }
+                  }}
+                  onCanvasClick={editPinsMode ? (x, y) => {
+                    console.log('Canvas clicked in edit mode at:', x, y);
+                    // Could allow placing new pins here in future
+                  } : undefined}
+                />
+                {editPinsMode && (
+                  <div className="spatial-edit-hint">
+                    <span className="spatial-edit-hint-text">
+                      ✏️ Edit Mode: Drag pins to reposition • Click outside map to finish
+                    </span>
+                  </div>
+                )}
+              </>
             ) : (
               /* Grid view - all maps */
               <div className="spatial-map-grid">

@@ -46,6 +46,134 @@ import { rowToCard, CardRow } from '../../models/Card';
  */
 export const wikiToolDefinitions = [
   {
+    name: 'batch_create_cards',
+    description: `Create multiple cards in one atomic operation with automatic parent-child linking.
+
+## WHAT THIS IS FOR:
+Build an entire wiki structure in ONE call instead of creating cards piece-by-piece.
+Useful when you know the full hierarchy upfront (like importing content or creating a section).
+
+## HOW IT WORKS:
+1. Provide array of cards to create
+2. Use placeholders like "@parent1", "@parent2" for parent references
+3. Tool creates cards in order and links children to actual UUIDs
+4. Returns mapping of placeholders to real UUIDs
+
+## CRITICAL - STILL RESPECT GRANULARITY:
+Even in batch mode, create separate cards for each formatting block!
+Don't create one giant card - create multiple granular cards in the batch.
+
+## PARENT REFERENCE PLACEHOLDERS:
+- Use "@root" for campaign root (parent_id: null)
+- Use "@placeholder-name" to reference a card created earlier in same batch
+- Example: "@world-lore" references the "World Lore" page created in same batch
+
+## EXAMPLE - Building a lore section with proper hierarchy:
+
+<example description="Batch create: parent page + child pages + text blocks">
+{
+  "campaign_id": "1ceec234-523b-4e25-a0b5-097c71018be5",
+  "cards": [
+    {
+      "placeholder": "@lore-hub",
+      "parent_ref": "@root",
+      "title": "📚 Campaign Lore",
+      "card_type": "page",
+      "content": {"type": "doc", "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Explore the world"}]}]}
+    },
+    {
+      "placeholder": "@dragon-page",
+      "parent_ref": "@lore-hub",
+      "title": "Three-Headed Dragon",
+      "card_type": "page",
+      "content": {"type": "doc", "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Learn about the dragon"}]}]}
+    },
+    {
+      "parent_ref": "@dragon-page",
+      "title": null,
+      "card_type": "text",
+      "content": {"type": "doc", "content": [{"type": "heading", "attrs": {"level": 2}, "content": [{"type": "text", "text": "The Three Heads"}]}]}
+    },
+    {
+      "parent_ref": "@dragon-page",
+      "title": null,
+      "card_type": "text",
+      "content": {"type": "doc", "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Good, Evil, and Neutral ruled together..."}]}]}
+    }
+  ]
+}
+Creates: Lore Hub (page) → Dragon (page) → Heading (text) + Paragraph (text)
+</example>
+
+## SEQUENTIAL WORKFLOW (if not using batch):
+
+To create nested structure, you MUST get parent UUIDs first:
+
+  Step 1: Create the parent PAGE card
+  create_card({
+    parent_id: null,
+    title: "World Lore",
+    card_type: "page"
+  })
+  → Returns: {"id": "abc-123-uuid", ...}
+
+  Step 2: Use that UUID for children - DON'T GUESS!
+  create_card({
+    parent_id: "abc-123-uuid",  // ← Use exact UUID from Step 1 response
+    title: "Dragon History",
+    card_type: "page"
+  })
+  → Returns: {"id": "def-456-uuid", ...}
+
+  Step 3: Create text blocks under Dragon History
+  create_card({
+    parent_id: "def-456-uuid",  // ← Use exact UUID from Step 2 response
+    title: null,
+    card_type: "text",
+    content: heading("The Three Heads")
+  })
+
+CRITICAL: Use search_cards or list_children to find existing page IDs.
+NEVER hallucinate/guess parent UUIDs - always get from response or query!
+
+## WHEN TO USE batch_create_cards vs create_card:
+- Use batch when: Building multi-level structure, know full hierarchy upfront
+- Use single when: Adding one card to existing structure, have parent UUID
+- Batch is atomic: all succeed or all fail (no partial wikis)
+
+## RETURN FORMAT:
+{
+  "created_count": 4,
+  "placeholder_map": {
+    "@lore-hub": "uuid-abc-123",
+    "@dragon-page": "uuid-def-456"
+  },
+  "cards": [array of created cards with real UUIDs]
+}`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        campaign_id: { type: 'string' },
+        cards: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              placeholder: { type: 'string' },
+              parent_ref: { type: 'string' },
+              title: { type: ['string', 'null'] },
+              card_type: { type: 'string', enum: ['text', 'page', 'database'] },
+              content: { type: 'object' },
+              information_level_id: { type: ['number', 'null'] }
+            },
+            required: ['parent_ref', 'card_type']
+          }
+        }
+      },
+      required: ['campaign_id', 'cards']
+    }
+  },
+  {
     name: 'read_card',
     description: `Read a campaign wiki card by ID, including content, metadata, and hierarchy position.
 

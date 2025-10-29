@@ -348,7 +348,7 @@ export const GeographicNavigatorPage: React.FC = () => {
    * Handle drag-drop to pin nodes to map coordinates
    */
   const handleNodeDrop = async (event: DragEndEvent) => {
-    const { active, over, activatorEvent } = event;
+    const { active, over, activatorEvent, delta } = event;
     setActiveNode(null); // Clear dragging state
 
     if (!over || over.id !== 'map-drop-zone') return;
@@ -362,9 +362,13 @@ export const GeographicNavigatorPage: React.FC = () => {
       return;
     }
 
-    // Get mouse position from the drop event
-    const mouseEvent = activatorEvent as MouseEvent;
-    if (!mouseEvent) return;
+    // Get the current mouse position (where user released)
+    // activatorEvent is the initial click, we need the final position
+    const mouseEvent = (activatorEvent as PointerEvent);
+
+    // Calculate final drop position using delta (how far dragged)
+    const finalX = mouseEvent.clientX + delta.x;
+    const finalY = mouseEvent.clientY + delta.y;
 
     // Get the MapCanvas container to calculate relative coordinates
     const mapCanvas = document.querySelector('.spatial-map-mode canvas');
@@ -372,15 +376,17 @@ export const GeographicNavigatorPage: React.FC = () => {
 
     const rect = mapCanvas.getBoundingClientRect();
 
-    // Calculate position relative to canvas
-    const canvasX = mouseEvent.clientX - rect.left;
-    const canvasY = mouseEvent.clientY - rect.top;
+    // Calculate position relative to canvas at drop location
+    const canvasX = finalX - rect.left;
+    const canvasY = finalY - rect.top;
 
     // Map coordinates are direct pixel positions on the image
     const mapX = Math.max(0, Math.round(canvasX));
     const mapY = Math.max(0, Math.round(canvasY));
 
-    console.log('Dropping node:', node.name, 'at coordinates:', mapX, mapY);
+    console.log('Drop position - clientX:', finalX, 'clientY:', finalY);
+    console.log('Canvas relative:', canvasX, canvasY);
+    console.log('Final map coordinates:', mapX, mapY);
     console.log('Using location ID:', node.location_id);
 
     try {

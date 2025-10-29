@@ -148,12 +148,6 @@
   margin-top: 0.125rem;
 }
 
-.unpinned-node-drag-handle {
-  color: #9ca3af;
-  font-size: 1rem;
-  flex-shrink: 0;
-  line-height: 1;
-}
 
 .unpinned-sidebar-empty {
   display: flex;

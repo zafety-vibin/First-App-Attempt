@@ -60,7 +60,6 @@ function DraggableNodeItem({ node }: DraggableNodeItemProps) {
           {node.location_exists === false && <span className="not-in-db-label"> • Not in database</span>}
         </div>
       </div>
-      <div className="unpinned-node-drag-handle">⋮⋮</div>
     </div>
   );
 }

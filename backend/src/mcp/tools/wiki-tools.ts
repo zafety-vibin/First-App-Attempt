@@ -238,9 +238,16 @@ Step 3: Inside "World Lore" page, create text cards for content
 
 **Create a TEXT card when:**
 - It's inline content within current page
-- Short paragraph or list
+- ONE formatting block (one paragraph, OR one list, OR one heading)
 - Doesn't need sub-navigation
-- Example: intro paragraph, bullet list, single fact
+
+CRITICAL - ONE BLOCK PER CARD:
+Each formatting change = new text card. Don't combine multiple formatting types.
+
+WRONG: One card with heading + paragraph + bulletList + paragraph
+RIGHT: Four separate cards (heading card, paragraph card, list card, paragraph card)
+
+Each card = one semantic formatting block stacked vertically in the page.
 
 ## HIERARCHICAL WORKFLOW EXAMPLE:
 

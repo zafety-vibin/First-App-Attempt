@@ -2288,8 +2288,99 @@ async function handleGetAncestor(params: any) {
   }
 }
 
+/**
+ * Handler for batch_create_cards tool
+ */
+async function handleBatchCreateCards(params: any) {
+  try {
+    const { campaign_id, cards } = params;
+
+    // Get campaign owner for auth
+    const campaign = db.prepare('SELECT owner_id FROM campaigns WHERE id = ?').get(campaign_id) as { owner_id: string } | undefined;
+
+    if (!campaign) {
+      return {
+        content: [{
+          type: 'text',
+          text: JSON.stringify({
+            error: 'CAMPAIGN_NOT_FOUND',
+            message: `Campaign not found: ${campaign_id}`
+          })
+        }]
+      };
+    }
+
+    const cardService = new CardService();
+    const createdCards: any[] = [];
+    const placeholderMap: Record<string, string> = {};
+
+    // Process cards in order
+    for (const cardSpec of cards) {
+      // Resolve parent reference
+      let parentId: string | null = null;
+      if (cardSpec.parent_ref === '@root') {
+        parentId = null; // Root level
+      } else if (cardSpec.parent_ref.startsWith('@')) {
+        // Lookup placeholder
+        parentId = placeholderMap[cardSpec.parent_ref] || null;
+        if (!parentId) {
+          throw new Error(`Parent reference ${cardSpec.parent_ref} not found in placeholder map`);
+        }
+      } else {
+        // Direct UUID
+        parentId = cardSpec.parent_ref;
+      }
+
+      // Create the card
+      const card = await cardService.createCard({
+        campaignId: campaign_id,
+        parentId: parentId || undefined,
+        type: cardSpec.card_type === 'map' ? 'page' : cardSpec.card_type,
+        title: cardSpec.title || 'Untitled',
+        content: cardSpec.content,
+        informationLevelId: cardSpec.information_level_id?.toString(),
+        position: 0
+      }, campaign.owner_id);
+
+      createdCards.push({
+        id: card.id,
+        title: card.title,
+        card_type: card.type,
+        parent_id: card.parentId
+      });
+
+      // Store placeholder if provided
+      if (cardSpec.placeholder) {
+        placeholderMap[cardSpec.placeholder] = card.id;
+      }
+    }
+
+    return {
+      content: [{
+        type: 'text',
+        text: JSON.stringify({
+          created_count: createdCards.length,
+          placeholder_map: placeholderMap,
+          cards: createdCards
+        })
+      }]
+    };
+  } catch (error: any) {
+    return {
+      content: [{
+        type: 'text',
+        text: JSON.stringify({
+          error: 'BATCH_CREATE_ERROR',
+          message: error.message
+        })
+      }]
+    };
+  }
+}
+
 // Export all handlers for use in index.ts
 export {
+  handleBatchCreateCards,
   handleReadCard,
   handleCreateCard,
   handleUpdateCard,

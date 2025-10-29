@@ -5,6 +5,7 @@
 
 import {
   wikiToolDefinitions,
+  handleBatchCreateCards,
   handleReadCard,
   handleCreateCard,
   handleUpdateCard,
@@ -1362,7 +1363,10 @@ export const TOOL_REGISTRY = [
  */
 export async function dispatchToolCall(name: string, params: any): Promise<any> {
   switch (name) {
-    // Wiki tools (11) - Feature 003 Notion-style wiki system
+    // Wiki tools (12) - Feature 003 Notion-style wiki system
+    // Batch operations
+    case 'batch_create_cards':
+      return await handleBatchCreateCards(params);
     // Card CRUD operations
     case 'read_card':
       return await handleReadCard(params);

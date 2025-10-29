@@ -195,30 +195,47 @@ When you view a page, you see its child cards stacked vertically:
 - **text**: Inline content blocks (paragraphs, lists, quotes)
   - Renders inside parent page
   - NOT clickable
-  - Use for: paragraph content, lists, short sections
+  - CANNOT HAVE CHILDREN - text cards are leaf nodes!
+  - Use for: paragraph content, lists, single blocks
 
 - **page**: Navigable sub-pages (clickable links)
   - Has its own URL: /campaigns/{id}/cards/{page-id}
   - Clickable from parent page
-  - Use for: major sections, chapters, categories
-  - Can have its own child cards
+  - CAN HAVE CHILDREN - pages are containers!
+  - Use for: major sections that need sub-content
+  - Can have text cards and page cards as children
 
 - **database**: Embedded database view (table of NPCs, etc.)
   - Renders database table inline
+  - CANNOT HAVE CHILDREN
   - Use sparingly for overview tables
+
+!!!!! CRITICAL RULE !!!!!
+ONLY "page" cards and the root page can have children.
+NEVER set parent_id to a "text" card - it will fail or orphan the child.
+
+If you need to nest content, the parent MUST be card_type: "page"!
 
 ## WHEN TO CREATE A PAGE vs TEXT CARD:
 
 **Create a PAGE card when:**
-- Content has its own subsections (needs children)
+- Content will have child cards underneath it (pages can have children!)
 - You want users to click to navigate deeper
 - It's a major topic worth its own URL
-- Example: "Geography", "NPC Roster", "Session Recaps"
+- It's a section/chapter/category that organizes other content
+- Example: "Geography" page with region text cards inside
+- Example: "NPCs" page with character pages inside
 
 **Create a TEXT card when:**
-- It's inline content within current page
+- It's inline content with NO children needed (text cards CANNOT have children!)
 - ONE formatting block (one paragraph, OR one list, OR one heading)
-- Doesn't need sub-navigation
+- It's a leaf node (end of hierarchy)
+- Example: A single paragraph of lore
+- Example: A bullet list of facts
+
+CRITICAL DECISION:
+- Will this card have children? → Use card_type: "page"
+- Is this a leaf block with no children? → Use card_type: "text"
 
 !!!!! MANDATORY - ONE FORMATTING BLOCK PER TEXT CARD !!!!!
 

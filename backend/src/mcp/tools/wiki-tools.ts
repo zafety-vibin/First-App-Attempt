@@ -137,6 +137,14 @@ Supported marks: bold, italic, code, link
     name: 'create_card',
     description: `Create a new card in the campaign wiki hierarchy.
 
+!!!!! MANDATORY RULE - READ THIS FIRST !!!!!
+ONE FORMATTING BLOCK PER CARD - NO EXCEPTIONS
+
+Do NOT create cards with multiple paragraphs, headings, or lists in one card.
+Each formatting change = SEPARATE create_card call.
+
+If you're about to create a card with 2+ content blocks, STOP and create multiple cards instead.
+
 ## WHAT THIS IS FOR:
 Creates a child card that renders INSIDE a parent page. Cards stack vertically within their parent.
 
@@ -212,13 +220,36 @@ When you view a page, you see its child cards stacked vertically:
 - ONE formatting block (one paragraph, OR one list, OR one heading)
 - Doesn't need sub-navigation
 
-CRITICAL - ONE BLOCK PER CARD:
-Each formatting change = new text card. Don't combine multiple formatting types.
+!!!!! MANDATORY - ONE FORMATTING BLOCK PER TEXT CARD !!!!!
 
-WRONG: One card with heading + paragraph + bulletList + paragraph
-RIGHT: Four separate cards (heading card, paragraph card, list card, paragraph card)
+You MUST create separate cards for each formatting element:
+- ONE heading = ONE card
+- ONE paragraph = ONE card
+- ONE bullet list = ONE card
+- ONE numbered list = ONE card
+- ONE blockquote = ONE card
 
-Each card = one semantic formatting block stacked vertically in the page.
+NEVER combine: heading + paragraph in same card
+NEVER combine: paragraph + bulletList in same card
+NEVER combine: multiple paragraphs in same card
+
+WRONG (DO NOT DO THIS):
+  content: {
+    type: "doc",
+    content: [
+      {type: "heading", ...},
+      {type: "paragraph", ...},
+      {type: "bulletList", ...}
+    ]
+  }
+
+RIGHT (DO THIS INSTEAD):
+  Call create_card THREE TIMES:
+  1. create_card with ONLY heading
+  2. create_card with ONLY paragraph
+  3. create_card with ONLY bulletList
+
+Each card renders as ONE formatting block stacked vertically in the page.
 
 ## HIERARCHICAL WORKFLOW EXAMPLE:
 
@@ -264,47 +295,68 @@ For map cards: {"type": "map", "map_enabled": true}
 - Invalid ProseMirror JSON structure (missing required fields)
 - Using string for card_type instead of enum value
 
-## EXAMPLES:
+## EXAMPLES - GRANULAR BLOCKS:
 
-<example description="Create a chapter in campaign notes">
+<example description="Create a heading block (ONE card for heading only)">
 {
   "campaign_id": "1ceec234-523b-4e25-a0b5-097c71018be5",
-  "parent_id": 12,
-  "title": "Chapter 3: The Shadowfell Incursion",
+  "parent_id": "parent-page-uuid",
+  "title": null,
   "card_type": "text",
   "content": {
     "type": "doc",
     "content": [
       {
         "type": "heading",
-        "attrs": {"level": 1},
-        "content": [{"type": "text", "text": "Chapter 3: The Shadowfell Incursion"}]
-      },
-      {
-        "type": "paragraph",
-        "content": [{"type": "text", "text": "The party discovers a rift to the Shadowfell..."}]
+        "attrs": {"level": 2},
+        "content": [{"type": "text", "text": "The Three-Headed Dragon"}]
       }
     ]
   }
 }
+Note: ONLY the heading, nothing else!
 </example>
 
-<example description="Create a root-level campaign overview">
+<example description="Create a paragraph block (ONE card for paragraph only)">
 {
   "campaign_id": "1ceec234-523b-4e25-a0b5-097c71018be5",
-  "parent_id": null,
-  "title": "Campaign Overview",
+  "parent_id": "parent-page-uuid",
+  "title": null,
   "card_type": "text",
   "content": {
     "type": "doc",
     "content": [
       {
         "type": "paragraph",
-        "content": [{"type": "text", "text": "Welcome to the Forgotten Realms campaign..."}]
+        "content": [{"type": "text", "text": "The dragon ruled from Hopewind for millennia..."}]
       }
     ]
   }
 }
+Note: ONLY one paragraph, nothing else!
+</example>
+
+<example description="Create a bullet list block (ONE card for list only)">
+{
+  "campaign_id": "1ceec234-523b-4e25-a0b5-097c71018be5",
+  "parent_id": "parent-page-uuid",
+  "title": null,
+  "card_type": "text",
+  "content": {
+    "type": "doc",
+    "content": [
+      {
+        "type": "bulletList",
+        "content": [
+          {"type": "listItem", "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Good head"}]}]},
+          {"type": "listItem", "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Evil head"}]}]},
+          {"type": "listItem", "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Neutral head"}]}]}
+        ]
+      }
+    ]
+  }
+}
+Note: ONLY the list, nothing else!
 </example>
 
 <example description="Create a database view card for NPCs">

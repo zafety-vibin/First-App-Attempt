@@ -93,7 +93,7 @@ export const GeographicNavigatorPage: React.FC = () => {
   const [mapZoom, setMapZoom] = useState(1); // Track MapCanvas zoom for pin overlay sync
   const [mapPosition, setMapPosition] = useState({ x: 0, y: 0 }); // Track MapCanvas position
   const [editPinsMode, setEditPinsMode] = useState(false); // Edit mode for repositioning pins
-  const [selectedPinForEdit, setSelectedPinForEdit] = useState<ScaleNode | null>(null);
+  const [selectedNodeToPin, setSelectedNodeToPin] = useState<ScaleNode | null>(null); // Node waiting to be pinned
   const [allNodes, setAllNodes] = useState<ScaleNode[]>([]); // Cache all geographic nodes
   const [graphId, setGraphId] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0); // Force refresh when incremented
@@ -602,14 +602,14 @@ export const GeographicNavigatorPage: React.FC = () => {
                   regions={parentLocation!.regions}
                   width={canvasWidth}
                   height={canvasHeight}
-                  editMode={editPinsMode}
+                  editMode={!!selectedNodeToPin} // Edit mode when placing a pin
                   canvasRef={mapCanvasRef}
                   zoom={mapZoom}
                   onZoomChange={setMapZoom}
                   onPinClick={(pin) => {
                     const node = pinnedChildren.find(n => n.id === pin.id);
                     if (editPinsMode) {
-                      // Edit mode: click pin to delete or reposition
+                      // Edit mode: click pin to unpin
                       if (node && confirm(`Remove "${node.name}" pin from map?\n\nThis will unpin it (move to sidebar). It won't delete the location.`)) {
                         handleUnpinNode(node);
                       }
@@ -621,9 +621,27 @@ export const GeographicNavigatorPage: React.FC = () => {
                       }
                     }
                   }}
-                  onCanvasClick={editPinsMode ? (x, y) => {
-                    console.log('Canvas clicked in edit mode at:', x, y);
-                    // Could allow placing new pins here in future
+                  onCanvasClick={selectedNodeToPin ? async (x, y) => {
+                    // MapCanvas gives us EXACT image coordinates (pan/zoom already calculated!)
+                    console.log('Placing pin at exact coords:', x, y);
+
+                    try {
+                      await apiClient.put(`/locations/${selectedNodeToPin.location_id}/pin-coordinates`, { x, y });
+
+                      // Update state
+                      setCurrentNodes(currentNodes.map(n =>
+                        n.id === selectedNodeToPin.id ? { ...n, map_pin_x: x, map_pin_y: y } : n
+                      ));
+                      setAllNodes(allNodes.map(n =>
+                        n.id === selectedNodeToPin.id ? { ...n, map_pin_x: x, map_pin_y: y } : n
+                      ));
+
+                      setSelectedNodeToPin(null);
+                      console.log('✅ Pin placed at', x, y);
+                    } catch (err) {
+                      console.error('Failed to pin:', err);
+                      alert('Failed to pin node');
+                    }
                   } : undefined}
                 />
                 {editPinsMode && (
@@ -839,6 +857,16 @@ export const GeographicNavigatorPage: React.FC = () => {
             }))}
             isOpen={sidebarOpen}
             onToggle={() => setSidebarOpen(!sidebarOpen)}
+            selectedNodeId={selectedNodeToPin?.id || null}
+            onNodeSelect={(node) => {
+              if (node.location_exists === false) {
+                alert(`"${node.name}" must be created in Locations database first`);
+                return;
+              }
+              // Find the full ScaleNode
+              const fullNode = unpinnedChildren.find(n => n.id === node.id);
+              setSelectedNodeToPin(fullNode || null);
+            }}
           />
         )}
 

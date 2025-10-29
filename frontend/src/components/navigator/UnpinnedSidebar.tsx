@@ -23,33 +23,22 @@ interface UnpinnedSidebarProps {
   nodes: UnpinnedNode[];
   isOpen: boolean;
   onToggle: () => void;
+  onNodeSelect?: (node: UnpinnedNode) => void;
+  selectedNodeId?: string | null;
 }
 
-interface DraggableNodeItemProps {
+interface ClickableNodeItemProps {
   node: UnpinnedNode;
+  isSelected: boolean;
+  onClick: () => void;
 }
 
-function DraggableNodeItem({ node }: DraggableNodeItemProps) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: node.id,
-    data: { node },
-  });
-
-  const style = transform
-    ? {
-        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-        opacity: isDragging ? 0.5 : 1,
-      }
-    : undefined;
-
+function ClickableNodeItem({ node, isSelected, onClick }: ClickableNodeItemProps) {
   return (
     <div
-      ref={setNodeRef}
-      style={style}
-      className={`unpinned-node-item ${isDragging ? 'dragging' : ''} ${node.location_exists === false ? 'not-in-db' : ''}`}
-      {...listeners}
-      {...attributes}
-      title={node.location_exists === false ? 'Create in Locations database first to enable pinning' : 'Drag to pin on map'}
+      className={`unpinned-node-item ${isSelected ? 'selected' : ''} ${node.location_exists === false ? 'not-in-db' : ''}`}
+      onClick={onClick}
+      title={node.location_exists === false ? 'Create in Locations database first' : 'Click to select, then click map to place pin'}
     >
       <div className="unpinned-node-icon">{node.location_exists === false ? '⚠️' : '📍'}</div>
       <div className="unpinned-node-info">
@@ -60,11 +49,12 @@ function DraggableNodeItem({ node }: DraggableNodeItemProps) {
           {node.location_exists === false && <span className="not-in-db-label"> • Not in database</span>}
         </div>
       </div>
+      {isSelected && <div className="unpinned-node-selected-indicator">→ Click map to place</div>}
     </div>
   );
 }
 
-export const UnpinnedSidebar: React.FC<UnpinnedSidebarProps> = ({ nodes, isOpen, onToggle }) => {
+export const UnpinnedSidebar: React.FC<UnpinnedSidebarProps> = ({ nodes, isOpen, onToggle, onNodeSelect, selectedNodeId }) => {
   return (
     <div className={`unpinned-sidebar ${isOpen ? 'open' : 'closed'}`}>
       <div className="unpinned-sidebar-header" onClick={onToggle}>
@@ -80,11 +70,16 @@ export const UnpinnedSidebar: React.FC<UnpinnedSidebarProps> = ({ nodes, isOpen,
           {nodes.length > 0 ? (
             <>
               <div className="unpinned-sidebar-hint">
-                Drag nodes onto the map to pin them to coordinates
+                Click a node, then click on the map to place it
               </div>
               <div className="unpinned-nodes-list">
                 {nodes.map((node) => (
-                  <DraggableNodeItem key={node.id} node={node} />
+                  <ClickableNodeItem
+                    key={node.id}
+                    node={node}
+                    isSelected={selectedNodeId === node.id}
+                    onClick={() => onNodeSelect?.(node)}
+                  />
                 ))}
               </div>
             </>

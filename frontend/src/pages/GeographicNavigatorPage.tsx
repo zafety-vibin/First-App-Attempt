@@ -579,11 +579,34 @@ export const GeographicNavigatorPage: React.FC = () => {
                   } : undefined}
                 />
                 {editPinsMode && (
-                  <div className="spatial-edit-hint">
-                    <span className="spatial-edit-hint-text">
-                      ✏️ Edit Mode: Drag pins to reposition • Click outside map to finish
-                    </span>
-                  </div>
+                  <>
+                    <div className="spatial-edit-hint">
+                      <span className="spatial-edit-hint-text">
+                        ✏️ Edit Mode: Click pin to unpin/reposition
+                      </span>
+                    </div>
+                    {/* Pin coordinate list */}
+                    <div className="spatial-pin-list">
+                      <div className="spatial-pin-list-header">Pinned Nodes</div>
+                      {pinnedChildren.map(node => (
+                        <div key={node.id} className="spatial-pin-list-item">
+                          <span className="spatial-pin-list-name">{node.name}</span>
+                          <span className="spatial-pin-list-coords">({node.map_pin_x}, {node.map_pin_y})</span>
+                          <button
+                            className="spatial-pin-unpin-btn"
+                            onClick={() => {
+                              if (confirm(`Unpin "${node.name}"?\n\nIt will return to the sidebar.`)) {
+                                handleUnpinNode(node);
+                              }
+                            }}
+                            title="Unpin this node"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </>
                 )}
               </>
             ) : (

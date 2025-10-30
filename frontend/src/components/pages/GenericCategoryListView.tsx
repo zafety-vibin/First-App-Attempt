@@ -66,10 +66,14 @@ export const GenericCategoryListView: React.FC<GenericCategoryListViewProps> = (
 
   const toggleViewMode = () => {
     const newMode = viewMode === 'dm_view' ? 'player_view' : 'dm_view';
+    console.log('🔄 Toggling view mode:', viewMode, '→', newMode);
     setViewMode(newMode);
     setViewModeStorage(campaignId, newMode);
     // Trigger re-fetch to get filtered data from backend
-    setRefreshTrigger(prev => prev + 1);
+    setRefreshTrigger(prev => {
+      console.log('🔄 Refresh trigger:', prev, '→', prev + 1);
+      return prev + 1;
+    });
   };
 
   // Fetch stats if config provided
@@ -106,6 +110,7 @@ export const GenericCategoryListView: React.FC<GenericCategoryListViewProps> = (
   // Re-fetch data when view mode changes
   useEffect(() => {
     if (refreshTrigger > 0) {
+      console.log('🔄 useEffect triggered, calling refresh() - trigger:', refreshTrigger);
       refresh();
     }
   }, [refreshTrigger, refresh]);

@@ -420,7 +420,6 @@ The system intentionally maintains two complementary data models:
 **When to Use Which:**
 - Creating a city? Location in database, lore in wiki card
 - Designing an NPC? Stats in database, backstory in wiki
-- Planning a dungeon? Map in location, rooms as nested cards
 - Tracking a quest? Quest in database, narrative in session recaps
 
 The models reference each other via entity links but remain independent, allowing GMs to use either or both as fits their workflow.
@@ -622,8 +621,6 @@ Frontend components follow containment pattern:
 - Real-time collaboration for campaigns
 - Mobile companion app for players
 - Advanced map features (fog of war, measurement tools)
-- Combat tracker integration
-- Dice rolling system
 - Asset marketplace for content
 
 **Architecture Evolution**:
@@ -707,4 +704,4 @@ The architecture prioritizes user agency and data ownership while maintaining fl
 
 As a prototype, the system successfully demonstrates the viability of unified campaign management. The modular architecture, standardized patterns, and clear separation of concerns position it well for future evolution toward production readiness, whether as a local tool, SaaS platform, or hybrid deployment.
 
-The key insight driving the architecture is that campaign management isn't just about storing information - it's about making that information actionable during play. Every architectural decision, from granular wiki blocks to toggleable knowledge graphs, serves this core mission of eliminating the "plan twice" problem.
+The key insight driving the architecture is that campaign management isn't just about storing information - it's about making that information actionable during planning and play. Every architectural decision, from granular wiki blocks to toggleable knowledge graphs, serves the mission of eliminating the "plan twice" (creating notes on something like google docs then having to retype the same information into database fields and etc. on one of these campaign management services. MCP quickly and intelligently adds your notes and retains exact wording when available.) problem and creates comprehensive AI context to create a living in-world assistant to one's unique campaign and setting.

@@ -213,7 +213,7 @@ export class LocationService extends BaseCategoryService<Location> {
 
     const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
 
-    // Count total
+    // Count total AFTER filtering (so player view doesn't reveal hidden entity count)
     const countStmt = this.db.prepare(`SELECT COUNT(*) as count FROM locations ${whereClause}`);
     const { count } = countStmt.get(...params) as { count: number };
 

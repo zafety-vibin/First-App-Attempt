@@ -221,9 +221,6 @@ export const GenericCategoryListView: React.FC<GenericCategoryListViewProps> = (
   const categoryLabel = getCategoryLabel(category);
   const totalPages = Math.ceil(totalCount / limit);
 
-  const handleNewEntity = (): void => {
-    navigate(`/campaigns/${campaignId}/${category}/new`);
-  };
 
   const handleCellUpdate = async (entityId: string, fieldKey: string, newValue: any): Promise<void> => {
     await update(entityId, { [fieldKey]: newValue });
@@ -281,14 +278,6 @@ export const GenericCategoryListView: React.FC<GenericCategoryListViewProps> = (
             aria-label="Toggle View Mode"
           >
             {viewMode === 'dm_view' ? 'DM View' : 'Player View'}
-          </button>
-          <button
-            type="button"
-            className="list-new-button"
-            onClick={handleNewEntity}
-            aria-label={`Create new ${singularize(categoryLabel)}`}
-          >
-            New {singularize(categoryLabel)}
           </button>
         </div>
       </header>

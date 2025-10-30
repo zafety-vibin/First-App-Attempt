@@ -524,17 +524,21 @@ export function BlockList({ parentCard, campaignId }: BlockListProps) {
     const newChildren = arrayMove(children, oldIndex, newIndex);
     setChildren(newChildren);
 
-    // Use reorder endpoint (cut/paste operation)
+    // Update ALL positions to match new order (prevents conflicts)
     try {
-      const movedCardId = active.id as string;
-      const newPosition = newIndex;
+      // Assign sequential positions based on new order
+      const positionUpdates = await Promise.all(
+        newChildren.map((card, index) =>
+          reorderCard(card.id, { position: index })
+        )
+      );
 
-      // Call reorder endpoint
-      await reorderCard(movedCardId, { position: newPosition });
+      console.log(`✓ Reordered ${newChildren.length} cards`);
 
-      console.log(`✓ Reordered card to position ${newPosition}`);
+      // Reload children to get fresh data from backend
+      await loadChildren();
     } catch (error) {
-      console.error('Failed to reorder card:', error);
+      console.error('Failed to reorder cards:', error);
       // Revert on error
       setChildren(children);
       alert('Failed to save card order. Changes reverted.');

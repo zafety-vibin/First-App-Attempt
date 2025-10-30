@@ -524,22 +524,29 @@ export function BlockList({ parentCard, campaignId }: BlockListProps) {
     const newChildren = arrayMove(children, oldIndex, newIndex);
     setChildren(newChildren);
 
-    // Update positions in backend
+    // Update positions in backend (parallel for speed)
     try {
-      // Update all affected cards' positions
-      const updates = newChildren.map((card, index) => ({
-        id: card.id,
-        position: index,
-      }));
+      // Only update cards whose positions actually changed
+      const updates = newChildren
+        .map((card, index) => {
+          const oldCard = children.find(c => c.id === card.id);
+          return oldCard && oldCard.position !== index ? { id: card.id, position: index } : null;
+        })
+        .filter(Boolean);
 
-      // Send position updates to backend
-      for (const update of updates) {
-        await updateCard(update.id, { position: update.position });
-      }
+      if (updates.length === 0) return; // No changes needed
+
+      // Update all in parallel and wait for all to complete
+      await Promise.all(
+        updates.map(update => updateCard(update!.id, { position: update!.position }))
+      );
+
+      console.log(`✓ Saved ${updates.length} position changes`);
     } catch (error) {
       console.error('Failed to update positions:', error);
       // Revert on error
       setChildren(children);
+      alert('Failed to save card order. Changes reverted.');
     }
   };
 

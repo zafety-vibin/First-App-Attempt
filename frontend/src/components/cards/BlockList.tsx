@@ -175,7 +175,7 @@ export function BlockList({ parentCard, campaignId }: BlockListProps) {
   const [focusedBlockId, setFocusedBlockId] = useState<string | null>(null);
   const [menuOpenForId, setMenuOpenForId] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { updateCard, createCard, deleteCard } = useCards();
+  const { updateCard, createCard, deleteCard, reorderCard } = useCards();
   const { viewMode } = useViewMode();
   const { levels, selectedLevelId, getLevelById } = useInformationLevel();
 
@@ -524,26 +524,17 @@ export function BlockList({ parentCard, campaignId }: BlockListProps) {
     const newChildren = arrayMove(children, oldIndex, newIndex);
     setChildren(newChildren);
 
-    // Update positions in backend (parallel for speed)
+    // Use reorder endpoint (cut/paste operation)
     try {
-      // Only update cards whose positions actually changed
-      const updates = newChildren
-        .map((card, index) => {
-          const oldCard = children.find(c => c.id === card.id);
-          return oldCard && oldCard.position !== index ? { id: card.id, position: index } : null;
-        })
-        .filter(Boolean);
+      const movedCardId = active.id as string;
+      const newPosition = newIndex;
 
-      if (updates.length === 0) return; // No changes needed
+      // Call reorder endpoint
+      await reorderCard(movedCardId, { position: newPosition });
 
-      // Update all in parallel and wait for all to complete
-      await Promise.all(
-        updates.map(update => updateCard(update!.id, { position: update!.position }))
-      );
-
-      console.log(`✓ Saved ${updates.length} position changes`);
+      console.log(`✓ Reordered card to position ${newPosition}`);
     } catch (error) {
-      console.error('Failed to update positions:', error);
+      console.error('Failed to reorder card:', error);
       // Revert on error
       setChildren(children);
       alert('Failed to save card order. Changes reverted.');

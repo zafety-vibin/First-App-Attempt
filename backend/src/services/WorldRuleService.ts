@@ -66,7 +66,8 @@ export class WorldRuleService extends BaseCategoryService<WorldRule> {
     filters: WorldRuleFilters,
     pagination: Pagination,
     sortBy: string = 'created_at',
-    sortOrder: 'asc' | 'desc' = 'desc'
+    sortOrder: 'asc' | 'desc' = 'desc',
+    viewMode: 'dm_view' | 'player_view' = 'dm_view'
   ): ListResult<WorldRule> {
     const whereClauses: string[] = [];
     const params: any[] = [];
@@ -75,6 +76,18 @@ export class WorldRuleService extends BaseCategoryService<WorldRule> {
       whereClauses.push('campaign_id = ?');
       params.push(filters.campaign_id);
     }
+
+    // Apply view mode row filtering (Feature 004 - Information Filtering)
+    if (viewMode === 'player_view') {
+      // Player view: Only show common_knowledge, player_knowledge, and null
+      // Filter OUT dm_only and custom secret levels
+      whereClauses.push("(player_knowledge IN ('common_knowledge', 'player_knowledge') OR player_knowledge IS NULL)");
+    } else if (filters.player_knowledge) {
+      // DM view: Respect explicit player_knowledge filter if provided
+      whereClauses.push('player_knowledge = ?');
+      params.push(filters.player_knowledge);
+    }
+
     if (filters.rule_type) {
       whereClauses.push('rule_type = ?');
       params.push(filters.rule_type);

@@ -14,7 +14,13 @@ router.use(applyInformationFilter);
 router.get('/', (req: Request, res: Response) => {
   const { campaign_id, limit = '50', offset = '0' } = req.query;
   if (!campaign_id) { res.status(400).json({ error: 'campaign_id required' }); return; }
-  const result = service.list({ campaign_id: campaign_id as string }, { limit: parseInt(limit as string), offset: parseInt(offset as string) });
+  const result = service.list(
+    { campaign_id: campaign_id as string },
+    { limit: parseInt(limit as string), offset: parseInt(offset as string) },
+    'created_at',
+    'desc',
+    req.categoryViewMode || 'dm_view'
+  );
   res.status(200).json({ data: result.data, pagination: { total: result.total } });
 });
 

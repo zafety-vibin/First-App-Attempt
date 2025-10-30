@@ -74,7 +74,8 @@ export class PlayerCharacterService extends BaseCategoryService<PlayerCharacter>
     filters: PlayerCharacterFilters,
     pagination: Pagination,
     sortBy: string = 'name',
-    sortOrder: 'asc' | 'desc' = 'asc'
+    sortOrder: 'asc' | 'desc' = 'asc',
+    viewMode: 'dm_view' | 'player_view' = 'dm_view'
   ): ListResult<PlayerCharacter> {
     const whereClauses: string[] = [];
     const params: any[] = [];
@@ -83,6 +84,18 @@ export class PlayerCharacterService extends BaseCategoryService<PlayerCharacter>
       whereClauses.push('campaign_id = ?');
       params.push(filters.campaign_id);
     }
+
+    // Apply view mode row filtering (Feature 004 - Information Filtering)
+    if (viewMode === 'player_view') {
+      // Player view: Only show common_knowledge, player_knowledge, and null
+      // Filter OUT dm_only and custom secret levels
+      whereClauses.push("(player_knowledge IN ('common_knowledge', 'player_knowledge') OR player_knowledge IS NULL)");
+    } else if (filters.player_knowledge) {
+      // DM view: Respect explicit player_knowledge filter if provided
+      whereClauses.push('player_knowledge = ?');
+      params.push(filters.player_knowledge);
+    }
+
     if (filters.player_name) {
       whereClauses.push('player_name = ?');
       params.push(filters.player_name);

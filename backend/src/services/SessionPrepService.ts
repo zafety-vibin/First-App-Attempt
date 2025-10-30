@@ -75,7 +75,8 @@ export class SessionPrepService extends BaseCategoryService<SessionPrep> {
     filters: SessionPrepFilters,
     pagination: Pagination,
     sortBy: string = 'planned_date',
-    sortOrder: 'asc' | 'desc' = 'desc'
+    sortOrder: 'asc' | 'desc' = 'desc',
+    viewMode: 'dm_view' | 'player_view' = 'dm_view'
   ): ListResult<SessionPrep> {
     const whereClauses: string[] = [];
     const params: any[] = [];
@@ -84,6 +85,19 @@ export class SessionPrepService extends BaseCategoryService<SessionPrep> {
       whereClauses.push('campaign_id = ?');
       params.push(filters.campaign_id);
     }
+
+    // Apply view mode row filtering (Feature 004 - Information Filtering)
+    // SessionPrep is always dm_only, so player_view will return no results (correct behavior)
+    if (viewMode === 'player_view') {
+      // Player view: Only show common_knowledge, player_knowledge, and null
+      // Filter OUT dm_only and custom secret levels
+      whereClauses.push("(player_knowledge IN ('common_knowledge', 'player_knowledge') OR player_knowledge IS NULL)");
+    } else if (filters.player_knowledge) {
+      // DM view: Respect explicit player_knowledge filter if provided
+      whereClauses.push('player_knowledge = ?');
+      params.push(filters.player_knowledge);
+    }
+
     if (filters.status) {
       whereClauses.push('status = ?');
       params.push(filters.status);

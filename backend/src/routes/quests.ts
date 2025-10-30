@@ -35,7 +35,10 @@ router.get('/', (req: Request, res: Response) => {
 
     const result = questService.list(
       { campaign_id, status: status as string },
-      { limit: parseInt(limit as string), offset: parseInt(offset as string) }
+      { limit: parseInt(limit as string), offset: parseInt(offset as string) },
+      'created_at',
+      'desc',
+      req.categoryViewMode || 'dm_view'
     );
 
     res.status(200).json({ data: result.data, pagination: { limit: parseInt(limit as string), offset: parseInt(offset as string), total: result.total } });

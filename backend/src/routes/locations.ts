@@ -73,7 +73,7 @@ router.get('/', (req: Request, res: Response) => {
     // Parse tags
     const tagArray = tags && typeof tags === 'string' ? tags.split(',').map(t => t.trim()) : undefined;
 
-    // Use standardized service method
+    // Use standardized service method with view mode filtering
     const result = locationService.list(
       {
         campaign_id,
@@ -84,7 +84,8 @@ router.get('/', (req: Request, res: Response) => {
       },
       { limit: limitNum, offset: offsetNum },
       sort_by as string,
-      sort_order as 'asc' | 'desc'
+      sort_order as 'asc' | 'desc',
+      req.categoryViewMode || 'dm_view' // Pass view mode for row filtering
     );
 
     res.status(200).json({

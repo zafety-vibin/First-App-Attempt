@@ -79,7 +79,8 @@ export class PlanarForceService extends BaseCategoryService<PlanarForce> {
     filters: PlanarForceFilters,
     pagination: Pagination,
     sortBy: string = 'created_at',
-    sortOrder: 'asc' | 'desc' = 'desc'
+    sortOrder: 'asc' | 'desc' = 'desc',
+    viewMode: 'dm_view' | 'player_view' = 'dm_view'
   ): ListResult<PlanarForce> {
     const whereClauses: string[] = [];
     const params: any[] = [];
@@ -88,6 +89,18 @@ export class PlanarForceService extends BaseCategoryService<PlanarForce> {
       whereClauses.push('campaign_id = ?');
       params.push(filters.campaign_id);
     }
+
+    // Apply view mode row filtering (Feature 004 - Information Filtering)
+    if (viewMode === 'player_view') {
+      // Player view: Only show common_knowledge, player_knowledge, and null
+      // Filter OUT dm_only and custom secret levels
+      whereClauses.push("(player_knowledge IN ('common_knowledge', 'player_knowledge') OR player_knowledge IS NULL)");
+    } else if (filters.player_knowledge) {
+      // DM view: Respect explicit player_knowledge filter if provided
+      whereClauses.push('player_knowledge = ?');
+      params.push(filters.player_knowledge);
+    }
+
     if (filters.entity_type) {
       whereClauses.push('entity_type = ?');
       params.push(filters.entity_type);

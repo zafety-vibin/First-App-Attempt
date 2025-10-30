@@ -91,14 +91,7 @@ router.get('/', (req: Request, res: Response) => {
       filters.core_status = core_status;
     }
 
-    // Apply player_knowledge filtering based on view mode
-    // @ts-ignore - TypeScript type narrowing issue with Express augmentation
-    if (req.categoryViewMode === "player_view") {
-      // Player view: filter to common_knowledge and player_knowledge only
-      // This overrides any explicit player_knowledge filter
-      filters.player_knowledge = player_knowledge || undefined;
-    } else if (player_knowledge) {
-      // DM view: respect explicit player_knowledge filter if provided
+    if (player_knowledge) {
       filters.player_knowledge = player_knowledge;
     }
 
@@ -106,34 +99,21 @@ router.get('/', (req: Request, res: Response) => {
       filters.tags = tags;
     }
 
-    // List NPCs with filters
+    // List NPCs with filters and view mode (service handles row filtering)
     const result = npcService.list(
       filters,
       { limit, offset },
       sort_by as 'created_at' | 'updated_at' | 'name',
-      sort_order as 'asc' | 'desc'
+      sort_order as 'asc' | 'desc',
+      req.categoryViewMode || 'dm_view'
     );
 
-    // Apply view mode filtering at service layer if needed
-    // Service returns all NPCs matching filters, middleware strips dm_* fields
-    let filteredData = result.data;
-
-    // @ts-ignore - TypeScript type narrowing issue with Express augmentation
-    if (req.categoryViewMode === "player_view") {
-      // Filter out NPCs not visible to players
-      filteredData = result.data.filter(npc => {
-        if (!npc.player_knowledge) return true; // null = visible to all
-        return ['common_knowledge', 'player_knowledge'].includes(npc.player_knowledge);
-      });
-    }
-
     res.status(200).json({
-      data: filteredData,
+      data: result.data,
       pagination: {
         limit,
         offset,
-        // @ts-ignore - TypeScript type narrowing issue with Express augmentation
-        total: req.categoryViewMode === "player_view" ? filteredData.length : result.total,
+        total: result.total,
       },
     });
   } catch (error: any) {

@@ -26,7 +26,13 @@ router.get('/', (req: Request, res: Response) => {
     return;
   }
 
-  const result = service.list({ campaign_id: campaign_id as string }, { limit: parseInt(limit as string), offset: parseInt(offset as string) });
+  const result = service.list(
+    { campaign_id: campaign_id as string },
+    { limit: parseInt(limit as string), offset: parseInt(offset as string) },
+    'created_at',
+    'desc',
+    req.categoryViewMode || 'dm_view'
+  );
   res.status(200).json({ data: result.data, pagination: { total: result.total } });
 });
 

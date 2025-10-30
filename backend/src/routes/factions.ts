@@ -48,13 +48,16 @@ router.get('/', (req: Request, res: Response) => {
       return;
     }
 
-    // Use standardized list method
+    // Use standardized list method with view mode
     const result = factionService.list(
       { campaign_id },
       {
         limit: parseInt(limit as string) || 50,
         offset: parseInt(offset as string) || 0,
-      }
+      },
+      'created_at',
+      'desc',
+      req.categoryViewMode || 'dm_view'
     );
 
     res.status(200).json({

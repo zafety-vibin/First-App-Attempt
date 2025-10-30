@@ -182,12 +182,14 @@ export abstract class BaseCategoryService<T extends UniversalFields> {
 
   /**
    * List entities with filters and pagination
+   * @param viewMode - Optional view mode for row filtering ('dm_view' shows all, 'player_view' filters dm_only)
    */
   abstract list(
     filters: EntityFilters,
     pagination: Pagination,
     sortBy?: string,
-    sortOrder?: 'asc' | 'desc'
+    sortOrder?: 'asc' | 'desc',
+    viewMode?: 'dm_view' | 'player_view'
   ): ListResult<T>;
 
   /**

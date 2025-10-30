@@ -33,7 +33,13 @@ router.get('/', (req: Request, res: Response) => {
       return;
     }
 
-    const result = pcService.list({ campaign_id }, { limit: parseInt(limit as string), offset: parseInt(offset as string) });
+    const result = pcService.list(
+      { campaign_id },
+      { limit: parseInt(limit as string), offset: parseInt(offset as string) },
+      'name',
+      'asc',
+      req.categoryViewMode || 'dm_view'
+    );
     res.status(200).json({ data: result.data, pagination: { limit: parseInt(limit as string), offset: parseInt(offset as string), total: result.total } });
   } catch (error: any) {
     console.error('List player characters error:', error);

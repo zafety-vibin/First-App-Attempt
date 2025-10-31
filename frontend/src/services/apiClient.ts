@@ -48,12 +48,19 @@ apiClient.interceptors.request.use(
     const pathMatch = config.url?.match(/\/campaigns\/([a-f0-9-]+)/);
     if (pathMatch && pathMatch[1]) {
       campaignId = pathMatch[1];
-    } else {
-      // Fallback to query param: ?campaign_id=...
-      const queryMatch = config.url?.match(/campaign_id=([^&]+)/);
+    }
+
+    // Also check query params: ?campaign_id=... or &campaign_id=...
+    if (!campaignId && config.url) {
+      const queryMatch = config.url.match(/[?&]campaign_id=([a-f0-9-]+)/);
       if (queryMatch && queryMatch[1]) {
         campaignId = queryMatch[1];
       }
+    }
+
+    // Also check params object (for POST/PUT requests)
+    if (!campaignId && config.params?.campaign_id) {
+      campaignId = config.params.campaign_id;
     }
 
     if (campaignId) {

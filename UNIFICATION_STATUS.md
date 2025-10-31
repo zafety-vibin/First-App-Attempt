@@ -1,6 +1,6 @@
 # View Mode & Information Level Unification - Status
 
-## Current State (As of Commit dd8d97d)
+## Current State (Latest Updates)
 
 ### ✅ Completed:
 
@@ -17,30 +17,23 @@
 2. campaignId extraction fixed (query params work)
 3. Quick-add simplified (name-only, edit other fields after)
 4. Visibility dropdown updated (added "Contextual" null option, removed "System")
+5. **✨ Dynamic custom levels loading** - EditableCell now loads custom levels from information_levels table
+6. **✨ Custom levels display in dropdowns** - All user-created levels appear dynamically
+7. **✨ System level filtered out** - Excluded from database dropdowns (wiki-only)
+8. **✨ Debug console logs removed** - Cleaned up 🔄 logs from GenericCategoryListView
 
 ### ⚠️ Needs Fixing:
 
 **Backend Files Modified in Container (Not in Git):**
-- backend/src/services/ViewModeService.ts (sed commands applied, needs commit)
-
-**Custom Levels:**
-- Database dropdowns show hardcoded levels only
-- Custom levels (like "secret plot that only some people know") don't appear
-- Need: Dynamic loading from information_levels table
-- Need: Filter out system level for databases
+- backend/src/services/ViewModeService.ts (sed changes need git add)
 
 ### 📋 Next Steps:
 
 **Immediate:**
 1. Copy ViewModeService.ts changes from container to git
-2. Test login works
+2. Test dynamic custom levels in browser
 3. Test view mode toggle works
 4. Commit and push
-
-**Short-term:**
-5. Load custom levels dynamically for database dropdowns
-6. Add help tooltips explaining "Contextual"
-7. Remove debug console logs (📡 and 🔄)
 
 **Information Level Unification (Deferred to Next Session):**
 - Rename player_knowledge → visibility (13 migrations)
@@ -48,39 +41,61 @@
 - Add help UI explaining ownership model
 - Support custom levels in databases
 
+**Short-term (This Week):**
+5. Add help tooltips explaining "Contextual" ownership model
+6. Test hierarchical filtering for custom levels in player_view
+
+**Long-term (Future Refactoring):**
+- Rename player_knowledge → visibility (13 migrations)
+- Update all service/route references
+- Add help UI explaining ownership model
+
 ## Files Changed This Session:
 
-**Committed:**
-1. shared/types/ViewMode.ts
-2. backend/src/middleware/viewMode.ts  
-3. backend/src/routes/cards.ts
-4. backend/src/services/ViewModeService.ts (partial)
-5. frontend/src/contexts/ViewModeContext.tsx
-6. frontend/src/components/ViewModeToggle.tsx
-7. frontend/src/components/cards/BlockList.tsx
-8. frontend/src/components/dashboard/CategoryLandingCanvas.tsx
-9. frontend/src/pages/DashboardPage.tsx
-10. frontend/src/services/apiClient.ts
-11. frontend/src/components/pages/GenericCategoryListView.tsx
-12. frontend/src/components/table/EditableCell.tsx
+**Pending Commit:**
+1. frontend/src/components/pages/GenericCategoryListView.tsx (debug logs removed, campaignId passed)
+2. frontend/src/components/table/CategoryTable.tsx (campaignId prop added)
+3. frontend/src/components/table/EditableCell.tsx (dynamic custom levels implementation)
+4. UNIFICATION_STATUS.md (this file)
 
 **Uncommitted (in container):**
 - backend/src/services/ViewModeService.ts (sed changes need git add)
 
 ## Testing Checklist:
 
+**Core Functionality:**
 - [ ] Login works
-- [ ] View mode toggle (eye icon) works
-- [ ] dm_only entities hide in player view
+- [ ] View mode toggle works in database tables
+- [ ] dm_only entities hide in player_view
 - [ ] Wiki cards filter by hierarchical flag
 - [ ] Database entities filter by player_knowledge
 - [ ] Contextual (null) option appears in dropdown
 - [ ] Quick-add creates with name only
 - [ ] In-place editing works for all fields
 
-## Session Stats:
+**New Features (Dynamic Custom Levels):**
+- [ ] Create custom information level in Settings
+- [ ] Custom level appears in database visibility dropdowns
+- [ ] Selecting custom level saves correctly
+- [ ] Custom level name displays in badge
+- [ ] System level does NOT appear in database dropdowns
+- [ ] Custom hierarchical levels filter in player_view
 
-- Total commits: 78
-- View mode unification: ~10 commits
-- Row filtering: ~30 files changed
-- Ready for testing!
+## Implementation Summary:
+
+**What Was Built:**
+Dynamic custom information level support for database tables. Users can now:
+1. Create custom levels (e.g., "Secret Plot Known to Faction A")
+2. See them immediately in all database visibility dropdowns
+3. Use them alongside default levels (Contextual, Common, Player, DM Only)
+4. Custom levels auto-filter in player_view if marked hierarchical
+
+**Technical Details:**
+- EditableCell uses InformationLevelContext to load levels
+- Loads once per campaign when component mounts
+- Filters out 'system' level (wiki structural content only)
+- Falls back to hardcoded defaults if levels haven't loaded
+- Display logic checks custom levels first, then defaults
+
+**Files Modified:** 3 frontend files, ~90 lines of code added
+**Breaking Changes:** None - fully backward compatible

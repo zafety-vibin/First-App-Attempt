@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useInformationLevel } from '../../contexts/InformationLevelContext';
 import './EditableCell.css';
 
 export type EditableCellType = 'text' | 'textarea' | 'number' | 'dropdown' | 'tags' | 'player_knowledge';
@@ -12,6 +13,7 @@ export interface EditableCellProps {
   dropdownOptions?: Array<{ value: string; label: string }>;
   placeholder?: string;
   disabled?: boolean;
+  campaignId?: string; // Required for player_knowledge type to load custom levels
 }
 
 /**
@@ -28,6 +30,7 @@ export const EditableCell: React.FC<EditableCellProps> = ({
   dropdownOptions = [],
   placeholder = 'Click to edit',
   disabled = false,
+  campaignId,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [currentValue, setCurrentValue] = useState(value);
@@ -35,6 +38,44 @@ export const EditableCell: React.FC<EditableCellProps> = ({
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Load information levels for player_knowledge dropdowns
+  const informationLevelContext = type === 'player_knowledge' && campaignId ? useInformationLevel() : null;
+
+  // Load information levels when component mounts (for player_knowledge type)
+  useEffect(() => {
+    if (type === 'player_knowledge' && campaignId && informationLevelContext && informationLevelContext.levels.length === 0) {
+      informationLevelContext.loadLevels(campaignId);
+    }
+  }, [type, campaignId, informationLevelContext]);
+
+  // Generate dynamic dropdown options for player_knowledge from information levels
+  const playerKnowledgeOptions = React.useMemo(() => {
+    if (type !== 'player_knowledge' || !informationLevelContext) {
+      return [];
+    }
+
+    const options: Array<{ value: string; label: string }> = [
+      { value: '', label: 'Contextual (freely available)' },
+      { value: 'common_knowledge', label: 'Common Knowledge' },
+      { value: 'player_knowledge', label: 'Player Knowledge' },
+      { value: 'dm_only', label: 'DM Only' },
+    ];
+
+    // Add custom levels (exclude system level - wiki structural content only)
+    const customLevels = informationLevelContext.levels.filter(
+      level => level.type === 'custom' && level.id !== 'system'
+    );
+
+    customLevels.forEach(level => {
+      options.push({
+        value: level.id,
+        label: level.name,
+      });
+    });
+
+    return options;
+  }, [type, informationLevelContext?.levels]);
 
   // Update current value when prop value changes (e.g., after successful save)
   useEffect(() => {
@@ -142,16 +183,26 @@ export const EditableCell: React.FC<EditableCellProps> = ({
         return <span className="editable-cell-empty">No tags</span>;
 
       case 'player_knowledge':
-        // Display as badge
+        // Display as badge - check custom levels first, then fallback to defaults
+        let displayLabel = 'Contextual';
+        if (currentValue) {
+          // Try to find custom level
+          const customLevel = informationLevelContext?.getLevelById(currentValue);
+          if (customLevel) {
+            displayLabel = customLevel.name;
+          } else {
+            // Fallback to default label map
+            const labelMap: Record<string, string> = {
+              common_knowledge: 'Common',
+              player_knowledge: 'Player',
+              dm_only: 'DM Only',
+              system: 'System', // Should not appear in databases
+            };
+            displayLabel = labelMap[currentValue] || currentValue;
+          }
+        }
         const badgeClass = `player-knowledge-badge player-knowledge-${currentValue || 'contextual'}`;
-        const labelMap: Record<string, string> = {
-          '': 'Contextual',
-          common_knowledge: 'Common',
-          player_knowledge: 'Player',
-          dm_only: 'DM Only',
-          system: 'System', // Should not appear in databases
-        };
-        return <span className={badgeClass}>{labelMap[currentValue] || currentValue || 'Contextual'}</span>;
+        return <span className={badgeClass}>{displayLabel}</span>;
 
       case 'dropdown':
         const option = dropdownOptions.find(opt => opt.value === currentValue);
@@ -219,6 +270,13 @@ export const EditableCell: React.FC<EditableCellProps> = ({
       case 'player_knowledge':
         // Simple dropdown for database tables (wiki uses PaintersEaselPalette)
         // System level excluded (wiki-only for structural content)
+        // Custom levels loaded dynamically from information_levels table
+        const options = playerKnowledgeOptions.length > 0 ? playerKnowledgeOptions : [
+          { value: '', label: 'Contextual (freely available)' },
+          { value: 'common_knowledge', label: 'Common Knowledge' },
+          { value: 'player_knowledge', label: 'Player Knowledge' },
+          { value: 'dm_only', label: 'DM Only' },
+        ];
         return (
           <select
             ref={inputRef as React.RefObject<HTMLSelectElement>}
@@ -229,10 +287,11 @@ export const EditableCell: React.FC<EditableCellProps> = ({
             className="editable-cell-select visibility-select"
             disabled={isSaving}
           >
-            <option value="">Contextual (freely available)</option>
-            <option value="common_knowledge">Common Knowledge</option>
-            <option value="player_knowledge">Player Knowledge</option>
-            <option value="dm_only">DM Only</option>
+            {options.map(opt => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
           </select>
         );
 

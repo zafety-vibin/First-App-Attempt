@@ -31,6 +31,7 @@ export interface CategoryTableProps<T = any> {
   quickAddColumns?: QuickAddColumn[];
   emptyMessage?: string;
   className?: string;
+  campaignId?: string; // For loading information levels in EditableCell
 }
 
 /**
@@ -51,6 +52,7 @@ export function CategoryTable<T = any>({
   quickAddColumns,
   emptyMessage = 'No items found',
   className = '',
+  campaignId,
 }: CategoryTableProps<T>) {
   const [columnSizing, setColumnSizing] = useState({});
 
@@ -207,6 +209,7 @@ export function CategoryTable<T = any>({
                           entityId={entityId}
                           onUpdate={onCellUpdate}
                           dropdownOptions={dropdownOptions}
+                          campaignId={campaignId}
                         />
                       </td>
                     );

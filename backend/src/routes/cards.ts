@@ -29,7 +29,7 @@ router.get('/', async (req: Request, res: Response) => {
   try {
     const { campaign_id, type } = req.query;
     const userId = req.user!.id;
-    const viewMode = req.viewMode || 'dm';
+    const viewMode = req.viewMode || 'dm_view';
 
     if (!campaign_id || typeof campaign_id !== 'string') {
       res.status(400).json({ error: 'campaign_id query parameter is required' });
@@ -132,7 +132,7 @@ router.get('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const userId = req.user!.id;
-    const viewMode = req.viewMode || 'dm';
+    const viewMode = req.viewMode || 'dm_view';
 
     const row = db.prepare(`
       SELECT c.* FROM cards c

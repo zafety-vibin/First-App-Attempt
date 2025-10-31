@@ -5,9 +5,9 @@
  */
 
 import { db } from './DatabaseService';
-import { ViewMode } from '../../shared/types/ViewMode';
-import { Card } from '../../shared/types/Card';
-import { DatabaseCardMetadata, DatabaseColumn } from '../../shared/types/DatabaseSchema';
+import { ViewMode } from '../shared/types/ViewMode';
+import { Card } from '../shared/types/Card';
+import { DatabaseCardMetadata, DatabaseColumn } from '../shared/types/DatabaseSchema';
 
 export interface FilteredCardsResult {
   visibleCards: Card[];

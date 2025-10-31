@@ -4,7 +4,7 @@
  */
 
 import { db } from './DatabaseService';
-import { Setting, CreateSettingRequest, UpdateSettingRequest } from '../../shared/types/Setting';
+import { Setting, CreateSettingRequest, UpdateSettingRequest } from '../shared/types/Setting';
 import { rowToSetting, SettingRow } from '../models/Setting';
 import { randomUUID } from 'crypto';
 

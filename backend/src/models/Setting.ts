@@ -4,7 +4,7 @@
  * Feature: 003-create-a-notion
  */
 
-import { Setting } from '../../shared/types/Setting';
+import { Setting } from '../shared/types/Setting';
 
 /**
  * Database row type for Settings table

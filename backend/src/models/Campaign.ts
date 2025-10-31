@@ -3,7 +3,7 @@
  * Based on: specs/002-create-the-authentication/data-model.md
  */
 
-import { Campaign, CampaignRow } from '../../shared/types/Campaign';
+import { Campaign, CampaignRow } from '../shared/types/Campaign';
 
 /**
  * Transform database row to Campaign entity

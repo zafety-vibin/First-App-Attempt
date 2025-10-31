@@ -86,6 +86,29 @@ This document tracks small UX improvements and polish items that are deferred to
 
 ---
 
+## Dashboard & Widgets
+
+### 🗺️ Multiple Maps Support for Map Widget
+**Context**: Locations can have multiple map uploads (Feature 007), but the dashboard map widget only displays the first uploaded image with no way to select other maps.
+
+**Proposed Enhancement**:
+- Add map selector dropdown/carousel to map widget
+- Show "Map 1 of 3" indicator
+- Arrow buttons to cycle through available maps
+- Display map name/description if available
+- Remember selected map per location in widget config
+
+**Files to Modify**:
+- Dashboard map widget component
+- Widget data service to fetch all maps, not just first
+- Widget config to store selected map index
+
+**Priority**: ⭐⭐ Medium (functional limitation)
+
+**Note**: Currently, if a location has 3 maps uploaded, only the first one is accessible via dashboard widget. Users must navigate to the location detail page to see other maps.
+
+---
+
 ## Database Table UX
 
 ### 📏 Column Width Persistence

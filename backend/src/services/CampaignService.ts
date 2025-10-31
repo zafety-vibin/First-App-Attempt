@@ -4,9 +4,9 @@
  */
 
 import { db } from './DatabaseService';
-import { Campaign, CreateCampaignInput, UpdateCampaignInput } from '../../shared/types/Campaign';
+import { Campaign, CreateCampaignInput, UpdateCampaignInput } from '../shared/types/Campaign';
 import { rowToCampaign } from '../models/Campaign';
-import { CampaignRow } from '../../shared/types/Campaign';
+import { CampaignRow } from '../shared/types/Campaign';
 import { generatePublicId } from '../utils/generatePublicId';
 import crypto from 'crypto';
 

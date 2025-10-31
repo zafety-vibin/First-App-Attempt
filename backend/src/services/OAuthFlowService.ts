@@ -25,7 +25,7 @@ import crypto from 'crypto';
 import axios from 'axios';
 import { db } from './DatabaseService';
 import { BYOLLMConfigService } from './BYOLLMConfigService';
-import type { OAuthSession } from '../../shared/types/OAuthSession';
+import type { OAuthSession } from '../shared/types/OAuthSession';
 
 interface OAuthInitiateRequest {
   provider: 'anthropic';

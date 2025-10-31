@@ -5,7 +5,7 @@
  * Task: T017
  */
 
-import { InformationLevel } from '../../shared/types/InformationLevel';
+import { InformationLevel } from '../shared/types/InformationLevel';
 
 /**
  * Database row type for information_levels table

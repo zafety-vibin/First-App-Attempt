@@ -3,7 +3,7 @@
  * Based on: specs/002-create-the-authentication/data-model.md
  */
 
-import { User, UserRow } from '../../shared/types/User';
+import { User, UserRow } from '../shared/types/User';
 
 /**
  * Transform database row to User entity

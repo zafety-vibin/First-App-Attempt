@@ -9,7 +9,7 @@ import {
   InformationLevel,
   CreateInformationLevelPayload,
   UpdateInformationLevelPayload,
-} from '../../shared/types/InformationLevel';
+} from '../shared/types/InformationLevel';
 import { rowToInformationLevel, InformationLevelRow } from '../models/InformationLevel';
 import { randomUUID } from 'crypto';
 

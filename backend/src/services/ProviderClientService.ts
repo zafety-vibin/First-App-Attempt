@@ -16,7 +16,7 @@ import axios from 'axios';
 import { EventEmitter } from 'events';
 import { BYOLLMConfigService } from './BYOLLMConfigService';
 import { MCPConfigService } from './MCPConfigService';
-import type { AnthropicCreditsResponse } from '../../shared/types/ProviderCredits';
+import type { AnthropicCreditsResponse } from '../shared/types/ProviderCredits';
 
 interface ConnectionTestResult {
   success: boolean;

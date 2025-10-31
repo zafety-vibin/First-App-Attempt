@@ -13,7 +13,7 @@
  */
 
 import { db } from './DatabaseService';
-import { Card, CreateCardRequest } from '../../shared/types/Card';
+import { Card, CreateCardRequest } from '../shared/types/Card';
 import { rowToCard, cardToRow, CardRow, generateCardId } from '../models/Card';
 import { InformationLevelService } from './InformationLevelService';
 

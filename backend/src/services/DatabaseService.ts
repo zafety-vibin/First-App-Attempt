@@ -13,8 +13,8 @@ if (!fs.existsSync(dir)) {
 // Detect if running as MCP server (stdio must be clean for JSON-RPC)
 const isMCPMode = process.argv.some(arg => arg.includes('mcp/server'));
 
-// Initialize database with WAL mode
-export const db = new Database(DB_PATH, {
+// Initialize database with WAL mode (explicit type annotation for TypeScript)
+export const db: Database.Database = new Database(DB_PATH, {
   verbose: !isMCPMode && process.env.NODE_ENV === 'development' ? console.error : undefined,
 });
 

@@ -10,7 +10,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { ViewMode } from '../../shared/types/ViewMode';
+import { ViewMode } from '../shared/types/ViewMode';
 
 /**
  * Add viewMode to Request type

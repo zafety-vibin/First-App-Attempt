@@ -7,7 +7,7 @@
  * Supports infinite nesting via adjacency list + materialized path.
  */
 
-import { Card, CardType } from '../../shared/types/Card';
+import { Card, CardType } from '../shared/types/Card';
 
 /**
  * Database row type for Cards table

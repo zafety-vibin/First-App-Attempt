@@ -17,7 +17,7 @@
 
 import crypto from 'crypto';
 import { db } from './DatabaseService';
-import type { MCPConfig, MCPTestResponse } from '../../shared/types/MCPConfig';
+import type { MCPConfig, MCPTestResponse } from '../shared/types/MCPConfig';
 
 interface CreateMCPConfigRequest {
   streamingEnabled?: boolean;

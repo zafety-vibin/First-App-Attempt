@@ -7,8 +7,8 @@
  */
 
 import { db } from './DatabaseService';
-import { User, UserRow } from '../../shared/types/User';
-import { Session, SessionRow } from '../../shared/types/Session';
+import { User, UserRow } from '../shared/types/User';
+import { Session, SessionRow } from '../shared/types/Session';
 import { rowToUser } from '../models/User';
 import { rowToSession } from '../models/Session';
 import crypto from 'crypto';

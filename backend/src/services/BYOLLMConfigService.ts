@@ -18,8 +18,8 @@
 import crypto from 'crypto';
 import { db } from './DatabaseService';
 import { EncryptionService } from './EncryptionService';
-import type { BYOLLMConfig } from '../../shared/types/BYOLLMConfig';
-import type { DecryptedOAuthCredentials, DecryptedAPIKeyCredentials } from '../../shared/types/BYOLLMConfig';
+import type { BYOLLMConfig } from '../shared/types/BYOLLMConfig';
+import type { DecryptedOAuthCredentials, DecryptedAPIKeyCredentials } from '../shared/types/BYOLLMConfig';
 
 interface CreateConfigRequest {
   scope: 'global' | 'campaign';

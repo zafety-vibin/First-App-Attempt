@@ -598,8 +598,11 @@ Frontend components follow containment pattern:
 ### Known Technical Debt
 
 1. **MCP SDK Version**: Currently on deprecated version, awaiting v0.5.0 stable release
-2. **TypeScript Errors**: Shared types outside rootDir causing compilation warnings
-3. **Test Coverage**: E2E tests incomplete for Features 016, 021
+2. ~~**TypeScript Errors**: Shared types outside rootDir causing compilation warnings~~ **✅ RESOLVED**
+   - Shared types moved to `backend/src/shared/types/` (no longer outside rootDir)
+   - All imports updated from `../../shared/types/` to `../shared/types/`
+   - TypeScript compilation clean (0 errors)
+3. **Test Coverage**: E2E tests incomplete for Feature 016 (deferred - wizard may be redesigned)
 4. **Password Storage**: Campaign passwords stored plaintext (prototype only)
 5. **Rate Limiting**: Not implemented for external API
 6. **Caching Strategy**: No Redis/Memcached, relies on SQLite page cache
@@ -616,7 +619,12 @@ Frontend components follow containment pattern:
    - ✅ hierarchy-navigator.ts refactored to use LocationService (no raw SQL)
    - ✅ Backward compatibility: Both req.viewMode and req.categoryViewMode set during transition
    - **Future cleanup**: Remove categoryViewMode property after verifying all routes use viewMode
-2. **Extract Shared Types**: Move to proper shared package
+2. **Extract Shared Types**: ~~Move to proper shared package~~ **✅ COMPLETE**
+   - ✅ Moved from `shared/types/` to `backend/src/shared/types/` (within rootDir)
+   - ✅ Updated all imports: `../../shared/types/` → `../shared/types/`
+   - ✅ TypeScript compilation errors fixed (20+ → 0)
+   - ✅ Database export type annotation added
+   - **Note**: Frontend still uses `shared/types/` (Vite handles it fine)
 3. **Add Junction Tables**: For relationship metadata
 4. **Implement Caching Layer**: For frequently accessed data
 5. **Add WebSocket Support**: For real-time collaboration prep

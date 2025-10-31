@@ -10,7 +10,7 @@ import express, { Request, Response } from 'express';
 import { protect } from '../middleware/auth';
 import { db } from '../services/DatabaseService';
 import { CardRow, generateCardId } from '../models/Card';
-import { DatabaseCardMetadata } from '../../shared/types/DatabaseSchema';
+import { DatabaseCardMetadata } from '../shared/types/DatabaseSchema';
 
 const router = express.Router();
 

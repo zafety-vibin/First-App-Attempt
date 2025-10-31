@@ -143,14 +143,15 @@ export const EditableCell: React.FC<EditableCellProps> = ({
 
       case 'player_knowledge':
         // Display as badge
-        const badgeClass = `player-knowledge-badge player-knowledge-${currentValue || 'common_knowledge'}`;
+        const badgeClass = `player-knowledge-badge player-knowledge-${currentValue || 'contextual'}`;
         const labelMap: Record<string, string> = {
-          system: 'System',
+          '': 'Contextual',
           common_knowledge: 'Common',
           player_knowledge: 'Player',
           dm_only: 'DM Only',
+          system: 'System', // Should not appear in databases
         };
-        return <span className={badgeClass}>{labelMap[currentValue] || currentValue}</span>;
+        return <span className={badgeClass}>{labelMap[currentValue] || currentValue || 'Contextual'}</span>;
 
       case 'dropdown':
         const option = dropdownOptions.find(opt => opt.value === currentValue);
@@ -217,17 +218,18 @@ export const EditableCell: React.FC<EditableCellProps> = ({
 
       case 'player_knowledge':
         // Simple dropdown for database tables (wiki uses PaintersEaselPalette)
+        // System level excluded (wiki-only for structural content)
         return (
           <select
             ref={inputRef as React.RefObject<HTMLSelectElement>}
-            value={currentValue || 'common_knowledge'}
-            onChange={(e) => handleChange(e.target.value)}
+            value={currentValue || ''}
+            onChange={(e) => handleChange(e.target.value || null)}
             onBlur={handleBlur}
             onKeyDown={handleKeyDown}
             className="editable-cell-select visibility-select"
             disabled={isSaving}
           >
-            <option value="system">System</option>
+            <option value="">Contextual (freely available)</option>
             <option value="common_knowledge">Common Knowledge</option>
             <option value="player_knowledge">Player Knowledge</option>
             <option value="dm_only">DM Only</option>

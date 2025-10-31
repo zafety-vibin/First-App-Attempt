@@ -231,7 +231,7 @@ export const CategoryLandingCanvas: React.FC<CategoryLandingCanvasProps> = ({
                 widgetId={item.widgetId}
                 instanceId={item.i}
                 size={`${item.w}x${item.h}` as any}
-                viewMode={viewMode === 'dm' ? 'dm_view' : 'player_view'}
+                viewMode={viewMode}
                 campaignId={campaignId}
                 onRemove={() => removeWidget(item.i)}
               />

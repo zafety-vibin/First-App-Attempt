@@ -181,7 +181,7 @@ export function BlockList({ parentCard, campaignId }: BlockListProps) {
 
   // Filter children based on view mode (Feature 004)
   const visibleChildren = useMemo(() => {
-    if (viewMode === 'dm') {
+    if (viewMode === 'dm_view') {
       // DM View: Show all cards
       return children;
     } else {

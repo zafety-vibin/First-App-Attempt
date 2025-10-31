@@ -111,6 +111,14 @@ export class NPCService extends BaseCategoryService<NPC> {
    * Update NPC in database
    */
   protected updateEntity(id: string, data: Partial<NPC>): void {
+    // Handle locations separately via junction table
+    if ('locations' in data && Array.isArray(data.locations)) {
+      this.setLocations(id, data.locations);
+      // Remove from update data to avoid updating JSON field
+      const { locations, ...restData } = data;
+      data = restData as Partial<NPC>;
+    }
+
     const updates: string[] = [];
     const params: any[] = [];
 
@@ -118,7 +126,7 @@ export class NPCService extends BaseCategoryService<NPC> {
       'name', 'description', 'core_status', 'player_knowledge', 'tags',
       'custom_fields', 'race', 'class', 'level', 'alignment', 'appearance',
       'personality_traits', 'motivation', 'relationship_to_party', 'met_party',
-      'art', 'faction_id', 'superior_npc_id', 'locations', 'dm_secrets', 'dm_plot_relevance',
+      'art', 'faction_id', 'superior_npc_id', 'dm_secrets', 'dm_plot_relevance',
       'updated_at' // CRITICAL: Include updated_at to ensure timestamp refresh
     ];
 
@@ -126,8 +134,8 @@ export class NPCService extends BaseCategoryService<NPC> {
       if (field in data) {
         updates.push(`${field} = ?`);
 
-        // Handle JSON fields
-        if (['tags', 'custom_fields', 'class', 'locations'].includes(field)) {
+        // Handle JSON fields (removed 'locations' - now in junction table)
+        if (['tags', 'custom_fields', 'class'].includes(field)) {
           params.push(JSON.stringify(data[field]));
         } else {
           params.push(data[field] as any);
@@ -280,5 +288,90 @@ export class NPCService extends BaseCategoryService<NPC> {
    */
   private rowToNPC(row: any): NPC {
     return this.parseJsonFields(row, ['tags', 'custom_fields', 'class', 'locations']) as NPC;
+  }
+
+  /**
+   * Get NPC locations from junction table
+   * @param npcId - NPC ID
+   * @returns Array of location IDs
+   */
+  getLocations(npcId: string): string[] {
+    const rows = this.db
+      .prepare('SELECT location_id FROM npc_locations WHERE npc_id = ?')
+      .all(npcId) as { location_id: string }[];
+
+    return rows.map(r => r.location_id);
+  }
+
+  /**
+   * Get NPC factions from junction table (bidirectional from faction_members)
+   * @param npcId - NPC ID
+   * @returns Array of faction IDs
+   */
+  getFactions(npcId: string): string[] {
+    const rows = this.db
+      .prepare('SELECT faction_id FROM faction_members WHERE npc_id = ?')
+      .all(npcId) as { faction_id: string }[];
+
+    return rows.map(r => r.faction_id);
+  }
+
+  /**
+   * Add NPC to location relationship
+   * @param npcId - NPC ID
+   * @param locationId - Location ID
+   * @param options - Relationship options (presence_type, is_notable, frequency)
+   */
+  addLocation(
+    npcId: string,
+    locationId: string,
+    options?: { presence_type?: string; is_notable?: boolean; frequency?: string }
+  ): void {
+    const { randomUUID } = require('crypto');
+
+    this.db
+      .prepare(`
+        INSERT INTO npc_locations (id, npc_id, location_id, presence_type, is_notable, frequency, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, strftime('%s', 'now'))
+        ON CONFLICT(npc_id, location_id) DO UPDATE SET
+          presence_type = COALESCE(excluded.presence_type, presence_type),
+          is_notable = COALESCE(excluded.is_notable, is_notable),
+          frequency = COALESCE(excluded.frequency, frequency),
+          updated_at = strftime('%s', 'now')
+      `)
+      .run(
+        randomUUID(),
+        npcId,
+        locationId,
+        options?.presence_type || null,
+        options?.is_notable ? 1 : 0,
+        options?.frequency || null
+      );
+  }
+
+  /**
+   * Remove NPC from location relationship
+   * @param npcId - NPC ID
+   * @param locationId - Location ID
+   */
+  removeLocation(npcId: string, locationId: string): void {
+    this.db
+      .prepare('DELETE FROM npc_locations WHERE npc_id = ? AND location_id = ?')
+      .run(npcId, locationId);
+  }
+
+  /**
+   * Set NPC locations (replaces all existing relationships)
+   * @param npcId - NPC ID
+   * @param locationIds - Array of location IDs
+   */
+  setLocations(npcId: string, locationIds: string[]): void {
+    // Remove all existing relationships
+    this.db.prepare('DELETE FROM npc_locations WHERE npc_id = ?').run(npcId);
+
+    // Add new relationships
+    locationIds.forEach(locationId => {
+      this.addLocation(npcId, locationId);
+    });
   }
 }

@@ -250,6 +250,17 @@ export function runMigrations(): void {
     }
   });
 
+  // Migration 26: Migrate JSON data to junction tables
+  runMigration(26, () => {
+    const migrationsDir = path.join(__dirname, '../db/migrations');
+    const filePath = path.join(migrationsDir, '026-migrate-json-to-junctions.sql');
+    if (fs.existsSync(filePath)) {
+      const sql = fs.readFileSync(filePath, 'utf-8');
+      db.exec(sql);
+      if (!isMCPMode) console.error(`  ✓ Applied 026-migrate-json-to-junctions.sql (data migrated to junction tables)`);
+    }
+  });
+
   if (!isMCPMode) console.error('✓ Database initialized');
   logDatabaseInfo();
 }

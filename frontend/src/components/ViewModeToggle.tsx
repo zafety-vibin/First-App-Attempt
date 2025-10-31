@@ -12,7 +12,7 @@ import { useViewMode } from '../contexts/ViewModeContext';
 export function ViewModeToggle() {
   const { viewMode, toggleViewMode } = useViewMode();
 
-  const isDMView = viewMode === 'dm';
+  const isDMView = viewMode === 'dm_view';
 
   return (
     <button

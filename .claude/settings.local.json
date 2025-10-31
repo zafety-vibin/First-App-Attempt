@@ -36,5 +36,5 @@
     "deny": [],
     "ask": []
   },
-  "outputStyle": "Explanatory"
+  "outputStyle": "default"
 }

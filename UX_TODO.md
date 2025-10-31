@@ -8,6 +8,24 @@ This document tracks small UX improvements and polish items that are deferred to
 
 ## Information Level Improvements
 
+### 🐛 Custom Level Input Visibility Issue
+**Context**: When creating a custom information level in Settings, the input text is not visible while typing.
+
+**Proposed Enhancement**:
+- Fix text color/contrast in custom information level input field
+- Ensure proper visibility for all form inputs
+- May be part of broader settings page redesign
+
+**Files to Modify**:
+- `frontend/src/pages/SettingsPage.tsx` or relevant settings component
+- Associated CSS files
+
+**Priority**: ⭐⭐ Medium (functional but usable)
+
+**Note**: User mentioned not wanting the settings page looking like this anyway, so may be deferred to settings page redesign.
+
+---
+
 ### 🎨 Custom Level Visual Indicators
 **Context**: Custom information levels now appear in database dropdowns (commit e071607) but look identical to default levels.
 

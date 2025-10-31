@@ -57,20 +57,18 @@ export const EditableCell: React.FC<EditableCellProps> = ({
 
     const options: Array<{ value: string; label: string }> = [
       { value: '', label: 'Contextual (freely available)' },
-      { value: 'common_knowledge', label: 'Common Knowledge' },
-      { value: 'player_knowledge', label: 'Player Knowledge' },
-      { value: 'dm_only', label: 'DM Only' },
     ];
 
-    // Add custom levels (exclude system level - wiki structural content only)
-    const customLevels = informationLevelContext.levels.filter(
-      level => level.type === 'custom' && level.id !== 'system'
+    // Load ALL levels from database (default + custom), exclude only 'system' level
+    const nonSystemLevels = informationLevelContext.levels.filter(
+      level => level.id !== 'system'
     );
 
-    customLevels.forEach(level => {
+    // Add all levels using their actual IDs and names from database
+    nonSystemLevels.forEach(level => {
       options.push({
-        value: level.id,
-        label: level.name,
+        value: level.id, // Use actual ID: 'dm-secret', 'common-knowledge', etc.
+        label: level.name, // Use actual name: 'DM Secret', 'Common Knowledge', etc.
       });
     });
 

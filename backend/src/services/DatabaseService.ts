@@ -228,6 +228,17 @@ export function runMigrations(): void {
     }
   });
 
+  // Migration 24: Fix information level ID mismatch
+  runMigration(24, () => {
+    const migrationsDir = path.join(__dirname, '../db/migrations');
+    const filePath = path.join(migrationsDir, '024-fix-information-level-ids.sql');
+    if (fs.existsSync(filePath)) {
+      const sql = fs.readFileSync(filePath, 'utf-8');
+      db.exec(sql);
+      if (!isMCPMode) console.error(`  ✓ Applied 024-fix-information-level-ids.sql`);
+    }
+  });
+
   if (!isMCPMode) console.error('✓ Database initialized');
   logDatabaseInfo();
 }

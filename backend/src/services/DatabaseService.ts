@@ -239,6 +239,17 @@ export function runMigrations(): void {
     }
   });
 
+  // Migration 25: Junction Tables for Relationships (Refactoring Priority #3)
+  runMigration(25, () => {
+    const migrationsDir = path.join(__dirname, '../db/migrations');
+    const filePath = path.join(migrationsDir, '025-junction-tables.sql');
+    if (fs.existsSync(filePath)) {
+      const sql = fs.readFileSync(filePath, 'utf-8');
+      db.exec(sql);
+      if (!isMCPMode) console.error(`  ✓ Applied 025-junction-tables.sql (28 junction tables created)`);
+    }
+  });
+
   if (!isMCPMode) console.error('✓ Database initialized');
   logDatabaseInfo();
 }

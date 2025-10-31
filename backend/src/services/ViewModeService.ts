@@ -174,7 +174,7 @@ export class ViewModeService {
    * Toggle view mode (convenience method)
    */
   toggleViewMode(currentMode: ViewMode): ViewMode {
-    return currentMode === 'dm_view' ? 'player' : 'dm_view';
+    return currentMode === 'dm_view' ? 'player_view' : 'dm_view';
   }
 
   /**

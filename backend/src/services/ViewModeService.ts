@@ -28,7 +28,7 @@ export class ViewModeService {
    * Player view: hide hierarchical information levels (DM Secret + custom hierarchical)
    */
   filterCards(cards: Card[], viewMode: ViewMode): FilteredCardsResult {
-    if (viewMode === 'dm') {
+    if (viewMode === 'dm_view') {
       return {
         visibleCards: cards,
         filteredCount: 0,
@@ -49,7 +49,7 @@ export class ViewModeService {
    * Check if single card is visible in view mode
    */
   isCardVisible(informationLevelId: string, viewMode: ViewMode): boolean {
-    if (viewMode === 'dm') {
+    if (viewMode === 'dm_view') {
       return true;
     }
 
@@ -62,7 +62,7 @@ export class ViewModeService {
    * Filter database schema to hide hierarchical columns in Player view
    */
   filterDatabaseSchema(schema: DatabaseCardMetadata, viewMode: ViewMode): { columns: DatabaseColumn[] } {
-    if (viewMode === 'dm') {
+    if (viewMode === 'dm_view') {
       return { columns: schema.schema.columns };
     }
 
@@ -84,7 +84,7 @@ export class ViewModeService {
     viewMode: ViewMode,
     playerKnowledgeColumnId?: string
   ): FilteredDatabaseEntriesResult {
-    if (viewMode === 'dm') {
+    if (viewMode === 'dm_view') {
       return {
         visibleEntries: entries,
         partialVisibilityCount: 0,
@@ -174,14 +174,14 @@ export class ViewModeService {
    * Toggle view mode (convenience method)
    */
   toggleViewMode(currentMode: ViewMode): ViewMode {
-    return currentMode === 'dm' ? 'player' : 'dm';
+    return currentMode === 'dm_view' ? 'player' : 'dm_view';
   }
 
   /**
    * Validate view mode value
    */
   validateViewMode(mode: string): mode is ViewMode {
-    return mode === 'dm' || mode === 'player';
+    return mode === 'dm_view' || mode === 'player';
   }
 
   /**
@@ -198,7 +198,7 @@ export class ViewModeService {
    */
   filterMapPins(pins: any[], viewMode: ViewMode | string, db: any): any[] {
     // DM view shows all pins
-    if (viewMode === 'dm' || viewMode === 'dm_view') {
+    if (viewMode === 'dm_view' || viewMode === 'dm_view') {
       return pins;
     }
 
@@ -233,7 +233,7 @@ export class ViewModeService {
    */
   filterFactionRegions(regions: any[], viewMode: ViewMode | string, db: any): any[] {
     // DM view shows all regions
-    if (viewMode === 'dm' || viewMode === 'dm_view') {
+    if (viewMode === 'dm_view' || viewMode === 'dm_view') {
       return regions;
     }
 

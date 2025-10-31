@@ -19,12 +19,8 @@ const ViewModeContext = createContext<ViewModeContextType | undefined>(undefined
 
 export function ViewModeProvider({ children }: { children: ReactNode }) {
   const [viewMode, setViewModeState] = useState<ViewMode>(() => {
-    // Initialize from localStorage
-    const stored = localStorage.getItem(VIEW_MODE_STORAGE_KEY);
-    if (stored === 'dm' || stored === 'player') {
-      return stored as ViewMode;
-    }
-    return DEFAULT_VIEW_MODE;
+    // Initialize from localStorage with migration
+    return ViewModeUtils.loadFromStorage();
   });
 
   // Update apiClient interceptor when view mode changes
@@ -57,8 +53,12 @@ export function ViewModeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const handleStorageChange = (event: StorageEvent) => {
       if (event.key === VIEW_MODE_STORAGE_KEY && event.newValue) {
-        if (event.newValue === 'dm' || event.newValue === 'player') {
+        if (event.newValue === 'dm_view' || event.newValue === 'player_view') {
           setViewModeState(event.newValue as ViewMode);
+        } else if (event.newValue === 'dm') {
+          setViewModeState('dm_view'); // Migrate old value
+        } else if (event.newValue === 'player') {
+          setViewModeState('player_view'); // Migrate old value
         }
       }
     };
@@ -72,7 +72,7 @@ export function ViewModeProvider({ children }: { children: ReactNode }) {
 
   const setViewMode = (mode: ViewMode) => {
     setViewModeState(mode);
-    localStorage.setItem(VIEW_MODE_STORAGE_KEY, mode);
+    ViewModeUtils.saveToStorage(mode);
   };
 
   const toggleViewMode = () => {

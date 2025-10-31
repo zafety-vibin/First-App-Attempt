@@ -47,22 +47,193 @@ export class QuestService extends BaseCategoryService<Quest> {
     );
   }
 
+  /**
+   * Get quest related NPCs from junction table
+   * @param questId - Quest ID
+   * @returns Array of NPC IDs
+   */
+  getRelatedNPCs(questId: string): string[] {
+    const rows = this.db
+      .prepare('SELECT npc_id FROM quest_related_npcs WHERE quest_id = ?')
+      .all(questId) as { npc_id: string }[];
+
+    return rows.map(r => r.npc_id);
+  }
+
+  /**
+   * Add related NPC to quest
+   * @param questId - Quest ID
+   * @param npcId - NPC ID
+   * @param options - Relationship options (role_in_quest)
+   */
+  addRelatedNPC(
+    questId: string,
+    npcId: string,
+    options?: { role_in_quest?: string }
+  ): void {
+    const { randomUUID } = require('crypto');
+
+    this.db
+      .prepare(`
+        INSERT INTO quest_related_npcs (id, quest_id, npc_id, role_in_quest, created_at)
+        VALUES (?, ?, ?, ?, strftime('%s', 'now'))
+        ON CONFLICT(quest_id, npc_id) DO UPDATE SET
+          role_in_quest = COALESCE(excluded.role_in_quest, role_in_quest),
+          updated_at = strftime('%s', 'now')
+      `)
+      .run(
+        randomUUID(),
+        questId,
+        npcId,
+        options?.role_in_quest || null
+      );
+  }
+
+  /**
+   * Remove related NPC from quest
+   * @param questId - Quest ID
+   * @param npcId - NPC ID
+   */
+  removeRelatedNPC(questId: string, npcId: string): void {
+    this.db
+      .prepare('DELETE FROM quest_related_npcs WHERE quest_id = ? AND npc_id = ?')
+      .run(questId, npcId);
+  }
+
+  /**
+   * Set quest related NPCs (replaces all existing relationships)
+   * @param questId - Quest ID
+   * @param npcIds - Array of NPC IDs
+   */
+  setRelatedNPCs(questId: string, npcIds: string[]): void {
+    // Remove all existing relationships
+    this.db.prepare('DELETE FROM quest_related_npcs WHERE quest_id = ?').run(questId);
+
+    // Add new relationships
+    npcIds.forEach(npcId => {
+      this.addRelatedNPC(questId, npcId);
+    });
+  }
+
+  /**
+   * Get quest related locations from junction table
+   * @param questId - Quest ID
+   * @returns Array of location IDs
+   */
+  getRelatedLocations(questId: string): string[] {
+    const rows = this.db
+      .prepare('SELECT location_id FROM quest_related_locations WHERE quest_id = ?')
+      .all(questId) as { location_id: string }[];
+
+    return rows.map(r => r.location_id);
+  }
+
+  /**
+   * Add related location to quest
+   * @param questId - Quest ID
+   * @param locationId - Location ID
+   * @param options - Relationship options (location_role)
+   */
+  addRelatedLocation(
+    questId: string,
+    locationId: string,
+    options?: { location_role?: string }
+  ): void {
+    const { randomUUID } = require('crypto');
+
+    this.db
+      .prepare(`
+        INSERT INTO quest_related_locations (id, quest_id, location_id, location_role, created_at)
+        VALUES (?, ?, ?, ?, strftime('%s', 'now'))
+        ON CONFLICT(quest_id, location_id) DO UPDATE SET
+          location_role = COALESCE(excluded.location_role, location_role),
+          updated_at = strftime('%s', 'now')
+      `)
+      .run(
+        randomUUID(),
+        questId,
+        locationId,
+        options?.location_role || null
+      );
+  }
+
+  /**
+   * Remove related location from quest
+   * @param questId - Quest ID
+   * @param locationId - Location ID
+   */
+  removeRelatedLocation(questId: string, locationId: string): void {
+    this.db
+      .prepare('DELETE FROM quest_related_locations WHERE quest_id = ? AND location_id = ?')
+      .run(questId, locationId);
+  }
+
+  /**
+   * Set quest related locations (replaces all existing relationships)
+   * @param questId - Quest ID
+   * @param locationIds - Array of location IDs
+   */
+  setRelatedLocations(questId: string, locationIds: string[]): void {
+    // Remove all existing relationships
+    this.db.prepare('DELETE FROM quest_related_locations WHERE quest_id = ?').run(questId);
+
+    // Add new relationships
+    locationIds.forEach(locationId => {
+      this.addRelatedLocation(questId, locationId);
+    });
+  }
+
   protected updateEntity(id: string, data: Partial<Quest>): void {
+    // Handle junction table relationships separately
+    if ('related_npcs' in data && Array.isArray(data.related_npcs)) {
+      this.setRelatedNPCs(id, data.related_npcs);
+      const { related_npcs, ...restData } = data;
+      data = restData as Partial<Quest>;
+    }
+
+    if ('related_locations' in data && Array.isArray(data.related_locations)) {
+      this.setRelatedLocations(id, data.related_locations);
+      const { related_locations, ...restData } = data;
+      data = restData as Partial<Quest>;
+    }
+
     const updates: string[] = [];
     const params: any[] = [];
 
-    Object.keys(data).forEach((key) => {
-      if (key === 'id' || key === 'campaign_id' || key === 'created_at') return;
-      const value = (data as any)[key];
-      const jsonFields = ['tags', 'custom_fields', 'objectives', 'related_npcs', 'related_locations'];
-      updates.push(`${key} = ?`);
-      params.push(jsonFields.includes(key) ? JSON.stringify(value) : value);
-    });
+    const updatableFields: (keyof Quest)[] = [
+      'name', 'description', 'core_status', 'player_knowledge', 'tags',
+      'custom_fields', 'status', 'objectives', 'rewards', 'quest_giver_id',
+      'started_session_id', 'completed_session_id', 'faction_id',
+      'dm_true_objective', 'dm_consequences',
+      'updated_at' // CRITICAL: Include updated_at to ensure timestamp refresh
+    ];
 
-    if (updates.length === 0) return;
+    for (const field of updatableFields) {
+      if (field in data) {
+        updates.push(`${field} = ?`);
+
+        // Handle JSON fields (removed 'related_npcs', 'related_locations' - now in junction tables)
+        if (['tags', 'custom_fields', 'objectives'].includes(field)) {
+          params.push(JSON.stringify(data[field]));
+        } else {
+          params.push(data[field] as any);
+        }
+      }
+    }
+
+    if (updates.length === 0) {
+      return;
+    }
 
     params.push(id);
-    this.db.prepare(`UPDATE quests SET ${updates.join(', ')} WHERE id = ?`).run(...params);
+
+    const stmt = this.db.prepare(`
+      UPDATE quests
+      SET ${updates.join(', ')}
+      WHERE id = ?
+    `);
+
+    stmt.run(...params);
   }
 
   protected deleteEntity(id: string): void {

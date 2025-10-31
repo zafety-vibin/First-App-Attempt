@@ -101,31 +101,41 @@ export class LocationService extends BaseCategoryService<Location> {
    * Update location in database
    */
   protected updateEntity(id: string, data: Partial<Location>): void {
+    // Handle junction table relationships separately
+    if ('connected_locations' in data && Array.isArray(data.connected_locations)) {
+      this.setConnections(id, data.connected_locations);
+      const { connected_locations, ...restData } = data;
+      data = restData as Partial<Location>;
+    }
+
     const updates: string[] = [];
-    const values: any[] = [];
+    const params: any[] = [];
 
-    Object.keys(data).forEach((key) => {
-      if (key === 'id' || key === 'campaign_id' || key === 'created_at') {
-        return;
+    const updatableFields: (keyof Location)[] = [
+      'name', 'description', 'core_status', 'player_knowledge', 'tags',
+      'custom_fields', 'location_type', 'population', 'cultural_characteristics',
+      'map', 'parent_location_id', 'notable_npcs', 'factions_present', 'dm_secrets',
+      'updated_at' // CRITICAL: Include updated_at to ensure timestamp refresh
+    ];
+
+    for (const field of updatableFields) {
+      if (field in data) {
+        updates.push(`${field} = ?`);
+
+        // Handle JSON fields (removed 'connected_locations' - now in junction table)
+        if (['tags', 'custom_fields', 'notable_npcs', 'factions_present'].includes(field)) {
+          params.push(JSON.stringify(data[field]));
+        } else {
+          params.push(data[field] as any);
+        }
       }
-
-      const value = (data as any)[key];
-
-      // Handle JSON fields
-      if (['tags', 'custom_fields', 'notable_npcs', 'factions_present', 'connected_locations'].includes(key)) {
-        updates.push(`${key} = ?`);
-        values.push(JSON.stringify(value));
-      } else {
-        updates.push(`${key} = ?`);
-        values.push(value);
-      }
-    });
+    }
 
     if (updates.length === 0) {
       return;
     }
 
-    values.push(id);
+    params.push(id);
 
     const stmt = this.db.prepare(`
       UPDATE locations
@@ -133,7 +143,7 @@ export class LocationService extends BaseCategoryService<Location> {
       WHERE id = ?
     `);
 
-    stmt.run(...values);
+    stmt.run(...params);
   }
 
   /**
@@ -729,6 +739,116 @@ export class LocationService extends BaseCategoryService<Location> {
     if (!entity) {
       throw new Error(`Linked ${entityType} not found`);
     }
+  }
+
+  /**
+   * Junction Table Operations - Location Connections
+   */
+
+  /**
+   * Get connected locations from junction table
+   * @param locationId - Location ID
+   * @returns Array of connected location IDs
+   */
+  getConnections(locationId: string): string[] {
+    const rows = this.db
+      .prepare('SELECT connected_location_id FROM location_connections WHERE location_id = ?')
+      .all(locationId) as { connected_location_id: string }[];
+
+    return rows.map(r => r.connected_location_id);
+  }
+
+  /**
+   * Add location connection relationship
+   * @param locationId - Location ID
+   * @param connectedLocationId - Connected location ID
+   * @param options - Relationship options
+   */
+  addConnection(
+    locationId: string,
+    connectedLocationId: string,
+    options?: { connection_type?: string; distance?: number; travel_time?: string }
+  ): void {
+    const { randomUUID } = require('crypto');
+
+    this.db
+      .prepare(`
+        INSERT INTO location_connections (id, location_id, connected_location_id, connection_type, distance, travel_time, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, strftime('%s', 'now'))
+        ON CONFLICT(location_id, connected_location_id) DO UPDATE SET
+          connection_type = COALESCE(excluded.connection_type, connection_type),
+          distance = COALESCE(excluded.distance, distance),
+          travel_time = COALESCE(excluded.travel_time, travel_time),
+          updated_at = strftime('%s', 'now')
+      `)
+      .run(
+        randomUUID(),
+        locationId,
+        connectedLocationId,
+        options?.connection_type || null,
+        options?.distance || null,
+        options?.travel_time || null
+      );
+  }
+
+  /**
+   * Remove location connection relationship
+   * @param locationId - Location ID
+   * @param connectedLocationId - Connected location ID
+   */
+  removeConnection(locationId: string, connectedLocationId: string): void {
+    this.db
+      .prepare('DELETE FROM location_connections WHERE location_id = ? AND connected_location_id = ?')
+      .run(locationId, connectedLocationId);
+  }
+
+  /**
+   * Set location connections (replaces all existing relationships)
+   * @param locationId - Location ID
+   * @param connectedLocationIds - Array of connected location IDs
+   */
+  setConnections(locationId: string, connectedLocationIds: string[]): void {
+    // Remove all existing connections
+    this.db.prepare('DELETE FROM location_connections WHERE location_id = ?').run(locationId);
+
+    // Add new connections
+    connectedLocationIds.forEach(connectedLocationId => {
+      this.addConnection(locationId, connectedLocationId);
+    });
+  }
+
+  /**
+   * Junction Table Operations - Notable NPCs
+   */
+
+  /**
+   * Get notable NPCs from junction table
+   * @param locationId - Location ID
+   * @returns Array of NPC IDs marked as notable at this location
+   */
+  getNotableNPCs(locationId: string): string[] {
+    const rows = this.db
+      .prepare('SELECT npc_id FROM npc_locations WHERE location_id = ? AND is_notable = 1')
+      .all(locationId) as { npc_id: string }[];
+
+    return rows.map(r => r.npc_id);
+  }
+
+  /**
+   * Junction Table Operations - Factions Present
+   */
+
+  /**
+   * Get factions present from junction table
+   * @param locationId - Location ID
+   * @returns Array of faction IDs present at this location
+   */
+  getFactionsPresent(locationId: string): string[] {
+    const rows = this.db
+      .prepare('SELECT faction_id FROM faction_presence WHERE location_id = ?')
+      .all(locationId) as { faction_id: string }[];
+
+    return rows.map(r => r.faction_id);
   }
 }
 

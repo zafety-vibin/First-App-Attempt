@@ -60,6 +60,7 @@ apiClient.interceptors.request.use(
       const viewMode = getViewMode(campaignId);
       // Backend expects 'dm_view' or 'player_view' (full value with suffix)
       config.headers['X-View-Mode'] = viewMode;
+      console.log(`📡 API Request: ${config.method?.toUpperCase()} ${config.url} | X-View-Mode: ${viewMode} | Campaign: ${campaignId.substring(0, 8)}...`);
     }
 
     return config;

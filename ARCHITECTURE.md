@@ -449,9 +449,9 @@ The models reference each other via entity links but remain independent, allowin
 - ❌ No concurrent write scaling (not needed)
 - ❌ Limited to single machine (acceptable for prototype)
 
-### Why Dual View Mode Systems?
+### Why Dual View Mode Systems? (HISTORICAL - NOW UNIFIED)
 
-**Decision**: Maintain separate view mode values for wiki (dm/player) vs databases (dm_view/player_view)
+**Decision**: ~~Maintain separate view mode values for wiki (dm/player) vs databases (dm_view/player_view)~~
 
 **Context**:
 - Features developed iteratively
@@ -464,7 +464,13 @@ The models reference each other via entity links but remain independent, allowin
 - ❌ Conceptual overhead for developers
 - ❌ Two middleware chains to maintain
 
-**Future**: Consider unification in v2 with migration strategy
+**Resolution** (commit d890ece): ✅ **UNIFIED**
+- Values standardized to `dm_view` | `player_view` everywhere
+- informationFilter.ts deleted, merged into viewMode.ts
+- Single middleware chain now serves both wiki and database systems
+- req.viewMode is canonical property (req.categoryViewMode for backward compat)
+- 17 route files updated to use unified imports
+- Architecture.md Refactoring Priority #1 complete
 
 ### Why No Junction Tables?
 
@@ -600,12 +606,16 @@ Frontend components follow containment pattern:
 
 ### Refactoring Priorities
 
-1. **Unify View Mode Systems**: ~~Merge dm/player and dm_view/player_view~~ **PARTIALLY COMPLETE**
+1. **Unify View Mode Systems**: ~~Merge dm/player and dm_view/player_view~~ **✅ COMPLETE** (commit d890ece)
    - ✅ Values unified: `dm_view`/`player_view` everywhere (wiki and databases)
    - ✅ Frontend context uses unified values
    - ✅ Backend middleware simplified
-   - ⚠️ Still dual systems architecturally (separate middleware chains)
-   - **Remaining**: Merge informationFilter.ts and viewModeFilter.ts into single system
+   - ✅ Middleware chains merged: informationFilter.ts deleted, unified into viewMode.ts
+   - ✅ Single source of truth: viewMode.ts handles both wiki and database filtering
+   - ✅ 17 route files updated to use unified imports
+   - ✅ hierarchy-navigator.ts refactored to use LocationService (no raw SQL)
+   - ✅ Backward compatibility: Both req.viewMode and req.categoryViewMode set during transition
+   - **Future cleanup**: Remove categoryViewMode property after verifying all routes use viewMode
 2. **Extract Shared Types**: Move to proper shared package
 3. **Add Junction Tables**: For relationship metadata
 4. **Implement Caching Layer**: For frequently accessed data

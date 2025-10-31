@@ -232,20 +232,16 @@ export const GenericCategoryListView: React.FC<GenericCategoryListViewProps> = (
     // Refresh is automatic after create in useCategory hook
   };
 
-  // Quick-add configuration: minimal fields for rapid entity creation
+  // Quick-add configuration: only name required, creates empty row for in-place editing
   const quickAddColumns = [
     {
       fieldKey: 'name',
       label: 'Name',
       type: 'text' as const,
-      required: true,
+      required: true, // Only name is required to create entity
     },
-    {
-      fieldKey: 'player_knowledge',
-      label: 'Visibility',
-      type: 'player_knowledge' as const,
-      required: false,
-    },
+    // Visibility (player_knowledge) is optional - defaults to null (contextual)
+    // All other fields editable in-place after creation via EditableCell
   ];
 
   if (loading && entities.length === 0) {

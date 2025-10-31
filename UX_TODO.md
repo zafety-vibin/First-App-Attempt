@@ -64,7 +64,7 @@ This document tracks small UX improvements and polish items that are deferred to
 
 **Priority**: ⭐⭐⭐ High (functional gap)
 
-**Note**: This is mentioned in UNIFICATION_STATUS.md as next step
+**Note**: This is mentioned in UNIFICATION_STATUS.md as next step. (**Note**: I believe the filtering is working as intended based on my testing. It is filtering the hierarchical custom information levels and displaying them. But review if code says otherwise or it is missing something.)
 
 ---
 
@@ -111,6 +111,7 @@ This document tracks small UX improvements and polish items that are deferred to
 - Add eye icon (eye-off for player view)
 - Color coding: blue for DM, green for player
 - Tooltip explaining current mode
+- Eye icon on wiki side need UI improvements
 
 **Files to Modify**:
 - `frontend/src/components/pages/GenericCategoryListView.tsx` (toggle button)
@@ -133,7 +134,7 @@ This document tracks small UX improvements and polish items that are deferred to
 **Files to Modify**:
 - `frontend/src/components/table/QuickAddRow.tsx`
 
-**Priority**: ⭐⭐ Medium
+**Priority**: ⭐⭐ Medium (**Note**: Not sure if this is the functionality I truly want. What I am imagining is when you click "add below..." it autofocuses the name field sure, but I want every field to be active the moment before you press submit entry so you can add to every field with just 1 click instead of double clicking inside each and when you click submit it adds all fields with data at once and then unfocuses.)
 
 ---
 
@@ -141,7 +142,7 @@ This document tracks small UX improvements and polish items that are deferred to
 **Context**: Quick-add collapses after creation, requiring re-expand for multiple adds.
 
 **Proposed Enhancement**:
-- Add checkbox/toggle: "Keep open after adding"
+- Add checkbox/toggle: "Keep open after adding" (**Note**: My vote if we support adding multiple entries without submitting one or all at once, add below should always be present even when a current field is not finished submitting I think you should be able and allowed to begin on a second entry or third etc. entries and click submit one by one or all at once.)
 - Or: Quick-add stays open, clears fields
 - User preference in localStorage
 
@@ -178,18 +179,6 @@ This document tracks small UX improvements and polish items that are deferred to
 
 ---
 
-### 📱 Mobile Responsive Tables
-**Context**: Tables likely break on mobile.
-
-**Proposed Enhancement**:
-- Card view for mobile
-- Horizontal scroll with sticky columns
-- Responsive breakpoints
-
-**Priority**: ⭐ Very Low (desktop-first prototype)
-
----
-
 ## Implementation Strategy
 
 **When to tackle these**:
@@ -205,7 +194,7 @@ This document tracks small UX improvements and polish items that are deferred to
 
 **Process**:
 1. Pick item from list
-2. Create feature branch
+2. Create feature branch if sufficiently complex
 3. Implement + test
 4. Mark complete here with commit hash
 5. Remove from list or mark ✅

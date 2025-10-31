@@ -275,4 +275,18 @@ export abstract class BaseCategoryService<T extends UniversalFields> {
 
     return serialized;
   }
+
+  /**
+   * Get hierarchical information level IDs for player_view filtering
+   * Uses blacklist approach: exclude hierarchical levels, show everything else
+   *
+   * @returns Array of level IDs that should be hidden in player_view
+   */
+  protected getHierarchicalLevelIds(): string[] {
+    const rows = this.db
+      .prepare('SELECT id FROM information_levels WHERE hierarchical = 1')
+      .all() as { id: string }[];
+
+    return rows.map(r => r.id);
+  }
 }

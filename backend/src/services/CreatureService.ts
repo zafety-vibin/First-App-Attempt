@@ -81,9 +81,15 @@ export class CreatureService extends BaseCategoryService<Creature> {
 
     // Apply view mode row filtering (Feature 004 - Information Filtering)
     if (viewMode === 'player_view') {
-      // Player view: Only show common_knowledge, player_knowledge, and null
-      // Filter OUT dm_only and custom secret levels
-      whereClauses.push("(player_knowledge IN ('common_knowledge', 'player_knowledge') OR player_knowledge IS NULL)");
+      // Player view: Exclude hierarchical levels (dm_only + custom hierarchical)
+      // Show everything else (common_knowledge, player_knowledge, null, custom non-hierarchical)
+      const hierarchicalIds = this.getHierarchicalLevelIds();
+      if (hierarchicalIds.length > 0) {
+        const placeholders = hierarchicalIds.map(() => '?').join(',');
+        whereClauses.push(`(player_knowledge IS NULL OR player_knowledge NOT IN (${placeholders}))`);
+        params.push(...hierarchicalIds);
+      }
+      // If no hierarchical levels exist, allow all
     } else if (filters.player_knowledge) {
       // DM view: Respect explicit player_knowledge filter if provided
       whereClauses.push('player_knowledge = ?');

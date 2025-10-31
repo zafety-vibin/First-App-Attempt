@@ -117,17 +117,24 @@ export class ExternalAPIService {
     const sortOrder: 'asc' | 'desc' = options?.sort?.startsWith('-') ? 'desc' : 'asc';
 
     const service = this.getService(category);
-    const result = service.list({ campaign_id: campaignId, ...filters }, { limit, offset }, sortBy as any, sortOrder);
+    // Pass viewMode to service for hierarchical filtering (uses information_levels.hierarchical flag)
+    const viewMode = options?.viewMode || 'dm_view';
+    const result = service.list(
+      { campaign_id: campaignId, ...filters },
+      { limit, offset },
+      sortBy as any,
+      sortOrder,
+      viewMode
+    );
 
+    // Service already handles row filtering; just strip dm_* fields for player_view
     let filteredData = result.data;
-    if (options?.viewMode === 'player_view') {
-      filteredData = result.data
-        .filter((e: any) => !e.player_knowledge || ['common_knowledge', 'player_knowledge'].includes(e.player_knowledge))
-        .map((e: any) => {
-          const stripped = { ...e };
-          Object.keys(stripped).forEach((k) => { if (k.startsWith('dm_')) delete stripped[k]; });
-          return stripped;
-        });
+    if (viewMode === 'player_view') {
+      filteredData = result.data.map((e: any) => {
+        const stripped = { ...e };
+        Object.keys(stripped).forEach((k) => { if (k.startsWith('dm_')) delete stripped[k]; });
+        return stripped;
+      });
     }
 
     return {

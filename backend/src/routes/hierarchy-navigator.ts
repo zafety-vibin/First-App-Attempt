@@ -8,7 +8,7 @@
 import express, { Request, Response } from 'express';
 import { LocationService } from '../services/LocationService';
 import { protect } from '../middleware/auth';
-import { extractViewMode, getPlayerKnowledgeFilter } from '../middleware/informationFilter';
+import { extractViewMode } from '../middleware/viewMode';
 import { db } from '../services/DatabaseService';
 
 const router = express.Router();
@@ -48,7 +48,7 @@ router.get('/campaigns/:campaignId/locations/hierarchy', (req: Request, res: Res
   try {
     const { campaignId } = req.params;
     const userId = req.user!.id;
-    const viewMode = req.categoryViewMode || 'dm_view';
+    const viewMode = req.viewMode || 'dm_view';
 
     // Validate campaign ownership
     const campaign = db
@@ -60,23 +60,15 @@ router.get('/campaigns/:campaignId/locations/hierarchy', (req: Request, res: Res
       return;
     }
 
-    // Build WHERE clause with player_knowledge filter
-    const playerKnowledgeFilter = getPlayerKnowledgeFilter(viewMode);
-    const whereClause = playerKnowledgeFilter
-      ? `campaign_id = ? AND (${playerKnowledgeFilter})`
-      : 'campaign_id = ?';
-
-    // Fetch all locations for campaign (filtered by view mode)
-    const locations = db
-      .prepare(`SELECT * FROM locations WHERE ${whereClause}`)
-      .all(campaignId) as any[];
-
-    // Parse JSON fields
-    const parsedLocations = locations.map(loc => ({
-      ...loc,
-      tags: loc.tags ? JSON.parse(loc.tags) : [],
-      map_images: loc.map_images ? JSON.parse(loc.map_images) : [],
-    }));
+    // Use LocationService for proper hierarchical filtering
+    const result = locationService.list(
+      { campaign_id: campaignId },
+      { limit: 10000, offset: 0 }, // Get all locations
+      'created_at',
+      'desc',
+      viewMode
+    );
+    const parsedLocations = result.data;
 
     // Build location map
     const locationMap = new Map<string, any>();
@@ -173,7 +165,7 @@ router.get('/locations/:id/breadcrumb', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const userId = req.user!.id;
-    const viewMode = req.categoryViewMode || 'dm_view';
+    const viewMode = req.viewMode || 'dm_view';
 
     // Validate location exists and user has access
     const location = locationService.findById(id);
@@ -266,7 +258,7 @@ router.get('/locations/:id/children', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const userId = req.user!.id;
-    const viewMode = req.categoryViewMode || 'dm_view';
+    const viewMode = req.viewMode || 'dm_view';
 
     // Validate location exists and user has access
     const location = locationService.findById(id);
@@ -284,21 +276,26 @@ router.get('/locations/:id/children', (req: Request, res: Response) => {
       return;
     }
 
-    // Build WHERE clause with parent filter and player_knowledge filter
-    const playerKnowledgeFilter = getPlayerKnowledgeFilter(viewMode);
-    const whereClause = playerKnowledgeFilter
-      ? `parent_location_id = ? AND (${playerKnowledgeFilter})`
-      : 'parent_location_id = ?';
+    // Use LocationService for proper hierarchical filtering
+    const result = locationService.list(
+      {
+        campaign_id: location.campaign_id,
+        parent_location_id: id,
+      },
+      { limit: 10000, offset: 0 }, // Get all child locations
+      'created_at',
+      'desc',
+      viewMode
+    );
 
-    // Fetch child locations
-    const children = db
-      .prepare(`SELECT * FROM locations WHERE ${whereClause}`)
-      .all(id) as any[];
+    // Transform to summary format (with map_count)
+    const childrenSummary = result.data.map(child => {
+      // Get map_images from raw row to count
+      const row = db
+        .prepare('SELECT map_images FROM locations WHERE id = ?')
+        .get(child.id) as { map_images: string } | undefined;
 
-    // Parse JSON and add map_count
-    const childrenSummary = children.map(child => {
-      const mapImages = child.map_images ? JSON.parse(child.map_images) : [];
-      const tags = child.tags ? JSON.parse(child.tags) : [];
+      const mapImages = row && row.map_images ? JSON.parse(row.map_images) : [];
 
       return {
         id: child.id,
@@ -307,7 +304,7 @@ router.get('/locations/:id/children', (req: Request, res: Response) => {
         location_type: child.location_type,
         parent_location_id: child.parent_location_id,
         player_knowledge: child.player_knowledge,
-        tags,
+        tags: child.tags,
         map_count: mapImages.length,
         created_at: child.created_at,
         updated_at: child.updated_at,

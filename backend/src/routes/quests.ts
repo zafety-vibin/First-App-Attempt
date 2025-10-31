@@ -6,7 +6,7 @@
 import express, { Request, Response } from 'express';
 import { QuestService } from '../services/QuestService';
 import { protect } from '../middleware/auth';
-import { extractViewMode, applyInformationFilter } from '../middleware/informationFilter';
+import { extractViewMode, applyInformationFilter } from '../middleware/viewMode';
 import { db } from '../services/DatabaseService';
 
 const router = express.Router();

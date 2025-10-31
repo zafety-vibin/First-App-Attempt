@@ -8,7 +8,7 @@
 import express, { Request, Response } from 'express';
 import { LocationService, MapPin } from '../services/LocationService';
 import { protect } from '../middleware/auth';
-import { extractViewMode } from '../middleware/informationFilter';
+import { extractViewMode } from '../middleware/viewMode';
 import { validateMapPin, validateMapPinUpdate } from '../validation/geographic-maps';
 import { db } from '../services/DatabaseService';
 import { ZodError } from 'zod';

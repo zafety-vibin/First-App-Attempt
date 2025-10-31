@@ -11,7 +11,7 @@
 import express, { Request, Response } from 'express';
 import { FactionService } from '../services/FactionService';
 import { protect } from '../middleware/auth';
-import { extractViewMode, applyInformationFilter } from '../middleware/informationFilter';
+import { extractViewMode, applyInformationFilter } from '../middleware/viewMode';
 import { db } from '../services/DatabaseService';
 
 const router = express.Router();

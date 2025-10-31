@@ -197,6 +197,30 @@ This document tracks small UX improvements and polish items that are deferred to
 
 ---
 
+## Pre-Completion Roadblock Items
+
+### 📋 Complete Tool Description Review
+**Context**: MCP tools (Feature 011) and their schemas may have outdated descriptions that don't reflect current architecture.
+
+**Required Action**:
+- Review all 29 MCP tool descriptions in `backend/src/mcp/tools/`
+- Review all tool schemas in `backend/src/mcp/schemas/`
+- Verify descriptions match current architecture (post-unification)
+- Update any references to old view mode values (dm/player)
+- Ensure parameter descriptions are accurate
+- Check that examples reflect current database schema
+
+**Priority**: 🚨 BLOCKER (must complete before saying we're 100% done)
+
+**Files to Review**:
+- `backend/src/mcp/tools/` - All 29 tool implementations
+- `backend/src/mcp/schemas/` - All Zod schemas
+- `backend/src/mcp/server.ts` - Tool registration and descriptions
+
+**Note**: This is a comprehensive audit task that ensures external tools (Claude Desktop) have accurate documentation and understand the current system architecture correctly.
+
+---
+
 ## Implementation Strategy
 
 **When to tackle these**:

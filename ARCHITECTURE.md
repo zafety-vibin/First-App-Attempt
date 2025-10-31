@@ -152,28 +152,34 @@ Frontend Context Updates → UI Re-render
 
 ### Feature 004: Information Filtering System
 
-**What It Does**: Implements 4-level information filtering (System, Common Knowledge, Player Knowledge, DM Secret) with dual view modes.
+**What It Does**: Implements 4-level information filtering (System, Common Knowledge, Player Knowledge, DM Secret) with dual view modes and custom user-defined levels.
 
 **Why Designed This Way**:
 - Dual systems accommodate different UI patterns:
-  - Wiki cards: `dm` | `player` (System 1)
-  - Category databases: `dm_view` | `player_view` (System 2)
-- *Why different values?* Historical evolution, different middleware chains
+  - Wiki cards: System 1 (now uses `dm_view` | `player_view`)
+  - Category databases: System 2 (`dm_view` | `player_view`)
+- *Note*: Values unified as of commit e071607, but separate middleware chains remain
+- Custom levels per campaign stored in `information_levels` table
 
 **Integration Points**:
 - X-View-Mode header controls filtering
 - Middleware strips dm_* fields in player view
 - SQL WHERE clauses filter by player_knowledge
+- **NEW**: EditableCell loads custom levels dynamically from InformationLevelContext
 
 **Key Components**:
 - `backend/src/middleware/informationFilter.ts`: Category filtering (System 2)
 - `backend/src/middleware/viewModeFilter.ts`: Wiki filtering (System 1)
 - `frontend/src/contexts/ViewModeContext.tsx`: UI state management
+- `frontend/src/contexts/InformationLevelContext.tsx`: Custom level management
+- `frontend/src/components/table/EditableCell.tsx`: Dynamic dropdown loading
 
 **Architectural Highlights**:
 - Information levels customizable per campaign
 - Painter's easel palette for batch tagging
 - View mode persists across navigation
+- **NEW**: Custom levels appear in all 13 category database dropdowns (commit e071607)
+- System level filtered from database dropdowns (wiki structural content only)
 
 ### Feature 005: AI Import & Planning Workflows
 
@@ -594,7 +600,12 @@ Frontend components follow containment pattern:
 
 ### Refactoring Priorities
 
-1. **Unify View Mode Systems**: Merge dm/player and dm_view/player_view
+1. **Unify View Mode Systems**: ~~Merge dm/player and dm_view/player_view~~ **PARTIALLY COMPLETE**
+   - ✅ Values unified: `dm_view`/`player_view` everywhere (wiki and databases)
+   - ✅ Frontend context uses unified values
+   - ✅ Backend middleware simplified
+   - ⚠️ Still dual systems architecturally (separate middleware chains)
+   - **Remaining**: Merge informationFilter.ts and viewModeFilter.ts into single system
 2. **Extract Shared Types**: Move to proper shared package
 3. **Add Junction Tables**: For relationship metadata
 4. **Implement Caching Layer**: For frequently accessed data

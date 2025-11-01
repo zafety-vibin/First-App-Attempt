@@ -51,13 +51,10 @@ export const RelationshipCell: React.FC<RelationshipCellProps> = ({
       setError(null);
 
       try {
-        // Fetch entities by IDs (limit to 100 to prevent massive queries)
-        const idsToFetch = entityIds.slice(0, 100);
-
-        // Build query string with IDs
-        const idParams = idsToFetch.map(id => `ids[]=${id}`).join('&');
+        // Fetch entities by IDs - need to fetch individually or use filter
+        // For now, fetch all and filter client-side (TODO: add batch endpoint)
         const response = await fetch(
-          `/api/campaigns/${campaignId}/${category}?${idParams}`,
+          `/api/campaigns/${campaignId}/${category}?limit=1000`,
           {
             headers: {
               'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
@@ -70,12 +67,16 @@ export const RelationshipCell: React.FC<RelationshipCellProps> = ({
         }
 
         const data = await response.json();
+        const allEntities = data.data || data;
 
-        // Extract id and name from response
-        const fetchedEntities: EntityName[] = (data.data || data).map((entity: any) => ({
-          id: entity.id,
-          name: entity.name || 'Unnamed',
-        }));
+        // Filter to only the IDs we need
+        const entityIdSet = new Set(entityIds);
+        const fetchedEntities: EntityName[] = allEntities
+          .filter((entity: any) => entityIdSet.has(entity.id))
+          .map((entity: any) => ({
+            id: entity.id,
+            name: entity.name || 'Unnamed',
+          }));
 
         setEntities(fetchedEntities);
       } catch (err: any) {

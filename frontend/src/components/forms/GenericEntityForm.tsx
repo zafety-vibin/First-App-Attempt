@@ -311,6 +311,54 @@ export const GenericEntityForm: React.FC<GenericEntityFormProps> = ({
         )}
       />
 
+      <Controller
+        name="npc_relationships"
+        control={control}
+        render={({ field }) => (
+          <RelationshipSelector
+            label="NPC Relationships (knows/family/friends)"
+            category="npcs"
+            campaignId={campaignId}
+            selectedIds={field.value || []}
+            onChange={field.onChange}
+            multiple
+            error={errors.npc_relationships?.message as string}
+          />
+        )}
+      />
+
+      <Controller
+        name="pc_encounters"
+        control={control}
+        render={({ field }) => (
+          <RelationshipSelector
+            label="PC Encounters (who has met this NPC)"
+            category="player_characters"
+            campaignId={campaignId}
+            selectedIds={field.value || []}
+            onChange={field.onChange}
+            multiple
+            error={errors.pc_encounters?.message as string}
+          />
+        )}
+      />
+
+      <Controller
+        name="member_of_factions"
+        control={control}
+        render={({ field }) => (
+          <RelationshipSelector
+            label="Member of Factions"
+            category="factions"
+            campaignId={campaignId}
+            selectedIds={field.value || []}
+            onChange={field.onChange}
+            multiple
+            error={errors.member_of_factions?.message as string}
+          />
+        )}
+      />
+
       <TextArea
         label="DM Secrets"
         name="dm_secrets"
@@ -857,13 +905,14 @@ export const GenericEntityForm: React.FC<GenericEntityFormProps> = ({
         name="loot_acquired"
         control={control}
         render={({ field }) => (
-          <TagInput
+          <RelationshipSelector
             label="Loot Acquired"
-            name="loot_acquired"
-            tags={field.value || []}
+            category="items"
+            campaignId={campaignId}
+            selectedIds={field.value || []}
             onChange={field.onChange}
+            multiple
             error={errors.loot_acquired?.message as string}
-            placeholder="Add item"
           />
         )}
       />
@@ -986,6 +1035,22 @@ export const GenericEntityForm: React.FC<GenericEntityFormProps> = ({
             onChange={field.onChange}
             multiple
             error={errors.locations_to_prep?.message as string}
+          />
+        )}
+      />
+
+      <Controller
+        name="quests_to_advance"
+        control={control}
+        render={({ field }) => (
+          <RelationshipSelector
+            label="Quests to Advance"
+            category="quests"
+            campaignId={campaignId}
+            selectedIds={field.value || []}
+            onChange={field.onChange}
+            multiple
+            error={errors.quests_to_advance?.message as string}
           />
         )}
       />

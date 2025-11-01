@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useInformationLevel } from '../../contexts/InformationLevelContext';
 import './EditableCell.css';
 
-export type EditableCellType = 'text' | 'textarea' | 'number' | 'dropdown' | 'tags' | 'player_knowledge';
+export type EditableCellType = 'text' | 'textarea' | 'number' | 'dropdown' | 'tags' | 'player_knowledge' | 'relationships';
 
 export interface EditableCellProps {
   value: any;
@@ -14,6 +14,7 @@ export interface EditableCellProps {
   placeholder?: string;
   disabled?: boolean;
   campaignId?: string; // Required for player_knowledge type to load custom levels
+  relationshipCategory?: string; // Required for 'relationships' type - which category to select from
 }
 
 /**

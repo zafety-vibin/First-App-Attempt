@@ -86,6 +86,56 @@ This document tracks small UX improvements and polish items that are deferred to
 
 ---
 
+## Relationship Management UX
+
+### 🔗 Inline Editing for Relationships
+**Context**: Relationship fields (locations, allied_factions, related_npcs, etc.) can only be edited via detail page edit form. Other fields have double-click inline editing.
+
+**Current Flow**:
+1. Click entity name → detail page
+2. Click "Edit" button (easy to miss!)
+3. Scroll to relationship field
+4. Use multi-select dropdown
+5. Save
+
+**Proposed Enhancement**:
+- Add inline editing for relationship fields like other columns
+- Double-click relationship cell → opens multi-select modal/dropdown
+- Select entities, auto-saves
+- Matches pattern for tags, dropdowns, text fields
+
+**Files to Modify**:
+- `frontend/src/components/table/EditableCell.tsx` (add 'relationships' type support)
+- `frontend/src/components/table/RelationshipCell.tsx` (make editable)
+- May need new component: `RelationshipEditor.tsx` (modal with multi-select)
+
+**Priority**: ⭐⭐⭐ High (consistency with other fields, discoverability)
+
+**Note**: Junction tables work perfectly via edit form, but inline would match user expectations for field editing.
+
+---
+
+### 🎯 Bulk Edit Button Discoverability
+**Context**: When entities are selected via checkboxes, user expects edit functionality but it's not visible.
+
+**Current**: Bulk actions toolbar shows Delete, Set Visibility, Add Tags - no Edit button
+
+**Proposed Enhancement**:
+- Add "Edit Selected" button to BulkActionsToolbar
+- Opens modal to batch-edit common fields
+- Or: Add individual row edit button (pencil icon) next to checkbox
+- Make edit functionality more discoverable
+
+**Files to Modify**:
+- `frontend/src/components/table/BulkActionsToolbar.tsx`
+- Or add edit icon to table rows
+
+**Priority**: ⭐⭐ Medium (discoverability issue)
+
+**Note**: Edit functionality exists via detail page, just not obvious where it is.
+
+---
+
 ## Dashboard & Widgets
 
 ### 🗺️ Multiple Maps Support for Map Widget

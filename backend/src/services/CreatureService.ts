@@ -1,6 +1,7 @@
 /**
  * CreatureService - Business logic for creature operations (standardized)
  * Feature: 014-create-the-database
+ * Junction Tables: creature_habitats (Phase 2c)
  */
 
 import Database from 'better-sqlite3';
@@ -39,20 +40,49 @@ export class CreatureService extends BaseCategoryService<Creature> {
   }
 
   protected updateEntity(id: string, data: Partial<Creature>): void {
+    // Handle junction table relationships separately
+    if ('habitats' in data && Array.isArray(data.habitats)) {
+      this.setHabitats(id, data.habitats);
+      const { habitats, ...restData } = data;
+      data = restData as Partial<Creature>;
+    }
+
     const updates: string[] = [];
     const params: any[] = [];
 
-    Object.keys(data).forEach((key) => {
-      if (key === 'id' || key === 'campaign_id' || key === 'created_at') return;
-      const value = (data as any)[key];
-      updates.push(`${key} = ?`);
-      params.push(['tags', 'custom_fields', 'habitats'].includes(key) ? JSON.stringify(value) : value);
-    });
+    const updatableFields: (keyof Creature)[] = [
+      'name', 'description', 'core_status', 'player_knowledge', 'tags',
+      'custom_fields', 'creature_type', 'challenge_rating', 'abilities',
+      'dm_behavior_notes',
+      'updated_at' // CRITICAL: Include updated_at to ensure timestamp refresh
+    ];
 
-    if (updates.length === 0) return;
+    for (const field of updatableFields) {
+      if (field in data) {
+        updates.push(`${field} = ?`);
+
+        // Handle JSON fields (removed 'habitats' - now in junction table)
+        if (['tags', 'custom_fields'].includes(field)) {
+          params.push(JSON.stringify(data[field]));
+        } else {
+          params.push(data[field] as any);
+        }
+      }
+    }
+
+    if (updates.length === 0) {
+      return;
+    }
 
     params.push(id);
-    this.db.prepare(`UPDATE creatures SET ${updates.join(', ')} WHERE id = ?`).run(...params);
+
+    const stmt = this.db.prepare(`
+      UPDATE creatures
+      SET ${updates.join(', ')}
+      WHERE id = ?
+    `);
+
+    stmt.run(...params);
   }
 
   protected deleteEntity(id: string): void {
@@ -109,5 +139,75 @@ export class CreatureService extends BaseCategoryService<Creature> {
       data: rows.map((row) => this.parseJsonFields(row, ['tags', 'custom_fields', 'habitats']) as Creature),
       total: count,
     };
+  }
+
+  /**
+   * Get creature habitats from junction table
+   * @param creatureId - Creature ID
+   * @returns Array of location IDs
+   */
+  getHabitats(creatureId: string): string[] {
+    const rows = this.db
+      .prepare('SELECT location_id FROM creature_habitats WHERE creature_id = ?')
+      .all(creatureId) as { location_id: string }[];
+
+    return rows.map(r => r.location_id);
+  }
+
+  /**
+   * Add creature habitat relationship
+   * @param creatureId - Creature ID
+   * @param locationId - Location ID
+   * @param options - Relationship options
+   */
+  addHabitat(
+    creatureId: string,
+    locationId: string,
+    options?: { habitat_frequency?: string; time_of_day?: string }
+  ): void {
+    const { randomUUID } = require('crypto');
+
+    this.db
+      .prepare(`
+        INSERT INTO creature_habitats (id, creature_id, location_id, habitat_frequency, time_of_day, created_at)
+        VALUES (?, ?, ?, ?, ?, strftime('%s', 'now'))
+        ON CONFLICT(creature_id, location_id) DO UPDATE SET
+          habitat_frequency = COALESCE(excluded.habitat_frequency, habitat_frequency),
+          time_of_day = COALESCE(excluded.time_of_day, time_of_day),
+          updated_at = strftime('%s', 'now')
+      `)
+      .run(
+        randomUUID(),
+        creatureId,
+        locationId,
+        options?.habitat_frequency || null,
+        options?.time_of_day || null
+      );
+  }
+
+  /**
+   * Remove creature habitat relationship
+   * @param creatureId - Creature ID
+   * @param locationId - Location ID
+   */
+  removeHabitat(creatureId: string, locationId: string): void {
+    this.db
+      .prepare('DELETE FROM creature_habitats WHERE creature_id = ? AND location_id = ?')
+      .run(creatureId, locationId);
+  }
+
+  /**
+   * Set creature habitats (replaces all existing relationships)
+   * @param creatureId - Creature ID
+   * @param locationIds - Array of location IDs
+   */
+  setHabitats(creatureId: string, locationIds: string[]): void {
+    // Remove all existing habitats
+    this.db.prepare('DELETE FROM creature_habitats WHERE creature_id = ?').run(creatureId);
+
+    // Add new habitats
+    locationIds.forEach(locationId => {
+      this.addHabitat(creatureId, locationId);
+    });
   }
 }

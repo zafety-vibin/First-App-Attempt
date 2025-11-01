@@ -1,6 +1,7 @@
 /**
  * WorldRuleService - Business logic for world rule operations (standardized)
  * Feature: 014-create-the-database
+ * Junction Tables: world_rule_relations (Phase 2c)
  */
 
 import Database from 'better-sqlite3';
@@ -36,21 +37,48 @@ export class WorldRuleService extends BaseCategoryService<WorldRule> {
   }
 
   protected updateEntity(id: string, data: Partial<WorldRule>): void {
+    // Handle junction table relationships separately
+    if ('related_rules' in data && Array.isArray(data.related_rules)) {
+      this.setRelatedRules(id, data.related_rules);
+      const { related_rules, ...restData } = data;
+      data = restData as Partial<WorldRule>;
+    }
+
     const updates: string[] = [];
     const params: any[] = [];
 
-    Object.keys(data).forEach((key) => {
-      if (key === 'id' || key === 'campaign_id' || key === 'created_at') return;
-      const value = (data as any)[key];
-      const jsonFields = ['tags', 'custom_fields', 'related_rules'];
-      updates.push(`${key} = ?`);
-      params.push(jsonFields.includes(key) ? JSON.stringify(value) : value);
-    });
+    const updatableFields: (keyof WorldRule)[] = [
+      'name', 'description', 'core_status', 'player_knowledge', 'tags',
+      'custom_fields', 'rule_type', 'exceptions',
+      'updated_at' // CRITICAL: Include updated_at to ensure timestamp refresh
+    ];
 
-    if (updates.length === 0) return;
+    for (const field of updatableFields) {
+      if (field in data) {
+        updates.push(`${field} = ?`);
+
+        // Handle JSON fields (removed 'related_rules' - now in junction table)
+        if (['tags', 'custom_fields'].includes(field)) {
+          params.push(JSON.stringify(data[field]));
+        } else {
+          params.push(data[field] as any);
+        }
+      }
+    }
+
+    if (updates.length === 0) {
+      return;
+    }
 
     params.push(id);
-    this.db.prepare(`UPDATE world_rules SET ${updates.join(', ')} WHERE id = ?`).run(...params);
+
+    const stmt = this.db.prepare(`
+      UPDATE world_rules
+      SET ${updates.join(', ')}
+      WHERE id = ?
+    `);
+
+    stmt.run(...params);
   }
 
   protected deleteEntity(id: string): void {
@@ -107,5 +135,73 @@ export class WorldRuleService extends BaseCategoryService<WorldRule> {
       data: rows.map((row) => this.parseJsonFields(row, ['tags', 'custom_fields', 'related_rules']) as WorldRule),
       total: count,
     };
+  }
+
+  /**
+   * Get related rules from junction table
+   * @param ruleId - World rule ID
+   * @returns Array of related rule IDs
+   */
+  getRelatedRules(ruleId: string): string[] {
+    const rows = this.db
+      .prepare('SELECT related_rule_id FROM world_rule_relations WHERE rule_id = ?')
+      .all(ruleId) as { related_rule_id: string }[];
+
+    return rows.map(r => r.related_rule_id);
+  }
+
+  /**
+   * Add related rule relationship
+   * @param ruleId - World rule ID
+   * @param relatedRuleId - Related rule ID
+   * @param options - Relationship options
+   */
+  addRelatedRule(
+    ruleId: string,
+    relatedRuleId: string,
+    options?: { relation_type?: string }
+  ): void {
+    const { randomUUID } = require('crypto');
+
+    this.db
+      .prepare(`
+        INSERT INTO world_rule_relations (id, rule_id, related_rule_id, relation_type, created_at)
+        VALUES (?, ?, ?, ?, strftime('%s', 'now'))
+        ON CONFLICT(rule_id, related_rule_id) DO UPDATE SET
+          relation_type = COALESCE(excluded.relation_type, relation_type),
+          updated_at = strftime('%s', 'now')
+      `)
+      .run(
+        randomUUID(),
+        ruleId,
+        relatedRuleId,
+        options?.relation_type || null
+      );
+  }
+
+  /**
+   * Remove related rule relationship
+   * @param ruleId - World rule ID
+   * @param relatedRuleId - Related rule ID
+   */
+  removeRelatedRule(ruleId: string, relatedRuleId: string): void {
+    this.db
+      .prepare('DELETE FROM world_rule_relations WHERE rule_id = ? AND related_rule_id = ?')
+      .run(ruleId, relatedRuleId);
+  }
+
+  /**
+   * Set related rules (replaces all existing relationships)
+   * @param ruleId - World rule ID
+   * @param relatedRuleIds - Array of related rule IDs
+   */
+  setRelatedRules(ruleId: string, relatedRuleIds: string[]): void {
+    // Remove all existing relationships
+    this.db.prepare('DELETE FROM world_rule_relations WHERE rule_id = ?').run(ruleId);
+
+    // Add new relationships
+    relatedRuleIds.forEach(relatedRuleId => {
+      this.addRelatedRule(ruleId, relatedRuleId);
+    });
   }
 }

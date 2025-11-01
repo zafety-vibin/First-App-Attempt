@@ -30,8 +30,8 @@ export class SessionPrepService extends BaseCategoryService<SessionPrep> {
         id, campaign_id, name, description, core_status, player_knowledge,
         tags, created_at, updated_at, custom_fields,
         planned_date, status, planned_events, possible_encounters, plot_hooks,
-        dm_notes, plot_threads, npcs_to_prep, locations_to_prep
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        dm_notes, plot_threads, npcs_to_prep, locations_to_prep, quests_to_advance
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       data.id, data.campaign_id, data.name, data.description, data.core_status,
       'dm_only', // Always dm_only for session prep
@@ -39,26 +39,67 @@ export class SessionPrepService extends BaseCategoryService<SessionPrep> {
       JSON.stringify(data.custom_fields), data.planned_date || null, data.status || null,
       data.planned_events || null, data.possible_encounters || null, data.plot_hooks || null,
       data.dm_notes || null, JSON.stringify(data.plot_threads || []),
-      JSON.stringify(data.npcs_to_prep || []), JSON.stringify(data.locations_to_prep || [])
+      JSON.stringify(data.npcs_to_prep || []), JSON.stringify(data.locations_to_prep || []),
+      JSON.stringify(data.quests_to_advance || [])
     );
   }
 
   protected updateEntity(id: string, data: Partial<SessionPrep>): void {
+    // Handle junction table relationships separately
+    if ('npcs_to_prep' in data && Array.isArray(data.npcs_to_prep)) {
+      this.setNPCsToPrep(id, data.npcs_to_prep);
+      const { npcs_to_prep, ...restData } = data;
+      data = restData as Partial<SessionPrep>;
+    }
+
+    if ('locations_to_prep' in data && Array.isArray(data.locations_to_prep)) {
+      this.setLocationsToPrep(id, data.locations_to_prep);
+      const { locations_to_prep, ...restData } = data;
+      data = restData as Partial<SessionPrep>;
+    }
+
+    if ('quests_to_advance' in data && Array.isArray(data.quests_to_advance)) {
+      this.setQuestsToAdvance(id, data.quests_to_advance);
+      const { quests_to_advance, ...restData } = data;
+      data = restData as Partial<SessionPrep>;
+    }
+
     const updates: string[] = [];
     const params: any[] = [];
 
-    Object.keys(data).forEach((key) => {
-      if (key === 'id' || key === 'campaign_id' || key === 'created_at' || key === 'player_knowledge') return;
-      const value = (data as any)[key];
-      const jsonFields = ['tags', 'custom_fields', 'plot_threads', 'npcs_to_prep', 'locations_to_prep'];
-      updates.push(`${key} = ?`);
-      params.push(jsonFields.includes(key) ? JSON.stringify(value) : value);
-    });
+    const updatableFields: (keyof SessionPrep)[] = [
+      'name', 'description', 'core_status', 'player_knowledge', 'tags',
+      'custom_fields', 'planned_date', 'status', 'planned_events',
+      'possible_encounters', 'plot_hooks', 'dm_notes', 'plot_threads',
+      'updated_at' // CRITICAL: Include updated_at to ensure timestamp refresh
+    ];
 
-    if (updates.length === 0) return;
+    for (const field of updatableFields) {
+      if (field in data) {
+        updates.push(`${field} = ?`);
+
+        // Handle JSON fields (removed 'npcs_to_prep', 'locations_to_prep', 'quests_to_advance' - now in junction tables)
+        if (['tags', 'custom_fields', 'plot_threads'].includes(field)) {
+          params.push(JSON.stringify(data[field]));
+        } else {
+          params.push(data[field] as any);
+        }
+      }
+    }
+
+    if (updates.length === 0) {
+      return;
+    }
 
     params.push(id);
-    this.db.prepare(`UPDATE session_preps SET ${updates.join(', ')} WHERE id = ?`).run(...params);
+
+    const stmt = this.db.prepare(`
+      UPDATE session_preps
+      SET ${updates.join(', ')}
+      WHERE id = ?
+    `);
+
+    stmt.run(...params);
   }
 
   protected deleteEntity(id: string): void {
@@ -67,7 +108,7 @@ export class SessionPrepService extends BaseCategoryService<SessionPrep> {
 
   findById(id: string): SessionPrep | null {
     const row = this.db.prepare('SELECT * FROM session_preps WHERE id = ?').get(id);
-    const jsonFields = ['tags', 'custom_fields', 'plot_threads', 'npcs_to_prep', 'locations_to_prep'];
+    const jsonFields = ['tags', 'custom_fields', 'plot_threads', 'npcs_to_prep', 'locations_to_prep', 'quests_to_advance'];
     return row ? this.parseJsonFields(row, jsonFields) as SessionPrep : null;
   }
 
@@ -113,10 +154,229 @@ export class SessionPrepService extends BaseCategoryService<SessionPrep> {
     const { count } = this.db.prepare(`SELECT COUNT(*) as count FROM session_preps ${whereClause}`).get(...params) as { count: number };
     const rows = this.db.prepare(`SELECT * FROM session_preps ${whereClause} ORDER BY ${sortBy} ${sortOrder} LIMIT ? OFFSET ?`).all(...params, pagination.limit, pagination.offset);
 
-    const jsonFields = ['tags', 'custom_fields', 'plot_threads', 'npcs_to_prep', 'locations_to_prep'];
+    const jsonFields = ['tags', 'custom_fields', 'plot_threads', 'npcs_to_prep', 'locations_to_prep', 'quests_to_advance'];
     return {
       data: rows.map((row) => this.parseJsonFields(row, jsonFields) as SessionPrep),
       total: count,
     };
+  }
+
+  // ========================================
+  // Junction Table Methods: NPCs to Prep
+  // ========================================
+
+  /**
+   * Get NPCs to prep for this session
+   * @param prepId - Session prep ID
+   * @returns Array of NPC IDs
+   */
+  getNPCsToPrep(prepId: string): string[] {
+    const rows = this.db
+      .prepare('SELECT npc_id FROM dm_session_prep_npcs WHERE session_prep_id = ?')
+      .all(prepId) as { npc_id: string }[];
+
+    return rows.map(r => r.npc_id);
+  }
+
+  /**
+   * Add NPC to prep for session
+   * @param prepId - Session prep ID
+   * @param npcId - NPC ID
+   * @param options - Relationship options (prep_priority, prep_notes)
+   */
+  addNPCToPrep(
+    prepId: string,
+    npcId: string,
+    options?: { prep_priority?: number; prep_notes?: string }
+  ): void {
+    const { randomUUID } = require('crypto');
+
+    this.db
+      .prepare(`
+        INSERT INTO dm_session_prep_npcs (id, session_prep_id, npc_id, prep_priority, prep_notes, created_at)
+        VALUES (?, ?, ?, ?, ?, strftime('%s', 'now'))
+        ON CONFLICT(session_prep_id, npc_id) DO UPDATE SET
+          prep_priority = COALESCE(excluded.prep_priority, prep_priority),
+          prep_notes = COALESCE(excluded.prep_notes, prep_notes)
+      `)
+      .run(
+        randomUUID(),
+        prepId,
+        npcId,
+        options?.prep_priority || null,
+        options?.prep_notes || null
+      );
+  }
+
+  /**
+   * Remove NPC from session prep
+   * @param prepId - Session prep ID
+   * @param npcId - NPC ID
+   */
+  removeNPCToPrep(prepId: string, npcId: string): void {
+    this.db
+      .prepare('DELETE FROM dm_session_prep_npcs WHERE session_prep_id = ? AND npc_id = ?')
+      .run(prepId, npcId);
+  }
+
+  /**
+   * Set NPCs to prep (replaces all existing relationships)
+   * @param prepId - Session prep ID
+   * @param npcIds - Array of NPC IDs
+   */
+  setNPCsToPrep(prepId: string, npcIds: string[]): void {
+    // Remove all existing relationships
+    this.db.prepare('DELETE FROM dm_session_prep_npcs WHERE session_prep_id = ?').run(prepId);
+
+    // Add new relationships
+    npcIds.forEach(npcId => {
+      this.addNPCToPrep(prepId, npcId);
+    });
+  }
+
+  // ========================================
+  // Junction Table Methods: Locations to Prep
+  // ========================================
+
+  /**
+   * Get locations to prep for this session
+   * @param prepId - Session prep ID
+   * @returns Array of location IDs
+   */
+  getLocationsToPrep(prepId: string): string[] {
+    const rows = this.db
+      .prepare('SELECT location_id FROM dm_session_prep_locations WHERE session_prep_id = ?')
+      .all(prepId) as { location_id: string }[];
+
+    return rows.map(r => r.location_id);
+  }
+
+  /**
+   * Add location to prep for session
+   * @param prepId - Session prep ID
+   * @param locationId - Location ID
+   * @param options - Relationship options (prep_priority, prep_notes)
+   */
+  addLocationToPrep(
+    prepId: string,
+    locationId: string,
+    options?: { prep_priority?: number; prep_notes?: string }
+  ): void {
+    const { randomUUID } = require('crypto');
+
+    this.db
+      .prepare(`
+        INSERT INTO dm_session_prep_locations (id, session_prep_id, location_id, prep_priority, prep_notes, created_at)
+        VALUES (?, ?, ?, ?, ?, strftime('%s', 'now'))
+        ON CONFLICT(session_prep_id, location_id) DO UPDATE SET
+          prep_priority = COALESCE(excluded.prep_priority, prep_priority),
+          prep_notes = COALESCE(excluded.prep_notes, prep_notes)
+      `)
+      .run(
+        randomUUID(),
+        prepId,
+        locationId,
+        options?.prep_priority || null,
+        options?.prep_notes || null
+      );
+  }
+
+  /**
+   * Remove location from session prep
+   * @param prepId - Session prep ID
+   * @param locationId - Location ID
+   */
+  removeLocationToPrep(prepId: string, locationId: string): void {
+    this.db
+      .prepare('DELETE FROM dm_session_prep_locations WHERE session_prep_id = ? AND location_id = ?')
+      .run(prepId, locationId);
+  }
+
+  /**
+   * Set locations to prep (replaces all existing relationships)
+   * @param prepId - Session prep ID
+   * @param locationIds - Array of location IDs
+   */
+  setLocationsToPrep(prepId: string, locationIds: string[]): void {
+    // Remove all existing relationships
+    this.db.prepare('DELETE FROM dm_session_prep_locations WHERE session_prep_id = ?').run(prepId);
+
+    // Add new relationships
+    locationIds.forEach(locationId => {
+      this.addLocationToPrep(prepId, locationId);
+    });
+  }
+
+  // ========================================
+  // Junction Table Methods: Quests to Advance
+  // ========================================
+
+  /**
+   * Get quests to advance in this session
+   * @param prepId - Session prep ID
+   * @returns Array of quest IDs
+   */
+  getQuestsToAdvance(prepId: string): string[] {
+    const rows = this.db
+      .prepare('SELECT quest_id FROM dm_session_prep_quests WHERE session_prep_id = ?')
+      .all(prepId) as { quest_id: string }[];
+
+    return rows.map(r => r.quest_id);
+  }
+
+  /**
+   * Add quest to advance in session
+   * @param prepId - Session prep ID
+   * @param questId - Quest ID
+   * @param options - Relationship options (prep_priority, prep_notes)
+   */
+  addQuestToAdvance(
+    prepId: string,
+    questId: string,
+    options?: { prep_priority?: number; prep_notes?: string }
+  ): void {
+    const { randomUUID } = require('crypto');
+
+    this.db
+      .prepare(`
+        INSERT INTO dm_session_prep_quests (id, session_prep_id, quest_id, prep_priority, prep_notes, created_at)
+        VALUES (?, ?, ?, ?, ?, strftime('%s', 'now'))
+        ON CONFLICT(session_prep_id, quest_id) DO UPDATE SET
+          prep_priority = COALESCE(excluded.prep_priority, prep_priority),
+          prep_notes = COALESCE(excluded.prep_notes, prep_notes)
+      `)
+      .run(
+        randomUUID(),
+        prepId,
+        questId,
+        options?.prep_priority || null,
+        options?.prep_notes || null
+      );
+  }
+
+  /**
+   * Remove quest from session prep
+   * @param prepId - Session prep ID
+   * @param questId - Quest ID
+   */
+  removeQuestToAdvance(prepId: string, questId: string): void {
+    this.db
+      .prepare('DELETE FROM dm_session_prep_quests WHERE session_prep_id = ? AND quest_id = ?')
+      .run(prepId, questId);
+  }
+
+  /**
+   * Set quests to advance (replaces all existing relationships)
+   * @param prepId - Session prep ID
+   * @param questIds - Array of quest IDs
+   */
+  setQuestsToAdvance(prepId: string, questIds: string[]): void {
+    // Remove all existing relationships
+    this.db.prepare('DELETE FROM dm_session_prep_quests WHERE session_prep_id = ?').run(prepId);
+
+    // Add new relationships
+    questIds.forEach(questId => {
+      this.addQuestToAdvance(prepId, questId);
+    });
   }
 }

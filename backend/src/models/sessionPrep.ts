@@ -28,4 +28,5 @@ export interface SessionPrep {
   plot_threads: string[];
   npcs_to_prep: string[];
   locations_to_prep: string[];
+  quests_to_advance: string[];
 }

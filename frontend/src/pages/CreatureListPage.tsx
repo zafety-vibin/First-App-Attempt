@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { GenericCategoryListView } from '../components/pages/GenericCategoryListView';
 import { ColumnDef } from '@tanstack/react-table';
 import { TruncatedText } from '../components/common/TruncatedText';
+import { RelationshipCell } from '../components/table/RelationshipCell';
 
 export const CreatureListPage: React.FC = () => {
   const { campaignId } = useParams<{ campaignId: string }>();
@@ -108,13 +109,17 @@ export const CreatureListPage: React.FC = () => {
       header: 'Habitats',
       cell: (info) => {
         const habitats = info.getValue() as string[];
-        return habitats && habitats.length > 0 ? `${habitats.length} locations` : '-';
+        return (
+          <RelationshipCell
+            entityIds={habitats || []}
+            category="locations"
+            campaignId={campaignId!}
+            maxDisplay={2}
+          />
+        );
       },
-      size: 200,
-      meta: {
-        editable: true,
-        editableType: 'tags',
-      },
+      size: 300,
+      enableSorting: false,
     },
     {
       accessorKey: 'tags',

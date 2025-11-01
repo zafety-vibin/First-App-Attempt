@@ -4,6 +4,7 @@ import { GenericCategoryListView } from '../components/pages/GenericCategoryList
 import { ColumnDef } from '@tanstack/react-table';
 import { PlayerCharacter } from '../utils/validationSchemas';
 import { TruncatedText } from '../components/common/TruncatedText';
+import { RelationshipCell } from '../components/table/RelationshipCell';
 
 /**
  * T066: Player Character List Page
@@ -143,13 +144,34 @@ export const PlayerCharacterListPage: React.FC = () => {
       header: 'Factions',
       cell: (info) => {
         const factions = info.getValue() as string[];
-        return factions && factions.length > 0 ? `${factions.length} factions` : '-';
+        return (
+          <RelationshipCell
+            entityIds={factions || []}
+            category="factions"
+            campaignId={campaignId!}
+            maxDisplay={2}
+          />
+        );
       },
-      size: 180,
-      meta: {
-        editable: true,
-        editableType: 'tags',
+      size: 300,
+      enableSorting: false,
+    },
+    {
+      accessorKey: 'allied_npcs',
+      header: 'Allied NPCs',
+      cell: (info) => {
+        const allies = info.getValue() as string[];
+        return (
+          <RelationshipCell
+            entityIds={allies || []}
+            category="npcs"
+            campaignId={campaignId!}
+            maxDisplay={3}
+          />
+        );
       },
+      size: 300,
+      enableSorting: false,
     },
     {
       accessorKey: 'tags',

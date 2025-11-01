@@ -4,6 +4,7 @@ import { GenericCategoryListView } from '../components/pages/GenericCategoryList
 import { ColumnDef } from '@tanstack/react-table';
 import { NPC } from '../utils/validationSchemas';
 import { TruncatedText } from '../components/common/TruncatedText';
+import { RelationshipCell } from '../components/table/RelationshipCell';
 
 /**
  * T061: NPC List Page
@@ -208,6 +209,23 @@ export const NPCListPage: React.FC = () => {
         editable: true,
         editableType: 'textarea',
       },
+    },
+    {
+      accessorKey: 'associated_locations',
+      header: 'Locations',
+      cell: (info) => {
+        const locations = info.getValue() as string[];
+        return (
+          <RelationshipCell
+            entityIds={locations || []}
+            category="locations"
+            campaignId={campaignId!}
+            maxDisplay={2}
+          />
+        );
+      },
+      size: 300,
+      enableSorting: false,
     },
   ];
 

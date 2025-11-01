@@ -2,6 +2,7 @@ import React from 'react';
 import { useParams } from 'react-router-dom';
 import { GenericCategoryListView } from '../components/pages/GenericCategoryListView';
 import { ColumnDef } from '@tanstack/react-table';
+import { RelationshipCell } from '../components/table/RelationshipCell';
 
 export const WorldRuleListPage: React.FC = () => {
   const { campaignId } = useParams<{ campaignId: string }>();
@@ -89,13 +90,17 @@ export const WorldRuleListPage: React.FC = () => {
       header: 'Related Rules',
       cell: (info) => {
         const rules = info.getValue() as string[];
-        return rules && rules.length > 0 ? `${rules.length} rules` : '-';
+        return (
+          <RelationshipCell
+            entityIds={rules || []}
+            category="world_rules"
+            campaignId={campaignId!}
+            maxDisplay={2}
+          />
+        );
       },
-      size: 200,
-      meta: {
-        editable: true,
-        editableType: 'tags',
-      },
+      size: 300,
+      enableSorting: false,
     },
     {
       accessorKey: 'tags',

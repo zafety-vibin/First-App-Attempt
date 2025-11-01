@@ -4,6 +4,7 @@ import { GenericCategoryListView } from '../components/pages/GenericCategoryList
 import { ColumnDef } from '@tanstack/react-table';
 import { SessionRecap } from '../utils/validationSchemas';
 import { TruncatedText } from '../components/common/TruncatedText';
+import { RelationshipCell } from '../components/table/RelationshipCell';
 
 /**
  * T065: Session Recap List Page
@@ -100,32 +101,76 @@ export const SessionRecapListPage: React.FC = () => {
       header: 'NPCs Met',
       cell: (info) => {
         const npcs = info.getValue() as string[];
-        return npcs && npcs.length > 0 ? `${npcs.length} NPCs` : '-';
+        return (
+          <RelationshipCell
+            entityIds={npcs || []}
+            category="npcs"
+            campaignId={campaignId!}
+            maxDisplay={3}
+          />
+        );
       },
-      size: 150,
-      meta: {
-        editable: true,
-        editableType: 'tags',
-      },
+      size: 300,
+      enableSorting: false,
     },
     {
       accessorKey: 'locations_visited',
       header: 'Locations',
       cell: (info) => {
         const value = info.getValue();
-        if (!value) return '-';
-        try {
-          const locations = typeof value === 'string' ? JSON.parse(value) : value;
-          return Array.isArray(locations) ? `${locations.length} locations` : String(value);
-        } catch {
-          return String(value);
+        let locations: string[] = [];
+        if (value) {
+          try {
+            locations = typeof value === 'string' ? JSON.parse(value) : value;
+          } catch {
+            locations = [];
+          }
         }
+        return (
+          <RelationshipCell
+            entityIds={locations || []}
+            category="locations"
+            campaignId={campaignId!}
+            maxDisplay={2}
+          />
+        );
       },
-      size: 180,
-      meta: {
-        editable: true,
-        editableType: 'tags',
+      size: 300,
+      enableSorting: false,
+    },
+    {
+      accessorKey: 'quests_progressed',
+      header: 'Quests',
+      cell: (info) => {
+        const quests = info.getValue() as string[];
+        return (
+          <RelationshipCell
+            entityIds={quests || []}
+            category="quests"
+            campaignId={campaignId!}
+            maxDisplay={2}
+          />
+        );
       },
+      size: 300,
+      enableSorting: false,
+    },
+    {
+      accessorKey: 'loot_acquired',
+      header: 'Loot',
+      cell: (info) => {
+        const loot = info.getValue() as string[];
+        return (
+          <RelationshipCell
+            entityIds={loot || []}
+            category="items"
+            campaignId={campaignId!}
+            maxDisplay={2}
+          />
+        );
+      },
+      size: 300,
+      enableSorting: false,
     },
     {
       accessorKey: 'tags',

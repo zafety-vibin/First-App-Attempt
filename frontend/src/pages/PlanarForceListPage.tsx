@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { GenericCategoryListView } from '../components/pages/GenericCategoryListView';
 import { ColumnDef } from '@tanstack/react-table';
 import { TruncatedText } from '../components/common/TruncatedText';
+import { RelationshipCell } from '../components/table/RelationshipCell';
 
 export const PlanarForceListPage: React.FC = () => {
   const { campaignId } = useParams<{ campaignId: string }>();
@@ -131,17 +132,55 @@ export const PlanarForceListPage: React.FC = () => {
       },
     },
     {
+      accessorKey: 'allied_entities',
+      header: 'Allied Entities',
+      cell: (info) => {
+        const allies = info.getValue() as string[];
+        return (
+          <RelationshipCell
+            entityIds={allies || []}
+            category="planar_forces"
+            campaignId={campaignId!}
+            maxDisplay={2}
+          />
+        );
+      },
+      size: 300,
+      enableSorting: false,
+    },
+    {
+      accessorKey: 'rival_entities',
+      header: 'Rival Entities',
+      cell: (info) => {
+        const rivals = info.getValue() as string[];
+        return (
+          <RelationshipCell
+            entityIds={rivals || []}
+            category="planar_forces"
+            campaignId={campaignId!}
+            maxDisplay={2}
+          />
+        );
+      },
+      size: 300,
+      enableSorting: false,
+    },
+    {
       accessorKey: 'religious_orders',
-      header: 'Orders',
+      header: 'Religious Orders',
       cell: (info) => {
         const orders = info.getValue() as string[];
-        return orders && orders.length > 0 ? `${orders.length} orders` : '-';
+        return (
+          <RelationshipCell
+            entityIds={orders || []}
+            category="factions"
+            campaignId={campaignId!}
+            maxDisplay={2}
+          />
+        );
       },
-      size: 180,
-      meta: {
-        editable: true,
-        editableType: 'tags',
-      },
+      size: 300,
+      enableSorting: false,
     },
     {
       accessorKey: 'tags',

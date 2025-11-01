@@ -2,6 +2,7 @@ import React from 'react';
 import { useParams } from 'react-router-dom';
 import { GenericCategoryListView } from '../components/pages/GenericCategoryListView';
 import { ColumnDef } from '@tanstack/react-table';
+import { RelationshipCell } from '../components/table/RelationshipCell';
 
 export const LoreEntryListPage: React.FC = () => {
   const { campaignId } = useParams<{ campaignId: string }>();
@@ -112,29 +113,54 @@ export const LoreEntryListPage: React.FC = () => {
     },
     {
       accessorKey: 'related_npcs',
-      header: 'NPCs',
+      header: 'Related NPCs',
       cell: (info) => {
         const npcs = info.getValue() as string[];
-        return npcs && npcs.length > 0 ? `${npcs.length} NPCs` : '-';
+        return (
+          <RelationshipCell
+            entityIds={npcs || []}
+            category="npcs"
+            campaignId={campaignId!}
+            maxDisplay={3}
+          />
+        );
       },
-      size: 150,
-      meta: {
-        editable: true,
-        editableType: 'tags',
-      },
+      size: 300,
+      enableSorting: false,
     },
     {
       accessorKey: 'related_factions',
-      header: 'Factions',
+      header: 'Related Factions',
       cell: (info) => {
         const factions = info.getValue() as string[];
-        return factions && factions.length > 0 ? `${factions.length} factions` : '-';
+        return (
+          <RelationshipCell
+            entityIds={factions || []}
+            category="factions"
+            campaignId={campaignId!}
+            maxDisplay={2}
+          />
+        );
       },
-      size: 180,
-      meta: {
-        editable: true,
-        editableType: 'tags',
+      size: 300,
+      enableSorting: false,
+    },
+    {
+      accessorKey: 'related_locations',
+      header: 'Related Locations',
+      cell: (info) => {
+        const locations = info.getValue() as string[];
+        return (
+          <RelationshipCell
+            entityIds={locations || []}
+            category="locations"
+            campaignId={campaignId!}
+            maxDisplay={2}
+          />
+        );
       },
+      size: 300,
+      enableSorting: false,
     },
     {
       accessorKey: 'tags',

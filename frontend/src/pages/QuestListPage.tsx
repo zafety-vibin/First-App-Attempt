@@ -4,6 +4,7 @@ import { GenericCategoryListView } from '../components/pages/GenericCategoryList
 import { ColumnDef } from '@tanstack/react-table';
 import { Quest } from '../utils/validationSchemas';
 import { TruncatedText } from '../components/common/TruncatedText';
+import { RelationshipCell } from '../components/table/RelationshipCell';
 
 /**
  * T064: Quest List Page
@@ -113,26 +114,34 @@ export const QuestListPage: React.FC = () => {
       header: 'Related NPCs',
       cell: (info) => {
         const npcs = info.getValue() as string[];
-        return npcs && npcs.length > 0 ? `${npcs.length} NPCs` : '-';
+        return (
+          <RelationshipCell
+            entityIds={npcs || []}
+            category="npcs"
+            campaignId={campaignId!}
+            maxDisplay={3}
+          />
+        );
       },
-      size: 180,
-      meta: {
-        editable: true,
-        editableType: 'tags',
-      },
+      size: 300,
+      enableSorting: false,
     },
     {
       accessorKey: 'related_locations',
       header: 'Locations',
       cell: (info) => {
         const locs = info.getValue() as string[];
-        return locs && locs.length > 0 ? `${locs.length} locations` : '-';
+        return (
+          <RelationshipCell
+            entityIds={locs || []}
+            category="locations"
+            campaignId={campaignId!}
+            maxDisplay={2}
+          />
+        );
       },
-      size: 180,
-      meta: {
-        editable: true,
-        editableType: 'tags',
-      },
+      size: 300,
+      enableSorting: false,
     },
     {
       accessorKey: 'tags',

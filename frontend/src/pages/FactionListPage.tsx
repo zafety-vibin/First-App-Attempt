@@ -4,6 +4,7 @@ import { GenericCategoryListView } from '../components/pages/GenericCategoryList
 import { ColumnDef } from '@tanstack/react-table';
 import { Faction } from '../utils/validationSchemas';
 import { TruncatedText } from '../components/common/TruncatedText';
+import { RelationshipCell } from '../components/table/RelationshipCell';
 
 /**
  * T063: Faction List Page
@@ -148,6 +149,74 @@ export const FactionListPage: React.FC = () => {
         editable: true,
         editableType: 'textarea',
       },
+    },
+    {
+      accessorKey: 'allied_factions',
+      header: 'Allied Factions',
+      cell: (info) => {
+        const allies = info.getValue() as string[];
+        return (
+          <RelationshipCell
+            entityIds={allies || []}
+            category="factions"
+            campaignId={campaignId!}
+            maxDisplay={2}
+          />
+        );
+      },
+      size: 300,
+      enableSorting: false,
+    },
+    {
+      accessorKey: 'rival_factions',
+      header: 'Rival Factions',
+      cell: (info) => {
+        const rivals = info.getValue() as string[];
+        return (
+          <RelationshipCell
+            entityIds={rivals || []}
+            category="factions"
+            campaignId={campaignId!}
+            maxDisplay={2}
+          />
+        );
+      },
+      size: 300,
+      enableSorting: false,
+    },
+    {
+      accessorKey: 'key_members',
+      header: 'Key Members',
+      cell: (info) => {
+        const members = info.getValue() as string[];
+        return (
+          <RelationshipCell
+            entityIds={members || []}
+            category="npcs"
+            campaignId={campaignId!}
+            maxDisplay={3}
+          />
+        );
+      },
+      size: 300,
+      enableSorting: false,
+    },
+    {
+      accessorKey: 'territory',
+      header: 'Territory',
+      cell: (info) => {
+        const territory = info.getValue() as string[];
+        return (
+          <RelationshipCell
+            entityIds={territory || []}
+            category="locations"
+            campaignId={campaignId!}
+            maxDisplay={2}
+          />
+        );
+      },
+      size: 300,
+      enableSorting: false,
     },
   ];
 

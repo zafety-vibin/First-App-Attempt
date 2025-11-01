@@ -472,9 +472,9 @@ The models reference each other via entity links but remain independent, allowin
 - 17 route files updated to use unified imports
 - Architecture.md Refactoring Priority #1 complete
 
-### Why No Junction Tables?
+### Why No Junction Tables? (HISTORICAL - NOW IMPLEMENTED)
 
-**Decision**: Use JSON arrays for many-to-many relationships instead of junction tables
+**Decision**: ~~Use JSON arrays for many-to-many relationships instead of junction tables~~
 
 **Context**:
 - Prototype simplicity priority
@@ -489,7 +489,22 @@ The models reference each other via entity links but remain independent, allowin
 - ❌ Less efficient for large datasets
 - ❌ Harder to maintain referential integrity
 
-**Future**: Migrate to junction tables when adding relationship metadata
+**Resolution** (commits 2339409 → 1eabf38): ✅ **IMPLEMENTED JUNCTION TABLES**
+- 28 junction tables created replacing 24 JSON array fields
+- Full referential integrity with FK constraints
+- Relationship metadata support (alliance_type, role, presence_type, etc.)
+- Bidirectional queries (NPC shows factions, faction shows NPCs)
+- Services updated with 100+ methods for managing relationships
+- UI displays entity names instead of counts ("Elara, Marcus" vs "2 NPCs")
+- Migration 026 successfully converted existing data
+- DM* prefix pattern for session prep relationships (player view filtering)
+
+**New capabilities**:
+- ✅ Orphaned IDs prevented (CASCADE delete on relationships)
+- ✅ Rich metadata (alliance strength, loyalty level, habitat frequency)
+- ✅ Efficient indexed queries on both sides
+- ✅ NPC-to-NPC and NPC-to-PC relationship tracking (new tables)
+- ✅ Faction territory vs presence distinction (domination vs coexistence)
 
 ### Why BaseCategoryService Abstraction?
 
@@ -625,7 +640,17 @@ Frontend components follow containment pattern:
    - ✅ TypeScript compilation errors fixed (20+ → 0)
    - ✅ Database export type annotation added
    - **Note**: Frontend still uses `shared/types/` (Vite handles it fine)
-3. **Add Junction Tables**: For relationship metadata
+3. **Add Junction Tables**: ~~For relationship metadata~~ **✅ COMPLETE** (commits 2339409 → 1eabf38)
+   - ✅ 28 junction tables created with FK constraints
+   - ✅ Migrated 17 existing relationships from JSON arrays (Migration 026)
+   - ✅ Updated all 11 category services with 100+ junction methods
+   - ✅ Services populate relationship arrays from junctions in responses
+   - ✅ RelationshipCell component displays entity names instead of counts
+   - ✅ 24 relationship columns updated across 11 table list pages
+   - ✅ Bidirectional relationships (factions ↔ NPCs, locations ↔ NPCs, etc.)
+   - ✅ New relationships: npc_npc_relationships, npc_pc_encounters
+   - ✅ DM* prefix pattern for session prep tables (hidden from player view)
+   - **Remaining**: Remove deprecated JSON fields (optional cleanup), add relationship editing UI
 4. **Implement Caching Layer**: For frequently accessed data
 5. **Add WebSocket Support**: For real-time collaboration prep
 

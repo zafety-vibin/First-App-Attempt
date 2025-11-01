@@ -242,8 +242,16 @@ export class QuestService extends BaseCategoryService<Quest> {
 
   findById(id: string): Quest | null {
     const row = this.db.prepare('SELECT * FROM quests WHERE id = ?').get(id);
+    if (!row) return null;
+
     const jsonFields = ['tags', 'custom_fields', 'objectives', 'related_npcs', 'related_locations'];
-    return row ? this.parseJsonFields(row, jsonFields) as Quest : null;
+    const quest = this.parseJsonFields(row, jsonFields) as Quest;
+
+    // Populate relationships from junction tables
+    quest.related_npcs = this.getRelatedNPCs(id);
+    quest.related_locations = this.getRelatedLocations(id);
+
+    return quest;
   }
 
   list(
@@ -292,8 +300,17 @@ export class QuestService extends BaseCategoryService<Quest> {
     const rows = this.db.prepare(`SELECT * FROM quests ${whereClause} ORDER BY ${sortBy} ${sortOrder} LIMIT ? OFFSET ?`).all(...params, pagination.limit, pagination.offset);
 
     const jsonFields = ['tags', 'custom_fields', 'objectives', 'related_npcs', 'related_locations'];
+
+    // Populate relationships from junction tables for each quest
+    const quests = rows.map((row) => {
+      const quest = this.parseJsonFields(row, jsonFields) as Quest;
+      quest.related_npcs = this.getRelatedNPCs(quest.id);
+      quest.related_locations = this.getRelatedLocations(quest.id);
+      return quest;
+    });
+
     return {
-      data: rows.map((row) => this.parseJsonFields(row, jsonFields) as Quest),
+      data: quests,
       total: count,
     };
   }

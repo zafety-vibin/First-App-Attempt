@@ -172,7 +172,15 @@ export class PlayerCharacterService extends BaseCategoryService<PlayerCharacter>
       .prepare('SELECT * FROM player_characters WHERE id = ?')
       .get(id) as PlayerCharacterRow | undefined;
 
-    return row ? this.rowToPlayerCharacter(row) : null;
+    if (!row) return null;
+
+    const pc = this.rowToPlayerCharacter(row);
+
+    // Populate relationships from junction tables
+    pc.faction_affiliations = this.getFactionAffiliations(id);
+    pc.allied_npcs = this.getNPCRelationships(id);
+
+    return pc;
   }
 
   /**
@@ -247,8 +255,16 @@ export class PlayerCharacterService extends BaseCategoryService<PlayerCharacter>
 
     const rows = dataStmt.all(...params, pagination.limit, pagination.offset) as PlayerCharacterRow[];
 
+    // Populate relationships from junction tables for each player character
+    const pcs = rows.map((row) => {
+      const pc = this.rowToPlayerCharacter(row);
+      pc.faction_affiliations = this.getFactionAffiliations(pc.id);
+      pc.allied_npcs = this.getNPCRelationships(pc.id);
+      return pc;
+    });
+
     return {
-      data: rows.map((row) => this.rowToPlayerCharacter(row)),
+      data: pcs,
       total: count,
     };
   }

@@ -135,7 +135,17 @@ export class SessionRecapService extends BaseCategoryService<SessionRecap> {
    */
   findById(id: string): SessionRecap | null {
     const row = this.db.prepare('SELECT * FROM session_recaps WHERE id = ?').get(id);
-    return row ? this.rowToSessionRecap(row as any) : null;
+    if (!row) return null;
+
+    const recap = this.rowToSessionRecap(row as any);
+
+    // Populate relationships from junction tables
+    recap.npcs_encountered = this.getNPCsEncountered(id);
+    recap.locations_visited = this.getLocationsVisited(id);
+    recap.quests_progressed = this.getQuestsProgressed(id);
+    recap.loot_acquired = this.getLootAcquired(id);
+
+    return recap;
   }
 
   /**
@@ -194,8 +204,18 @@ export class SessionRecapService extends BaseCategoryService<SessionRecap> {
 
     const rows = dataStmt.all(...params, pagination.limit, pagination.offset);
 
+    // Populate relationships from junction tables for each recap
+    const recaps = rows.map((row) => {
+      const recap = this.rowToSessionRecap(row as any);
+      recap.npcs_encountered = this.getNPCsEncountered(recap.id);
+      recap.locations_visited = this.getLocationsVisited(recap.id);
+      recap.quests_progressed = this.getQuestsProgressed(recap.id);
+      recap.loot_acquired = this.getLootAcquired(recap.id);
+      return recap;
+    });
+
     return {
-      data: rows.map((row) => this.rowToSessionRecap(row as any)),
+      data: recaps,
       total: count,
     };
   }

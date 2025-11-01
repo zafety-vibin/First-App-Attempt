@@ -108,8 +108,17 @@ export class SessionPrepService extends BaseCategoryService<SessionPrep> {
 
   findById(id: string): SessionPrep | null {
     const row = this.db.prepare('SELECT * FROM session_preps WHERE id = ?').get(id);
+    if (!row) return null;
+
     const jsonFields = ['tags', 'custom_fields', 'plot_threads', 'npcs_to_prep', 'locations_to_prep', 'quests_to_advance'];
-    return row ? this.parseJsonFields(row, jsonFields) as SessionPrep : null;
+    const prep = this.parseJsonFields(row, jsonFields) as SessionPrep;
+
+    // Populate relationships from junction tables
+    prep.npcs_to_prep = this.getNPCsToPrep(id);
+    prep.locations_to_prep = this.getLocationsToPrep(id);
+    prep.quests_to_advance = this.getQuestsToAdvance(id);
+
+    return prep;
   }
 
   list(
@@ -155,8 +164,18 @@ export class SessionPrepService extends BaseCategoryService<SessionPrep> {
     const rows = this.db.prepare(`SELECT * FROM session_preps ${whereClause} ORDER BY ${sortBy} ${sortOrder} LIMIT ? OFFSET ?`).all(...params, pagination.limit, pagination.offset);
 
     const jsonFields = ['tags', 'custom_fields', 'plot_threads', 'npcs_to_prep', 'locations_to_prep', 'quests_to_advance'];
+
+    // Populate relationships from junction tables for each session prep
+    const preps = rows.map((row) => {
+      const prep = this.parseJsonFields(row, jsonFields) as SessionPrep;
+      prep.npcs_to_prep = this.getNPCsToPrep(prep.id);
+      prep.locations_to_prep = this.getLocationsToPrep(prep.id);
+      prep.quests_to_advance = this.getQuestsToAdvance(prep.id);
+      return prep;
+    });
+
     return {
-      data: rows.map((row) => this.parseJsonFields(row, jsonFields) as SessionPrep),
+      data: preps,
       total: count,
     };
   }

@@ -87,7 +87,14 @@ export class WorldRuleService extends BaseCategoryService<WorldRule> {
 
   findById(id: string): WorldRule | null {
     const row = this.db.prepare('SELECT * FROM world_rules WHERE id = ?').get(id);
-    return row ? this.parseJsonFields(row, ['tags', 'custom_fields', 'related_rules']) as WorldRule : null;
+    if (!row) return null;
+
+    const rule = this.parseJsonFields(row, ['tags', 'custom_fields', 'related_rules']) as WorldRule;
+
+    // Populate relationships from junction tables
+    rule.related_rules = this.getRelatedRules(id);
+
+    return rule;
   }
 
   list(
@@ -131,8 +138,15 @@ export class WorldRuleService extends BaseCategoryService<WorldRule> {
     const { count } = this.db.prepare(`SELECT COUNT(*) as count FROM world_rules ${whereClause}`).get(...params) as { count: number };
     const rows = this.db.prepare(`SELECT * FROM world_rules ${whereClause} ORDER BY ${sortBy} ${sortOrder} LIMIT ? OFFSET ?`).all(...params, pagination.limit, pagination.offset);
 
+    // Populate relationships from junction tables for each world rule
+    const rules = rows.map((row) => {
+      const rule = this.parseJsonFields(row, ['tags', 'custom_fields', 'related_rules']) as WorldRule;
+      rule.related_rules = this.getRelatedRules(rule.id);
+      return rule;
+    });
+
     return {
-      data: rows.map((row) => this.parseJsonFields(row, ['tags', 'custom_fields', 'related_rules']) as WorldRule),
+      data: rules,
       total: count,
     };
   }

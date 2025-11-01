@@ -181,7 +181,17 @@ export class FactionService extends BaseCategoryService<Faction> {
       .prepare('SELECT * FROM factions WHERE id = ?')
       .get(id) as FactionRow | undefined;
 
-    return row ? this.rowToFaction(row) : null;
+    if (!row) return null;
+
+    const faction = this.rowToFaction(row);
+
+    // Populate relationships from junction tables
+    faction.allied_factions = this.getAlliances(id);
+    faction.rival_factions = this.getRivalries(id);
+    faction.key_members = this.getMembers(id);
+    faction.territory = this.getTerritory(id);
+
+    return faction;
   }
 
   /**
@@ -262,8 +272,18 @@ export class FactionService extends BaseCategoryService<Faction> {
 
     const rows = dataStmt.all(...params, pagination.limit, pagination.offset) as FactionRow[];
 
+    // Populate relationships from junction tables for each faction
+    const factions = rows.map((row) => {
+      const faction = this.rowToFaction(row);
+      faction.allied_factions = this.getAlliances(faction.id);
+      faction.rival_factions = this.getRivalries(faction.id);
+      faction.key_members = this.getMembers(faction.id);
+      faction.territory = this.getTerritory(faction.id);
+      return faction;
+    });
+
     return {
-      data: rows.map((row) => this.rowToFaction(row)),
+      data: factions,
       total: count,
     };
   }

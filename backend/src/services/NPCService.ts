@@ -173,7 +173,12 @@ export class NPCService extends BaseCategoryService<NPC> {
     if (!row) {
       return null;
     }
-    return this.rowToNPC(row as any);
+    const npc = this.rowToNPC(row as any);
+
+    // Populate locations from junction table
+    npc.locations = this.getLocations(id);
+
+    return npc;
   }
 
   /**
@@ -255,8 +260,15 @@ export class NPCService extends BaseCategoryService<NPC> {
 
     const rows = dataStmt.all(...params, pagination.limit, pagination.offset);
 
+    // Populate locations from junction table for each NPC
+    const npcs = rows.map((row) => {
+      const npc = this.rowToNPC(row as any);
+      npc.locations = this.getLocations(npc.id);
+      return npc;
+    });
+
     return {
-      data: rows.map((row) => this.rowToNPC(row as any)),
+      data: npcs,
       total: count,
     };
   }

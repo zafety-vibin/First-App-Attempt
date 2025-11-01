@@ -1,0 +1,52 @@
+.relationship-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.relationship-cell-empty {
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.relationship-cell-loading {
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.relationship-cell-count {
+  color: #6b7280;
+  font-size: 0.875rem;
+  cursor: help;
+}
+
+.relationship-cell-entity {
+  color: #3b82f6;
+  text-decoration: none;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.relationship-cell-entity:hover {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+.relationship-cell-entity:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.relationship-cell-separator {
+  color: #6b7280;
+}
+
+.relationship-cell-more {
+  color: #6b7280;
+  font-size: 0.875rem;
+  font-style: italic;
+  cursor: help;
+}

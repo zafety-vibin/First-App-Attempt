@@ -112,8 +112,17 @@ export class PlanarForceService extends BaseCategoryService<PlanarForce> {
 
   findById(id: string): PlanarForce | null {
     const row = this.db.prepare('SELECT * FROM planar_forces WHERE id = ?').get(id);
+    if (!row) return null;
+
     const jsonFields = ['tags', 'custom_fields', 'domains', 'allied_entities', 'rival_entities', 'religious_orders'];
-    return row ? this.parseJsonFields(row, jsonFields) as PlanarForce : null;
+    const planarForce = this.parseJsonFields(row, jsonFields) as PlanarForce;
+
+    // Populate relationships from junction tables
+    planarForce.allied_entities = this.getAlliances(id);
+    planarForce.rival_entities = this.getRivalries(id);
+    planarForce.religious_orders = this.getWorshipers(id);
+
+    return planarForce;
   }
 
   list(
@@ -158,8 +167,18 @@ export class PlanarForceService extends BaseCategoryService<PlanarForce> {
     const rows = this.db.prepare(`SELECT * FROM planar_forces ${whereClause} ORDER BY ${sortBy} ${sortOrder} LIMIT ? OFFSET ?`).all(...params, pagination.limit, pagination.offset);
 
     const jsonFields = ['tags', 'custom_fields', 'domains', 'allied_entities', 'rival_entities', 'religious_orders'];
+
+    // Populate relationships from junction tables for each planar force
+    const planarForces = rows.map((row) => {
+      const planarForce = this.parseJsonFields(row, jsonFields) as PlanarForce;
+      planarForce.allied_entities = this.getAlliances(planarForce.id);
+      planarForce.rival_entities = this.getRivalries(planarForce.id);
+      planarForce.religious_orders = this.getWorshipers(planarForce.id);
+      return planarForce;
+    });
+
     return {
-      data: rows.map((row) => this.parseJsonFields(row, jsonFields) as PlanarForce),
+      data: planarForces,
       total: count,
     };
   }

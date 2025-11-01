@@ -161,7 +161,16 @@ export class LocationService extends BaseCategoryService<Location> {
       .prepare('SELECT * FROM locations WHERE id = ?')
       .get(id) as LocationRow | undefined;
 
-    return row ? this.rowToLocation(row) : null;
+    if (!row) return null;
+
+    const location = this.rowToLocation(row);
+
+    // Populate relationships from junction tables
+    location.connected_locations = this.getConnections(id);
+    location.notable_npcs = this.getNotableNPCs(id);
+    location.factions_present = this.getFactionsPresent(id);
+
+    return location;
   }
 
   /**
@@ -243,8 +252,17 @@ export class LocationService extends BaseCategoryService<Location> {
 
     const rows = dataStmt.all(...params, pagination.limit, pagination.offset) as LocationRow[];
 
+    // Populate relationships from junction tables for each location
+    const locations = rows.map((row) => {
+      const location = this.rowToLocation(row);
+      location.connected_locations = this.getConnections(location.id);
+      location.notable_npcs = this.getNotableNPCs(location.id);
+      location.factions_present = this.getFactionsPresent(location.id);
+      return location;
+    });
+
     return {
-      data: rows.map((row) => this.rowToLocation(row)),
+      data: locations,
       total: count,
     };
   }

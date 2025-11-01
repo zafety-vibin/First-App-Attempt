@@ -4,6 +4,7 @@ import { GenericCategoryListView } from '../components/pages/GenericCategoryList
 import { ColumnDef } from '@tanstack/react-table';
 import { Location } from '../utils/validationSchemas';
 import { TruncatedText } from '../components/common/TruncatedText';
+import { RelationshipCell } from '../components/table/RelationshipCell';
 
 /**
  * T062: Location List Page
@@ -115,26 +116,51 @@ export const LocationListPage: React.FC = () => {
       header: 'Notable NPCs',
       cell: (info) => {
         const npcs = info.getValue() as string[];
-        return npcs && npcs.length > 0 ? `${npcs.length} NPCs` : '-';
+        return (
+          <RelationshipCell
+            entityIds={npcs || []}
+            category="npcs"
+            campaignId={campaignId!}
+            maxDisplay={3}
+          />
+        );
       },
-      size: 200,
-      meta: {
-        editable: true,
-        editableType: 'tags',
-      },
+      size: 300,
+      enableSorting: false,
     },
     {
       accessorKey: 'factions_present',
       header: 'Factions',
       cell: (info) => {
         const factions = info.getValue() as string[];
-        return factions && factions.length > 0 ? `${factions.length} factions` : '-';
+        return (
+          <RelationshipCell
+            entityIds={factions || []}
+            category="factions"
+            campaignId={campaignId!}
+            maxDisplay={2}
+          />
+        );
       },
-      size: 200,
-      meta: {
-        editable: true,
-        editableType: 'tags',
+      size: 300,
+      enableSorting: false,
+    },
+    {
+      accessorKey: 'connected_locations',
+      header: 'Connected To',
+      cell: (info) => {
+        const connections = info.getValue() as string[];
+        return (
+          <RelationshipCell
+            entityIds={connections || []}
+            category="locations"
+            campaignId={campaignId!}
+            maxDisplay={2}
+          />
+        );
       },
+      size: 300,
+      enableSorting: false,
     },
     {
       accessorKey: 'tags',

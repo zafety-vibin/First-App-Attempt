@@ -91,7 +91,14 @@ export class CreatureService extends BaseCategoryService<Creature> {
 
   findById(id: string): Creature | null {
     const row = this.db.prepare('SELECT * FROM creatures WHERE id = ?').get(id);
-    return row ? this.parseJsonFields(row, ['tags', 'custom_fields', 'habitats']) as Creature : null;
+    if (!row) return null;
+
+    const creature = this.parseJsonFields(row, ['tags', 'custom_fields', 'habitats']) as Creature;
+
+    // Populate relationships from junction tables
+    creature.habitats = this.getHabitats(id);
+
+    return creature;
   }
 
   list(
@@ -135,8 +142,15 @@ export class CreatureService extends BaseCategoryService<Creature> {
     const { count } = this.db.prepare(`SELECT COUNT(*) as count FROM creatures ${whereClause}`).get(...params) as { count: number };
     const rows = this.db.prepare(`SELECT * FROM creatures ${whereClause} ORDER BY ${sortBy} ${sortOrder} LIMIT ? OFFSET ?`).all(...params, pagination.limit, pagination.offset);
 
+    // Populate relationships from junction tables for each creature
+    const creatures = rows.map((row) => {
+      const creature = this.parseJsonFields(row, ['tags', 'custom_fields', 'habitats']) as Creature;
+      creature.habitats = this.getHabitats(creature.id);
+      return creature;
+    });
+
     return {
-      data: rows.map((row) => this.parseJsonFields(row, ['tags', 'custom_fields', 'habitats']) as Creature),
+      data: creatures,
       total: count,
     };
   }

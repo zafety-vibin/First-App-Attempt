@@ -151,7 +151,16 @@ export class LoreEntryService extends BaseCategoryService<LoreEntry> {
       .prepare('SELECT * FROM lore_entries WHERE id = ?')
       .get(id) as LoreEntryRow | undefined;
 
-    return row ? this.rowToLoreEntry(row) : null;
+    if (!row) return null;
+
+    const loreEntry = this.rowToLoreEntry(row);
+
+    // Populate relationships from junction tables
+    loreEntry.related_npcs = this.getRelatedNPCs(id);
+    loreEntry.related_locations = this.getRelatedLocations(id);
+    loreEntry.related_factions = this.getRelatedFactions(id);
+
+    return loreEntry;
   }
 
   /**
@@ -232,8 +241,17 @@ export class LoreEntryService extends BaseCategoryService<LoreEntry> {
 
     const rows = dataStmt.all(...params, pagination.limit, pagination.offset) as LoreEntryRow[];
 
+    // Populate relationships from junction tables for each lore entry
+    const loreEntries = rows.map((row) => {
+      const loreEntry = this.rowToLoreEntry(row);
+      loreEntry.related_npcs = this.getRelatedNPCs(loreEntry.id);
+      loreEntry.related_locations = this.getRelatedLocations(loreEntry.id);
+      loreEntry.related_factions = this.getRelatedFactions(loreEntry.id);
+      return loreEntry;
+    });
+
     return {
-      data: rows.map((row) => this.rowToLoreEntry(row)),
+      data: loreEntries,
       total: count,
     };
   }

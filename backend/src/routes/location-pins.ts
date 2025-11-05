@@ -140,9 +140,14 @@ router.get('/:id/pins', (req: Request, res: Response) => {
 
         if (!entity) return false;
 
-        return !entity.player_knowledge ||
-               entity.player_knowledge === 'common_knowledge' ||
-               entity.player_knowledge === 'player_knowledge';
+        // Include if null (contextual) or if non-hierarchical level
+        if (!entity.player_knowledge) return true;
+
+        const level = db
+          .prepare('SELECT hierarchical FROM information_levels WHERE id = ?')
+          .get(entity.player_knowledge) as { hierarchical: number } | undefined;
+
+        return level ? !level.hierarchical : false;
       });
     }
 

@@ -5,6 +5,7 @@ import { ColumnDef } from '@tanstack/react-table';
 import { Quest } from '../utils/validationSchemas';
 import { TruncatedText } from '../components/common/TruncatedText';
 import { RelationshipCell } from '../components/table/RelationshipCell';
+import { QUEST_STATUS_OPTIONS } from '../constants/fieldValues';
 
 /**
  * T064: Quest List Page
@@ -62,12 +63,7 @@ export const QuestListPage: React.FC = () => {
       meta: {
         editable: true,
         editableType: 'dropdown',
-        dropdownOptions: [
-          { value: 'active', label: 'Active' },
-          { value: 'completed', label: 'Completed' },
-          { value: 'failed', label: 'Failed' },
-          { value: 'on_hold', label: 'On Hold' },
-        ],
+        dropdownOptions: QUEST_STATUS_OPTIONS,
       },
     },
     {

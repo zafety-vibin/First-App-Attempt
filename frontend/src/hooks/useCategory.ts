@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { CategoryName } from '../contexts/SidebarContext';
 import * as npcService from '../services/npcService';
 import * as locationService from '../services/locationService';
@@ -147,24 +147,26 @@ export function useCategory<T = any>(
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Get the appropriate service based on category
-  const getService = useCallback(() => {
-    const service = SERVICE_MAP[category];
-    if (!service) {
+  // FIX #3: Memoize service lookup to prevent unnecessary re-renders
+  const service = useMemo(() => {
+    const svc = SERVICE_MAP[category];
+    if (!svc) {
       throw new Error(`Unknown category: ${category}`);
     }
-    return service;
+    return svc;
   }, [category]);
 
-  // Fetch entities from API
-  // Note: We intentionally don't include filters/pagination in dependencies
-  // to prevent infinite loops. Instead, we rely on the useEffect below
-  // that watches for changes using JSON.stringify
-  const fetchEntities = useCallback(async () => {
+  // FIX #1: Memoize JSON keys for filters/pagination to prevent infinite loops
+  // We use JSON.stringify in the dependency array to detect deep changes
+  const filtersKey = useMemo(() => JSON.stringify(filters || {}), [JSON.stringify(filters)]);
+  const paginationKey = useMemo(() => JSON.stringify(pagination || {}), [JSON.stringify(pagination)]);
+
+  // FIX #2: Fetch entities with AbortController to prevent memory leaks
+  const fetchEntities = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     setError(null);
+
     try {
-      const service = getService();
       const listFnName = FUNCTION_MAPS.list[category];
       const listFn = service[listFnName as keyof typeof service] as any;
 
@@ -172,31 +174,57 @@ export function useCategory<T = any>(
         throw new Error(`List function not found for category: ${category}`);
       }
 
-      const response = await listFn(campaignId, filters, pagination);
+      // Call service function - service doesn't accept signal, so we rely on axios interceptor
+      // Note: We parse filters/pagination from the memoized keys to maintain stability
+      const parsedFilters = filtersKey ? JSON.parse(filtersKey) : undefined;
+      const parsedPagination = paginationKey ? JSON.parse(paginationKey) : undefined;
+
+      const response = await listFn(campaignId, parsedFilters, parsedPagination);
+
+      // Check if aborted before setting state
+      if (signal?.aborted) return;
+
       setEntities(response.data || []);
       setTotalCount(response.pagination?.totalCount || 0);
     } catch (err: any) {
-      const errorMessage = err.response?.data?.error || err.message || 'Failed to fetch entities';
-      setError(errorMessage);
-      console.error(`Error fetching ${category}:`, err);
+      // Ignore abort errors
+      if (err.name === 'AbortError' || err.name === 'CanceledError' || err.code === 'ERR_CANCELED') {
+        return;
+      }
+
+      if (!signal?.aborted) {
+        const errorMessage = err.response?.data?.error || err.message || 'Failed to fetch entities';
+        setError(errorMessage);
+        console.error(`Error fetching ${category}:`, err);
+      }
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
     }
-  }, [category, campaignId, getService]);
+  }, [category, campaignId, service, filtersKey, paginationKey]);
 
   // Auto-fetch on mount and when dependencies change
-  // Use JSON.stringify for deep comparison of filters/pagination objects
+  // FIX #1 & #2: Use memoized keys and AbortController for cleanup
   useEffect(() => {
-    if (autoFetch) {
-      fetchEntities();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoFetch, fetchEntities, JSON.stringify(filters), JSON.stringify(pagination)]);
+    if (!autoFetch) return;
+
+    const abortController = new AbortController();
+    fetchEntities(abortController.signal);
+
+    return () => {
+      abortController.abort();
+    };
+  }, [autoFetch, fetchEntities, filtersKey, paginationKey]);
+
+  // Refresh wrapper that doesn't require signal (for CRUD operations)
+  const refresh = useCallback(async () => {
+    await fetchEntities();
+  }, [fetchEntities]);
 
   // Create entity
   const create = useCallback(
     async (data: Partial<T>): Promise<T> => {
-      const service = getService();
       const createFnName = FUNCTION_MAPS.create[category];
       const createFn = service[createFnName as keyof typeof service] as any;
 
@@ -205,16 +233,15 @@ export function useCategory<T = any>(
       }
 
       const created = await createFn(data);
-      await fetchEntities(); // Refresh list
+      await refresh(); // Refresh list
       return created;
     },
-    [category, getService, fetchEntities]
+    [category, service, refresh]
   );
 
   // Update entity
   const update = useCallback(
     async (id: string, data: Partial<T>): Promise<T> => {
-      const service = getService();
       const updateFnName = FUNCTION_MAPS.update[category];
       const updateFn = service[updateFnName as keyof typeof service] as any;
 
@@ -223,16 +250,15 @@ export function useCategory<T = any>(
       }
 
       const updated = await updateFn(id, data);
-      await fetchEntities(); // Refresh list
+      await refresh(); // Refresh list
       return updated;
     },
-    [category, getService, fetchEntities]
+    [category, service, refresh]
   );
 
   // Delete entity
   const deleteEntity = useCallback(
     async (id: string): Promise<void> => {
-      const service = getService();
       const deleteFnName = FUNCTION_MAPS.delete[category];
       const deleteFn = service[deleteFnName as keyof typeof service] as any;
 
@@ -241,15 +267,14 @@ export function useCategory<T = any>(
       }
 
       await deleteFn(id);
-      await fetchEntities(); // Refresh list
+      await refresh(); // Refresh list
     },
-    [category, getService, fetchEntities]
+    [category, service, refresh]
   );
 
   // Get single entity by ID
   const getById = useCallback(
     async (id: string): Promise<T> => {
-      const service = getService();
       const getFnName = FUNCTION_MAPS.getById[category];
       const getFn = service[getFnName as keyof typeof service] as any;
 
@@ -259,7 +284,7 @@ export function useCategory<T = any>(
 
       return await getFn(id);
     },
-    [category, getService]
+    [category, service]
   );
 
   return {
@@ -270,7 +295,7 @@ export function useCategory<T = any>(
     create,
     update,
     delete: deleteEntity,
-    refresh: fetchEntities,
+    refresh,
     getById,
   };
 }

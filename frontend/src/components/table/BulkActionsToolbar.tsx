@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useInformationLevel } from '../../contexts/InformationLevelContext';
 import './BulkActionsToolbar.css';
 
 export interface BulkActionsToolbarProps {
@@ -24,6 +25,9 @@ export const BulkActionsToolbar: React.FC<BulkActionsToolbarProps> = ({
   const [showTagsInput, setShowTagsInput] = useState(false);
   const [tagsInput, setTagsInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Load information levels from database
+  const { levels } = useInformationLevel();
 
   const handleDelete = async () => {
     if (!confirm(`Delete ${selectedCount} selected ${selectedCount === 1 ? 'item' : 'items'}? This cannot be undone.`)) {
@@ -89,10 +93,13 @@ export const BulkActionsToolbar: React.FC<BulkActionsToolbarProps> = ({
           </button>
           {showVisibilityMenu && (
             <div className="bulk-dropdown-menu">
-              <button onClick={() => handleSetVisibility('system')}>System</button>
-              <button onClick={() => handleSetVisibility('common_knowledge')}>Common Knowledge</button>
-              <button onClick={() => handleSetVisibility('player_knowledge')}>Player Knowledge</button>
-              <button onClick={() => handleSetVisibility('dm_only')}>DM Only</button>
+              {levels
+                .filter(level => level.id !== 'system') // Exclude system from bulk edit
+                .map(level => (
+                  <button key={level.id} onClick={() => handleSetVisibility(level.id)}>
+                    {level.name}
+                  </button>
+                ))}
             </div>
           )}
         </div>

@@ -261,6 +261,18 @@ export function runMigrations(): void {
     }
   });
 
+  // Migration 27: Cleanup information level values (public/partial → correct hyphenated IDs)
+  runMigration(27, () => {
+    const migrationsDir = path.join(__dirname, '../db/migrations');
+    const filePath = path.join(migrationsDir, '027-cleanup-information-level-values.sql');
+    if (fs.existsSync(filePath)) {
+      const sql = fs.readFileSync(filePath, 'utf-8');
+      db.exec(sql);
+      if (!isMCPMode) console.error(`  ✓ Applied 027-cleanup-information-level-values.sql (public/partial/underscores → hyphens)`);
+    }
+  });
+// Migration 028: Add composite indexes to junction tables for faster relationship queries  runMigration(28, () => {    const migrationsDir = path.join(__dirname, '../db/migrations');    const filePath = path.join(migrationsDir, '028-composite-junction-indexes.sql');    if (fs.existsSync(filePath)) {      const sql = fs.readFileSync(filePath, 'utf-8');      db.exec(sql);      if (!isMCPMode) console.error(`  ✓ Applied 028-composite-junction-indexes.sql (28 composite indexes added)`);    }  });
+
   if (!isMCPMode) console.error('✓ Database initialized');
   logDatabaseInfo();
 }

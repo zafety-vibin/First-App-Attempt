@@ -31,7 +31,7 @@ router.post('/login', (req: Request, res: Response) => {
     };
 
     const user = AuthService.upsertUser(testUser);
-    const session = AuthService.createSession(user.id, token, 900); // 15 minutes
+    const session = AuthService.createSession(user.id, token, 3600); // 1 hour
 
     res.status(200).json({
       user,

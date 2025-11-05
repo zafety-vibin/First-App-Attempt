@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useInformationLevel } from '../../contexts/InformationLevelContext';
+import CodeMirror from '@uiw/react-codemirror';
+import { markdown } from '@codemirror/lang-markdown';
+import { keymap } from '@codemirror/view';
 import './EditableCell.css';
 
 export type EditableCellType = 'text' | 'textarea' | 'number' | 'dropdown' | 'tags' | 'player_knowledge' | 'relationships';
@@ -92,7 +95,7 @@ export const EditableCell: React.FC<EditableCellProps> = ({
   }, [isEditing]);
 
   // Auto-save with 500ms debounce
-  const handleSave = async (newValue: any) => {
+  const handleSave = async (newValue: any, shouldCloseEditor: boolean = false) => {
     // Clear existing timeout
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
@@ -100,7 +103,9 @@ export const EditableCell: React.FC<EditableCellProps> = ({
 
     // Don't save if value hasn't changed
     if (newValue === value) {
-      setIsEditing(false);
+      if (shouldCloseEditor) {
+        setIsEditing(false);
+      }
       return;
     }
 
@@ -109,7 +114,11 @@ export const EditableCell: React.FC<EditableCellProps> = ({
 
     try {
       await onUpdate(entityId, fieldKey, newValue);
-      setIsEditing(false);
+      // Only close editor if explicitly requested (on blur/Escape)
+      // Don't close on autosave - user can keep typing, saves happen in background
+      if (shouldCloseEditor) {
+        setIsEditing(false);
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to save');
       console.error('Save error:', err);
@@ -139,17 +148,22 @@ export const EditableCell: React.FC<EditableCellProps> = ({
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
-    // Trigger immediate save
-    handleSave(currentValue);
+    // Trigger immediate save and close editor
+    handleSave(currentValue, true);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    // For textarea, Ctrl+Enter or Cmd+Enter saves, Escape cancels
+    // For textarea, Ctrl+Enter or Cmd+Enter saves and closes, Escape cancels
     if (type === 'textarea') {
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
         e.preventDefault();
-        handleBlur();
+        // Save and close editor on Ctrl+Enter
+        if (saveTimeoutRef.current) {
+          clearTimeout(saveTimeoutRef.current);
+        }
+        handleSave(currentValue, true);
       } else if (e.key === 'Escape') {
+        // Cancel pending save, revert value, and close editor
         if (saveTimeoutRef.current) {
           clearTimeout(saveTimeoutRef.current);
         }
@@ -158,7 +172,11 @@ export const EditableCell: React.FC<EditableCellProps> = ({
       }
     } else if (e.key === 'Enter' && type !== 'text') {
       e.preventDefault();
-      handleBlur();
+      // For dropdowns/selects, Enter saves and closes
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+      handleSave(currentValue, true);
     } else if (e.key === 'Escape') {
       // Cancel edit and revert
       if (saveTimeoutRef.current) {
@@ -295,19 +313,53 @@ export const EditableCell: React.FC<EditableCellProps> = ({
         );
 
       case 'textarea':
-        // Multi-line textarea for long text fields (description, appearance, etc.)
+        // Multi-line textarea with markdown syntax highlighting for long text fields
+        // Custom keymap for Ctrl+Enter (save & close) and Escape (cancel)
+        const customKeymap = keymap.of([
+          {
+            key: 'Mod-Enter', // Ctrl+Enter on Windows/Linux, Cmd+Enter on Mac
+            run: () => {
+              // Save and close editor
+              if (saveTimeoutRef.current) {
+                clearTimeout(saveTimeoutRef.current);
+              }
+              handleSave(currentValue, true);
+              return true;
+            },
+          },
+          {
+            key: 'Escape',
+            run: () => {
+              // Cancel edit and revert
+              if (saveTimeoutRef.current) {
+                clearTimeout(saveTimeoutRef.current);
+              }
+              setCurrentValue(value);
+              setIsEditing(false);
+              return true;
+            },
+          },
+        ]);
+
         return (
-          <textarea
-            ref={inputRef as React.RefObject<HTMLTextAreaElement>}
-            value={currentValue || ''}
-            onChange={(e) => handleChange(e.target.value)}
-            onBlur={handleBlur}
-            onKeyDown={handleKeyDown}
-            className="editable-cell-textarea"
-            rows={4}
-            disabled={isSaving}
-            placeholder="Double-click to edit... (Ctrl+Enter to save, Esc to cancel)"
-          />
+          <div className="editable-cell-codemirror-wrapper">
+            <CodeMirror
+              value={currentValue || ''}
+              height="120px"
+              extensions={[markdown(), customKeymap]}
+              onChange={(value) => handleChange(value)}
+              onBlur={handleBlur}
+              theme="light"
+              basicSetup={{
+                lineNumbers: false,
+                foldGutter: false,
+                highlightActiveLine: false,
+                highlightActiveLineGutter: false,
+              }}
+              className="editable-cell-codemirror"
+              placeholder="Double-click to edit... (Ctrl+Enter to save, Esc to cancel)"
+            />
+          </div>
         );
 
       case 'text':

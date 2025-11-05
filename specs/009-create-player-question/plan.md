@@ -1,7 +1,7 @@
 
 # Implementation Plan: Player Question Portal
 
-**Branch**: `009-create-player-question` | **Date**: 2025-10-01 | **Spec**: [spec.md](./spec.md)
+**Branch**: `009-create-player-question` | **Date**: 2025-10-31 | **Spec**: [spec.md](./spec.md)
 **Input**: Feature specification from `/specs/009-create-player-question/spec.md`
 
 ## Execution Flow (/plan command scope)
@@ -26,16 +26,16 @@
 9. STOP - Ready for /tasks command
 ```
 
-**IMPORTANT**: The /plan command STOPS at step 7. Phases 2-4 are executed by other commands:
+**IMPORTANT**: The /plan command STOPS at step 8. Phases 2-4 are executed by other commands:
 - Phase 2: /tasks command creates tasks.md
 - Phase 3-4: Implementation execution (manual or via tools)
 
 ## Summary
-Feature 009 provides Player Question Portal, a public Q&A interface per campaign where players can ask in-world questions and receive AI responses grounded in Common Knowledge and Player Knowledge content only (DM Secrets filtered out). Portal accessible via shareable URL with optional password protection, no login required. Lightweight account linkage via "Who are you in-game?" prompt establishes player identity with unique character name enforcement (rejects duplicates). Uses GM's BYOLLM credentials with prominent warning about token usage. Per-player conversation history persists across sessions. GM monitoring panel shows question logs and token usage per player. Response style configurable (Friendly Sage, Scholarly Tome, Tavern Gossip, Factual, Custom). AI responses include clickable citations linking to source cards. DM Preview Mode allows testing filtered view. Items database integration for inventory queries via "Held By" field. Knowledge graph access with DM Secret filtering. Session Recap access with granular content verification. Trust-based usage model (no automatic rate limits). Multiple players supported with isolated conversations.
+Feature 009 provides Player Question Portal, a public Q&A interface per campaign where players ask in-world questions and receive AI responses grounded in Common Knowledge and Player Knowledge content only (DM Secrets filtered out). Portal accessible via shareable URL with optional password protection, no login required. Lightweight account linkage via "Who are you in-game?" prompt establishes player identity with unique character name enforcement. Uses GM's BYOLLM credentials (Feature 008) with prominent warning. Per-player conversation history persists across sessions. GM monitoring panel shows question logs and token usage. Response style configurable (Friendly Sage, Scholarly Tome, Tavern Gossip, Factual, Custom). AI responses include clickable citations linking to source cards. DM Preview Mode allows testing filtered view. Items database integration for inventory queries. Knowledge graph access with information level filtering. Session Recap access respecting player_knowledge field. Trust-based usage model.
 
 ## Technical Context
 **Language/Version**: Node.js 20 LTS, TypeScript 5.0+
-**Primary Dependencies**: Express 4.x, Better-SQLite3, React 18, axios, uuid (portal URL generation), express-session (lightweight player identity), bcrypt (optional password hashing)
+**Primary Dependencies**: Express 4.x, Better-SQLite3, React 18, TanStack Table v8, axios, uuid (portal URL generation), crypto (session tokens), bcrypt (password hashing), @anthropic-ai/sdk, openai
 **Storage**: SQLite database with new tables (portal_configs, portal_players, portal_conversations, portal_messages, portal_token_usage)
 **Testing**: Vitest (backend services, frontend components), Supertest (API endpoints), Playwright (E2E portal flow)
 **Target Platform**: Docker Compose localhost environment (Linux container, Windows/Mac host)
@@ -44,43 +44,53 @@ Feature 009 provides Player Question Portal, a public Q&A interface per campaign
 **Constraints**: Uses GM's BYOLLM credentials (no separate portal credentials), information filtering MUST prevent any DM Secret leakage, unique character names enforced per campaign
 **Scale/Scope**: Support 10 concurrent players per campaign portal, 100+ questions per player conversation history, token tracking for all usage
 
+**Current Architecture Context** (as of 2025-10-31):
+- **ViewMode System**: Unified middleware in `backend/src/middleware/viewMode.ts` with `extractViewMode()`, `stripDmFields()`, `getPlayerKnowledgeFilter()`. X-View-Mode header sets `dm_view` or `player_view`.
+- **Information Levels**: Stored in `information_levels` table with IDs like `common-knowledge`, `player-knowledge`, `dm-secret`, `system`. Custom levels supported with `hierarchical` flag.
+- **BaseCategoryService**: All 13 categories extend BaseCategoryService with standardized `.list(filters, pagination, sort?, order?)` that respects view mode filtering.
+- **Session Recaps**: SessionRecapService extends BaseCategoryService, has `player_knowledge` field, filtered via standard view mode middleware.
+- **Junction Tables**: 28 junction tables implemented (Feature 014+), relationships stored in proper relational structure, not JSON arrays.
+- **External API**: Feature 018 provides localhost:3002 AI-friendly API pattern with two-phase delete, audit logging, information filtering.
+- **BYOLLM**: Feature 008 provides BYOLLMConfigService with OAuth flow, encrypted credentials (AES-256-GCM), custom endpoints, provider clients.
+
 ## Constitution Check
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
 ### I. Workflow-First Design
 **Status**: ✅ PASS
-**Rationale**: Player Portal extends campaign workflow by giving players direct access to world information. Portal tab in campaign navigation provides quick access. "Who are you in-game?" prompt integrates naturally. Citations link back to source cards (wiki IS the reference). Players don't maintain separate notes - portal is the canonical source.
+**Rationale**: Player Portal extends campaign workflow by giving players direct access to world information between sessions. Portal tab in campaign navigation provides quick access. "Who are you in-game?" prompt integrates naturally. Citations link back to source cards (wiki IS the reference). Players don't maintain separate notes - portal is the canonical source. Eliminates "plan twice" for players asking lore questions.
 
-### II. User Agency & Control
+### II. User Agency & Full Customization
 **Status**: ✅ PASS
-**Rationale**: GM has complete control over portal (enable/disable, password protection, response style). Players control their own questions and conversation history. GM monitoring provides visibility into usage. Trust-based model respects player agency while protecting GM's token budget. DM Preview Mode allows GM to test before sharing. Citations give players agency to verify sources.
+**Rationale**: GM has complete control over portal (enable/disable, password protection, response style selector with Custom option). Players control their own questions and conversation history. GM monitoring provides visibility into usage. Trust-based model respects player agency while protecting GM's token budget. DM Preview Mode allows GM to test before sharing. Citations give players agency to verify sources. Custom information levels work with portal filtering.
 
-### III. Information Filtering
+### III. Information Filtering & Access Control
 **Status**: ✅ PASS (CRITICAL - Core feature)
-**Rationale**: **Portal directly implements Information Filtering (Feature 004 integration).**
-- Portal AI ONLY accesses Common Knowledge + Player Knowledge cards
-- System and DM Secret tags completely filtered out
-- Knowledge graph nodes filtered by referenced card tags
-- Session Recaps verified piece-by-piece for DM Secret content
-- Items database respects information levels
+**Rationale**: Portal directly implements Information Filtering (Feature 004 integration).
+- Portal AI ONLY accesses cards tagged as common-knowledge or player-knowledge
+- system and dm-secret tags completely filtered out via existing viewMode middleware
+- Knowledge graph nodes filtered by referenced card player_knowledge field
+- Session Recaps filtered via SessionRecapService.list() with player_view mode
+- Items database respects player_knowledge field
 - DM Preview Mode shows exact filtered view players see
-- No secret leakage possible (same filtering as Player/General View)
+- No secret leakage possible (same filtering as category list views)
+- Custom hierarchical levels filtered automatically via hierarchical flag query
 
 ### IV. Knowledge Graph Architecture
 **Status**: ✅ PASS
-**Rationale**: Portal AI queries knowledge graphs (Feature 006 integration) to answer player questions with rich context. Graph filtering ensures DM Secret nodes excluded. Political-Web, Campaign-Story, Geographical, World-Foundations graphs all accessible with appropriate filtering. Citations link to graph node source cards. Enhances player experience by providing structured lore access.
+**Rationale**: Portal AI queries knowledge graphs (Feature 006 integration) to answer player questions with rich context. Graph filtering ensures nodes with player_knowledge = 'dm-secret' or custom hierarchical levels excluded. Political-Web, Campaign-Story, Geographical, World-Foundations graphs all accessible with appropriate filtering. Citations link to graph node source cards. Enhances player experience by providing structured lore access. Graphs optional per query (user controls context).
 
 ### V. BYOLLM & Privacy
-**Status**: ✅ PASS
-**Rationale**: Portal uses GM's BYOLLM credentials (Feature 008 dependency). Prominent warning ensures GM understands players will consume their tokens. No separate portal API credentials (local-only principle maintained). All AI calls use GM's configured provider. Trust-based usage model aligns with privacy-first approach. Token tracking provides transparency.
+**Status**: ✅ PASS (Feature 008 dependency)
+**Rationale**: Portal uses GM's BYOLLM credentials from BYOLLMConfigService. Prominent warning ensures GM understands players will consume their tokens. No separate portal API credentials (local-only principle maintained). All AI calls use GM's configured provider (OpenAI/Anthropic/custom). Trust-based usage model aligns with privacy-first approach. Token tracking provides transparency. Conversation history stored locally in SQLite.
 
-### VI. Local-Only Prototype
+### VI. Local-Only & Prototype-First
 **Status**: ✅ PASS
-**Rationale**: Docker Compose localhost deployment. SQLite local storage for portal configurations and conversations. Public URLs are localhost URLs (e.g., http://localhost:3000/portal/{campaign-id}). No external portal hosting. Players access portal on same network or via localhost. Prototype-first focus on functionality over deployment complexity.
+**Rationale**: Docker Compose localhost deployment. SQLite local storage for portal configurations and conversations. Public URLs are localhost URLs (e.g., http://localhost:3000/portal/{campaign-id}). No external portal hosting. Players access portal on same network or via localhost. Prototype-first focus on functionality over deployment complexity. No rate limiting complexity (trust-based).
 
-### VII. Transparency & No Autonomous AI
+### VII. Transparency & User Approval
 **Status**: ✅ PASS
-**Rationale**: Portal AI is reactive (only responds to player questions). No autonomous updates or changes. Citations provide full transparency about information sources. GM sees all player questions in monitoring panel. DM Preview Mode allows GM to verify responses before enabling portal. "I don't have information" response prevents hallucination. All AI behavior controlled by GM's response style configuration.
+**Rationale**: Portal AI is reactive (only responds to player questions). No autonomous updates or changes. Citations provide full transparency about information sources. GM sees all player questions in monitoring panel. DM Preview Mode allows GM to verify responses before enabling portal. "I don't have information" response prevents hallucination. All AI behavior controlled by GM's response style configuration. No AI writes to database.
 
 ## Project Structure
 
@@ -100,53 +110,52 @@ specs/009-create-player-question/
 backend/
 ├── src/
 │   ├── models/
-│   │   ├── portal-config.model.ts          # Portal configuration per campaign
-│   │   ├── portal-player.model.ts          # Lightweight player identity
-│   │   ├── portal-conversation.model.ts    # Per-player conversation
-│   │   ├── portal-message.model.ts         # Individual Q&A messages
-│   │   └── portal-token-usage.model.ts     # Token tracking per player
+│   │   ├── PortalConfig.ts              # Portal configuration per campaign
+│   │   ├── PortalPlayer.ts              # Lightweight player identity
+│   │   ├── PortalConversation.ts        # Per-player conversation
+│   │   ├── PortalMessage.ts             # Individual Q&A messages
+│   │   └── PortalTokenUsage.ts          # Token tracking per player
 │   ├── services/
-│   │   ├── portal-config.service.ts        # Portal CRUD, enable/disable, password
-│   │   ├── portal-player.service.ts        # Player identity, unique name validation
-│   │   ├── portal-conversation.service.ts  # Conversation CRUD, history
-│   │   ├── portal-ai.service.ts            # AI question answering with filtering
-│   │   ├── information-filter.service.ts   # Reuse Feature 004 filtering (Common+Player only)
-│   │   ├── citation-generator.service.ts   # Generate clickable citations from sources
-│   │   ├── token-tracker.service.ts        # Track token usage per player/campaign
-│   │   └── session-recap-filter.service.ts # Granular Session Recap filtering
-│   └── api/
-│       ├── portal-management.routes.ts     # GM portal management endpoints
-│       └── portal-public.routes.ts         # Public player Q&A endpoints
+│   │   ├── PortalConfigService.ts       # Portal CRUD, enable/disable, password
+│   │   ├── PortalPlayerService.ts       # Player identity, unique name validation
+│   │   ├── PortalConversationService.ts # Conversation CRUD, history
+│   │   ├── PortalAIService.ts           # AI question answering with filtering
+│   │   ├── CitationGeneratorService.ts  # Generate clickable citations from sources
+│   │   └── PortalTokenTrackerService.ts # Track token usage per player/campaign
+│   ├── middleware/
+│   │   └── (reuse existing viewMode.ts) # Information filtering via extractViewMode, getPlayerKnowledgeFilter
+│   └── routes/
+│       ├── portal-management.ts         # GM portal management endpoints
+│       └── portal-public.ts             # Public player Q&A endpoints
 └── tests/
     ├── contract/
-    │   └── portal.contract.test.ts         # API contract tests from OpenAPI
+    │   └── portal.contract.test.ts      # API contract tests from OpenAPI
     ├── integration/
     │   └── portal-filtering.integration.test.ts # Information filtering validation
     └── unit/
-        ├── portal-ai.service.test.ts
-        ├── citation-generator.service.test.ts
-        └── portal-player.service.test.ts
+        ├── PortalAIService.test.ts
+        ├── CitationGeneratorService.test.ts
+        └── PortalPlayerService.test.ts
 
 frontend/
 ├── src/
 │   ├── components/
-│   │   ├── portal/
-│   │   │   ├── PortalManagement.tsx        # GM portal management UI
-│   │   │   ├── PortalSettings.tsx          # Enable/disable, password, response style
-│   │   │   ├── PortalMonitoring.tsx        # Per-player logs, token usage
-│   │   │   ├── DMPreviewMode.tsx           # Test portal with filtered view
-│   │   │   ├── PlayerPortal.tsx            # Public player Q&A interface
-│   │   │   ├── PlayerIdentity.tsx          # "Who are you in-game?" prompt
-│   │   │   ├── PortalChat.tsx              # Chat interface with citations
-│   │   │   ├── ResponseStyleSelector.tsx   # Response style configuration
-│   │   │   └── PasswordProtection.tsx      # Password entry UI
-│   │   └── citations/
-│   │       └── CitationLink.tsx            # Clickable citation component
+│   │   └── portal/
+│   │       ├── PortalManagement.tsx     # GM portal management UI
+│   │       ├── PortalSettings.tsx       # Enable/disable, password, response style
+│   │       ├── PortalMonitoring.tsx     # Per-player logs, token usage
+│   │       ├── DMPreviewMode.tsx        # Test portal with filtered view
+│   │       ├── PlayerPortal.tsx         # Public player Q&A interface
+│   │       ├── PlayerIdentity.tsx       # "Who are you in-game?" prompt
+│   │       ├── PortalChat.tsx           # Chat interface with citations
+│   │       ├── ResponseStyleSelector.tsx # Response style configuration
+│   │       ├── PasswordProtection.tsx   # Password entry UI
+│   │       └── CitationLink.tsx         # Clickable citation component
 │   ├── pages/
-│   │   ├── PortalManagementPage.tsx        # GM portal management page
-│   │   └── PlayerPortalPage.tsx            # Public player portal page
+│   │   ├── PortalManagementPage.tsx     # GM portal management page
+│   │   └── PlayerPortalPage.tsx         # Public player portal page
 │   └── services/
-│       └── portal.service.ts               # Frontend API client for portal endpoints
+│       └── portalService.ts             # Frontend API client for portal endpoints
 └── tests/
     ├── integration/
     │   └── portal-flow.integration.test.tsx # Portal E2E flow test
@@ -156,29 +165,25 @@ frontend/
         └── CitationLink.test.tsx
 ```
 
-**Structure Decision**: Web application structure selected. Backend provides portal management API (GM controls), public portal API (player Q&A), AI service with information filtering, citation generation, and token tracking. Frontend provides GM management interface (enable/disable, monitoring, preview) and public player interface (identity, chat, citations).
+**Structure Decision**: Web application structure selected. Backend provides portal management API (GM controls), public portal API (player Q&A), AI service with information filtering (reusing viewMode middleware), citation generation, and token tracking. Frontend provides GM management interface (enable/disable, monitoring, preview) and public player interface (identity, chat, citations). Reuses existing BaseCategoryService pattern for querying cards, Session Recaps, Items database. Reuses BYOLLMConfigService for AI credentials.
 
 ## Phase 0: Outline & Research
 1. **Extract unknowns from Technical Context** above:
-   - Lightweight account linkage mechanism (session storage, cookies, or DB table)
+   - Player identity session mechanism (crypto random tokens vs express-session)
    - Public URL generation and security for per-campaign portals
-   - Information filtering integration with Feature 004 (ViewModeService reuse)
-   - Citation generation from AI response sources
-   - Token usage tracking and aggregation
-   - Concurrent player access handling
-   - Session Recap granular content filtering strategy
-   - Items database "Held By" field querying
+   - Citation generation from AI response sources (card linking)
+   - Token usage tracking and aggregation pattern
+   - Concurrent player access handling (SQLite write locks)
+   - Items database "Held By" field querying pattern
 
 2. **Generate and dispatch research agents**:
    ```
-   Task: "Research lightweight account linkage for public portal (session, cookies, lightweight DB)"
-   Task: "Research public URL generation per campaign with optional password protection"
-   Task: "Research Feature 004 ViewModeService reuse for portal information filtering"
-   Task: "Research citation generation and card linking from AI response sources"
-   Task: "Research token usage tracking per player with aggregation"
-   Task: "Research concurrent access patterns for multiple players using portal simultaneously"
-   Task: "Research Session Recap granular filtering (piece-by-piece DM Secret detection)"
-   Task: "Research Items database querying for 'Held By' field inventory questions"
+   Task: "Research player identity session mechanism - crypto random tokens in portal_players table vs express-session"
+   Task: "Research public URL generation per campaign with optional password protection (bcrypt)"
+   Task: "Research citation generation pattern - link AI responses to source cards by ID"
+   Task: "Research token usage tracking per player with campaign aggregation (portal_token_usage table)"
+   Task: "Research concurrent SQLite access for multiple players (WAL mode, read-heavy pattern)"
+   Task: "Research Items database query pattern for 'Held By' field via BaseCategoryService"
    ```
 
 3. **Consolidate findings** in `research.md` using format:
@@ -192,23 +197,23 @@ frontend/
 *Prerequisites: research.md complete*
 
 1. **Extract entities from feature spec** → `data-model.md`:
-   - PortalConfig entity (campaign, enabled, password, response style, URL)
-   - PortalPlayer entity (campaign, character name unique, conversation FK)
-   - PortalConversation entity (player FK, messages, token usage)
-   - PortalMessage entity (conversation FK, question, response, citations, timestamp)
-   - PortalTokenUsage entity (player FK, campaign FK, token count, aggregated)
+   - PortalConfig entity (campaign, enabled, password_hash, response_style, portal_url)
+   - PortalPlayer entity (campaign, character_name UNIQUE, session_token, conversation FK)
+   - PortalConversation entity (player FK, created_at, updated_at)
+   - PortalMessage entity (conversation FK, role, content, citations JSONB, token_count, timestamp)
+   - PortalTokenUsage entity (campaign FK, player FK, total_tokens, aggregated)
 
 2. **Generate API contracts** from functional requirements:
-   - POST /api/portal/config (create/update portal configuration)
-   - GET /api/portal/config (get portal config for campaign)
-   - PUT /api/portal/config/enable (enable/disable portal)
-   - PUT /api/portal/config/password (set/remove password)
-   - PUT /api/portal/config/response-style (set response style)
-   - GET /api/portal/monitoring (get per-player logs and token usage)
-   - POST /api/portal/public/{campaign-id}/identify (player identity creation)
-   - POST /api/portal/public/{campaign-id}/ask (player question)
-   - GET /api/portal/public/{campaign-id}/history (player conversation history)
-   - POST /api/portal/preview (DM Preview Mode test question)
+   - POST /api/campaigns/:campaignId/portal/config (create/update portal configuration)
+   - GET /api/campaigns/:campaignId/portal/config (get portal config)
+   - PUT /api/campaigns/:campaignId/portal/enable (enable/disable portal)
+   - PUT /api/campaigns/:campaignId/portal/password (set/remove password)
+   - PUT /api/campaigns/:campaignId/portal/response-style (set response style)
+   - GET /api/campaigns/:campaignId/portal/monitoring (get per-player logs and token usage)
+   - POST /api/portal/public/:campaignId/identify (player identity creation)
+   - POST /api/portal/public/:campaignId/ask (player question)
+   - GET /api/portal/public/:campaignId/history (player conversation history)
+   - POST /api/campaigns/:campaignId/portal/preview (DM Preview Mode test question)
    - Output OpenAPI 3.0 schema to `/contracts/portal.yaml`
 
 3. **Generate contract tests** from contracts:
@@ -222,8 +227,9 @@ frontend/
    - Edge cases → error handling validation
 
 5. **Update CLAUDE.md incrementally** (O(1) operation):
+   - Run `.specify/scripts/bash/update-agent-context.sh claude`
    - Add Frontend (009): PortalManagement, PlayerPortal, CitationLink components
-   - Add Backend (009): Portal services, information filtering, citation generation, token tracking
+   - Add Backend (009): Portal services, viewMode filtering reuse, citation generation, token tracking
    - Add Testing (009): Vitest, Supertest, Playwright portal flow
    - Add Recent Changes entry for Feature 009
 
@@ -237,27 +243,27 @@ frontend/
 - Generate tasks from Phase 1 design docs (contracts, data model, quickstart)
 - Each contract endpoint → contract test task [P]
 - Each entity (PortalConfig, PortalPlayer, PortalConversation, PortalMessage, PortalTokenUsage) → model creation task [P]
-- Information filtering service → implementation task (Feature 004 integration)
+- viewMode middleware integration → verification task (already exists)
 - Citation generator service → implementation task
 - Token tracker service → implementation task
-- Portal AI service → implementation task (depends on filtering, citations, tokens)
+- Portal AI service → implementation task (depends on viewMode, citations, tokens, BYOLLMConfigService)
 - Backend API routes → implementation tasks (depends on services)
-- Frontend components → implementation tasks [P] (9 components: PortalManagement, PortalSettings, PortalMonitoring, DMPreviewMode, PlayerPortal, PlayerIdentity, PortalChat, ResponseStyleSelector, PasswordProtection, CitationLink)
-- Frontend service → implementation task (portal.service.ts)
+- Frontend components → implementation tasks [P] (10 components: PortalManagement, PortalSettings, PortalMonitoring, DMPreviewMode, PlayerPortal, PlayerIdentity, PortalChat, ResponseStyleSelector, PasswordProtection, CitationLink)
+- Frontend service → implementation task (portalService.ts)
 - Integration tests → test tasks (portal filtering, E2E flow)
 - Quickstart validation → final validation task
 
 **Ordering Strategy**:
 - TDD order: Contract tests before implementation
 - Dependency order:
-  1. Models (PortalConfig, PortalPlayer, PortalConversation, PortalMessage, PortalTokenUsage)
-  2. Information filtering service (Feature 004 ViewModeService integration)
-  3. Citation generator service (independent, parallel)
-  4. Token tracker service (independent, parallel)
-  5. Session Recap filter service (depends on filtering service)
-  6. Portal AI service (depends on filtering, citations, token tracker)
-  7. Portal player service (unique name validation)
-  8. Portal config service (enable/disable, password, response style)
+  1. Database migration (portal tables)
+  2. Models (PortalConfig, PortalPlayer, PortalConversation, PortalMessage, PortalTokenUsage)
+  3. viewMode middleware verification (already exists, verify player_view filtering)
+  4. Citation generator service (independent, parallel)
+  5. Token tracker service (independent, parallel)
+  6. Portal player service (unique name validation)
+  7. Portal config service (enable/disable, password, response style)
+  8. Portal AI service (depends on viewMode, citations, token tracker, BYOLLMConfigService)
   9. Portal conversation service (history, messages)
   10. Backend API routes (depends on all services)
   11. Frontend components [P] (many can be parallel)
@@ -286,18 +292,18 @@ No violations detected. All constitutional principles pass for Feature 009.
 *This checklist is updated during execution flow*
 
 **Phase Status**:
-- [x] Phase 0: Research complete (/plan command)
-- [x] Phase 1: Design complete (/plan command - core deliverables: plan, research, data-model)
-- [x] Phase 2: Task planning complete (/plan command - describe approach only)
+- [ ] Phase 0: Research complete (/plan command)
+- [ ] Phase 1: Design complete (/plan command)
+- [ ] Phase 2: Task planning complete (/plan command - describe approach only)
 - [ ] Phase 3: Tasks generated (/tasks command)
 - [ ] Phase 4: Implementation complete
 - [ ] Phase 5: Validation passed
 
 **Gate Status**:
 - [x] Initial Constitution Check: PASS
-- [x] Post-Design Constitution Check: PASS
-- [x] All NEEDS CLARIFICATION resolved
+- [ ] Post-Design Constitution Check: PASS (pending Phase 1)
+- [ ] All NEEDS CLARIFICATION resolved (pending Phase 0)
 - [x] Complexity deviations documented (none - no violations)
 
 ---
-*Based on Constitution v2.1.1 - See `/memory/constitution.md`*
+*Based on Constitution v1.1.0 - See `.specify/memory/constitution.md`*

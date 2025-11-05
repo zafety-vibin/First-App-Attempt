@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { useInformationLevel } from '../../contexts/InformationLevelContext';
 import './QuickAddRow.css';
 
 export interface QuickAddRowProps {
@@ -23,6 +24,9 @@ export const QuickAddRow: React.FC<QuickAddRowProps> = ({ onAdd, columns }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const firstInputRef = useRef<HTMLInputElement>(null);
+
+  // Load information levels from database
+  const { levels } = useInformationLevel();
 
   const handleChange = (fieldKey: string, value: any) => {
     setValues(prev => ({ ...prev, [fieldKey]: value }));
@@ -130,16 +134,20 @@ export const QuickAddRow: React.FC<QuickAddRowProps> = ({ onAdd, columns }) => {
               </select>
             ) : column.type === 'player_knowledge' ? (
               <select
-                value={values[column.fieldKey] || 'common_knowledge'}
+                value={values[column.fieldKey] || ''}
                 onChange={(e) => handleChange(column.fieldKey, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(e, isLastField)}
                 className="quick-add-select"
                 disabled={isAdding}
               >
-                <option value="system">System</option>
-                <option value="common_knowledge">Common Knowledge</option>
-                <option value="player_knowledge">Player Knowledge</option>
-                <option value="dm_only">DM Only</option>
+                <option value="">Contextual</option>
+                {levels
+                  .filter(level => level.id !== 'system')
+                  .map(level => (
+                    <option key={level.id} value={level.id}>
+                      {level.name}
+                    </option>
+                  ))}
               </select>
             ) : column.type === 'number' ? (
               <input

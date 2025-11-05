@@ -5,254 +5,187 @@
 **Prerequisites**: plan.md ✓, research.md ✓, data-model.md ✓
 **Dependencies**:
 - Feature 003 (Card Architecture) MUST be complete
-- Feature 004 (Information Filtering - ViewModeService) MUST be complete
+- Feature 004 (ViewMode System - viewMode.ts middleware) MUST be complete
+- Feature 006 (Knowledge Graphs) MUST be complete
 - **Feature 008 (BYOLLM Configuration) MUST be complete** ⚠️ BLOCKING
 
 ## Execution Flow (main)
 ```
 1. Load plan.md from feature directory ✓
-   → Extract: express-session, uuid (portal URL), bcrypt (password), ViewModeService reuse
+   → Extract: Express 4.x, Better-SQLite3, React 18, bcrypt, crypto
 2. Load design documents ✓
+   → research.md: 6 technical decisions (crypto tokens, viewMode reuse, citations, token tracking, WAL concurrency)
    → data-model.md: 5 entities (PortalConfig, PortalPlayer, PortalConversation, PortalMessage, PortalTokenUsage)
-   → contracts/: portal.yaml (10 endpoints per plan.md)
-   → research.md: 8 technical decisions (express-session, ViewModeService integration, citation generation, token tracking)
 3. Generate tasks by category ✓
-   → Setup: Database migrations for portal tables
-   → Tests: contract tests, information filtering validation, citation generation
-   → Core: models, services (PortalConfig, PortalAI with filtering, Citations, TokenTracker), routes
-   → Frontend: GM portal management UI, public player portal UI, DM Preview Mode
-   → Integration: ViewModeService filtering, citation linking, token usage tracking
-   → Polish: E2E tests, quickstart validation
+   → Setup: Database migration (5 tables + indexes)
+   → Models: 5 TypeScript interfaces
+   → Tests: Unit tests for services, integration tests for filtering
+   → Core: 6 services (Config, Player, Conversation, AI, Citations, TokenTracker)
+   → Routes: 2 route files (management, public)
+   → Frontend: 13 components (7 GM management + 6 player portal)
+   → Integration: viewMode middleware integration, E2E tests
+   → Polish: Documentation, security audit
 4. Apply task rules ✓
    → Different files = [P] parallel
    → Same file = sequential
    → Tests before implementation (TDD)
-5. Number tasks sequentially (T001-T075) ✓
+5. Number tasks sequentially (T001-T055) ✓
 6. Generate dependency graph ✓
 7. Create parallel execution examples ✓
 8. Validate task completeness ✓
 ```
 
-## Path Conventions (Web App - extends features 003-004)
+## Path Conventions (Web App - extends features 003-008)
 - **Backend**: `backend/src/`, `backend/tests/`
 - **Frontend**: `frontend/src/`, `frontend/tests/`
-- **Database**: `backend/src/db/migrations/009-portal.sql`
-- **Shared**: `shared/types/` (extended with PortalConfig, PortalPlayer, PortalConversation, PortalMessage)
+- **Database**: `backend/src/db/migrations/029-portal.sql`
 
 ---
 
-## Phase 3.1: Database Setup & Migrations
+## Phase 3.1: Database Setup & Migration
 
-- [ ] **T001** Create migration 009 for Portal tables (`backend/src/db/migrations/009-add-portal-tables.sql` with portal_configs, portal_players, portal_conversations, portal_messages, portal_token_usage per data-model.md)
-- [ ] **T002** Create indexes for portal queries (`backend/src/db/migrations/009-add-portal-indexes.sql` for campaign_id, player_id, session_id, created_at)
-- [ ] **T003** Create unique constraint for character names (`backend/src/db/migrations/009-add-unique-character-names.sql` UNIQUE(campaign_id, character_name) per clarifications)
+- [ ] **T001** Create migration 029 for portal tables (`backend/src/db/migrations/029-add-portal-tables.sql` with 5 tables per data-model.md: portal_configs, portal_players, portal_conversations, portal_messages, portal_token_usage)
+- [ ] **T002** Verify migration runs successfully (`npm run migrate` or equivalent, check all tables + indexes created)
 
 ---
 
-## Phase 3.2: Shared Types
+## Phase 3.2: Backend Models
 
-- [ ] **T004** [P] PortalConfig type (`shared/types/PortalConfig.ts` with TypeScript interface from data-model.md)
-- [ ] **T005** [P] PortalPlayer type (`shared/types/PortalPlayer.ts` with TypeScript interface from data-model.md)
-- [ ] **T006** [P] PortalConversation type (`shared/types/PortalConversation.ts` with TypeScript interface from data-model.md)
-- [ ] **T007** [P] PortalMessage type (`shared/types/PortalMessage.ts` with TypeScript interface from data-model.md including citations array)
-- [ ] **T008** [P] PortalTokenUsage type (`shared/types/PortalTokenUsage.ts` with TypeScript interface from data-model.md)
-- [ ] **T009** [P] Citation type (`shared/types/Citation.ts` with number, cardId, cardTitle, url fields)
+- [ ] **T003** [P] PortalConfig model (`backend/src/models/PortalConfig.ts` with TypeScript interface from data-model.md Entity 1)
+- [ ] **T004** [P] PortalPlayer model (`backend/src/models/PortalPlayer.ts` with TypeScript interface from data-model.md Entity 2)
+- [ ] **T005** [P] PortalConversation model (`backend/src/models/PortalConversation.ts` with TypeScript interface from data-model.md Entity 3)
+- [ ] **T006** [P] PortalMessage model (`backend/src/models/PortalMessage.ts` with TypeScript interface from data-model.md Entity 4, citations as JSON array)
+- [ ] **T007** [P] PortalTokenUsage model (`backend/src/models/PortalTokenUsage.ts` with TypeScript interface from data-model.md Entity 5)
 
 ---
 
 ## Phase 3.3: Tests First (TDD) ⚠️ MUST COMPLETE BEFORE 3.4
 **CRITICAL: These tests MUST be written and MUST FAIL before ANY implementation**
 
-### Backend Contract Tests (from plan.md portal.yaml spec)
-- [ ] **T010** [P] Contract test POST /api/portal/config (`backend/tests/contract/portal.contract.test.ts` create/update portal configuration)
-- [ ] **T011** [P] Contract test GET /api/portal/config (`backend/tests/contract/portal.contract.test.ts` get portal config for campaign)
-- [ ] **T012** [P] Contract test PUT /api/portal/config/enable (`backend/tests/contract/portal.contract.test.ts` enable/disable portal)
-- [ ] **T013** [P] Contract test PUT /api/portal/config/password (`backend/tests/contract/portal.contract.test.ts` set/remove password)
-- [ ] **T014** [P] Contract test PUT /api/portal/config/response-style (`backend/tests/contract/portal.contract.test.ts` set response style)
-- [ ] **T015** [P] Contract test GET /api/portal/monitoring (`backend/tests/contract/portal.contract.test.ts` get per-player logs and token usage)
-- [ ] **T016** [P] Contract test POST /api/portal/public/:campaignId/identify (`backend/tests/contract/portal.contract.test.ts` player identity creation)
-- [ ] **T017** [P] Contract test POST /api/portal/public/:campaignId/ask (`backend/tests/contract/portal.contract.test.ts` player question)
-- [ ] **T018** [P] Contract test GET /api/portal/public/:campaignId/history (`backend/tests/contract/portal.contract.test.ts` player conversation history)
-- [ ] **T019** [P] Contract test POST /api/portal/preview (`backend/tests/contract/portal.contract.test.ts` DM Preview Mode test question)
+### Backend Unit Tests
+- [ ] **T008** [P] Unit test crypto random token generation (`backend/tests/unit/PortalPlayerService-tokens.test.ts` test sessionToken is 64-char hex per research.md Topic 1)
+- [ ] **T009** [P] Unit test unique character name validation (`backend/tests/unit/PortalPlayerService-unique-names.test.ts` test UNIQUE(campaign_id, character_name) rejects duplicates)
+- [ ] **T010** [P] Unit test bcrypt password hashing (`backend/tests/unit/PortalConfigService-password.test.ts` test setPassword hashes, verifyPassword compares)
+- [ ] **T011** [P] Unit test citation generation (`backend/tests/unit/CitationGeneratorService.test.ts` test numbered [1][2] format with card linking per research.md Topic 4)
+- [ ] **T012** [P] Unit test token tracking aggregation (`backend/tests/unit/PortalTokenTrackerService.test.ts` test SQL SUM queries for per-player totals per research.md Topic 5)
 
-### Backend Unit Tests (Critical Portal Logic)
-- [ ] **T020** [P] Unit test ViewModeService filtering integration (`backend/tests/unit/services/PortalAI-filtering.test.ts` test Common Knowledge + Player Knowledge ONLY access per research.md)
-- [ ] **T021** [P] Unit test citation generation (`backend/tests/unit/services/CitationGenerator.test.ts` test clickable citation format with card linking)
-- [ ] **T022** [P] Unit test token usage tracking (`backend/tests/unit/services/TokenTracker.test.ts` test per-player token aggregation)
-- [ ] **T023** [P] Unit test unique character name validation (`backend/tests/unit/services/PortalPlayer-unique-names.test.ts` test duplicate rejection per clarifications)
-- [ ] **T024** [P] Unit test Session Recap granular filtering (`backend/tests/unit/services/SessionRecapFilter.test.ts` test piece-by-piece DM Secret detection per research.md)
-
-### Backend Integration Tests (from quickstart.md)
-- [ ] **T025** [P] Integration test: Portal enable → URL generation → player access (`backend/tests/integration/portal-enable-access.integration.test.ts`)
-- [ ] **T026** [P] Integration test: Player identity with unique name enforcement (`backend/tests/integration/player-identity.integration.test.ts`)
-- [ ] **T027** [P] Integration test: Portal AI filtering (only Common + Player Knowledge accessible) (`backend/tests/integration/portal-filtering.integration.test.ts`)
-- [ ] **T028** [P] Integration test: Citation generation with card links (`backend/tests/integration/citation-generation.integration.test.ts`)
+### Backend Integration Tests
+- [ ] **T013** [P] Integration test: Portal enable → player access with password (`backend/tests/integration/portal-enable-password.integration.test.ts` test password verification flow)
+- [ ] **T014** [P] Integration test: Player identity with crypto token persistence (`backend/tests/integration/player-identity-token.integration.test.ts` test sessionToken lookup works)
+- [ ] **T015** [P] Integration test: Portal AI filtering with viewMode middleware (`backend/tests/integration/portal-filtering.integration.test.ts` test only common-knowledge + player-knowledge accessible via BaseCategoryService.list() per research.md Topic 3)
+- [ ] **T016** [P] Integration test: Citation links to existing card routes (`backend/tests/integration/citation-card-links.integration.test.ts` test /cards/{cardId} navigation)
 
 ---
 
 ## Phase 3.4: Backend Core Implementation (ONLY after tests are failing)
 
-### Models
-- [ ] **T029** [P] PortalConfig model (`backend/src/models/PortalConfig.ts` with TypeScript interface from data-model.md)
-- [ ] **T030** [P] PortalPlayer model (`backend/src/models/PortalPlayer.ts` with TypeScript interface from data-model.md)
-- [ ] **T031** [P] PortalConversation model (`backend/src/models/PortalConversation.ts` with TypeScript interface from data-model.md)
-- [ ] **T032** [P] PortalMessage model (`backend/src/models/PortalMessage.ts` with TypeScript interface from data-model.md)
-- [ ] **T033** [P] PortalTokenUsage model (`backend/src/models/PortalTokenUsage.ts` with TypeScript interface from data-model.md)
-
 ### Services - Portal Configuration
-- [ ] **T034** PortalConfigService (`backend/src/services/PortalConfigService.ts` CRUD for portal configs, enable/disable, password hashing with bcrypt)
-- [ ] **T035** PortalConfigService - URL generation (`backend/src/services/PortalConfigService.ts` generate public URL with uuid per research.md)
+- [ ] **T017** PortalConfigService - CRUD operations (`backend/src/services/PortalConfigService.ts` create/read/update portal configs per data-model.md Entity 1)
+- [ ] **T018** PortalConfigService - Password management (`backend/src/services/PortalConfigService.ts` add setPassword with bcrypt, verifyPassword methods per research.md Topic 2)
+- [ ] **T019** PortalConfigService - Response style configuration (`backend/src/services/PortalConfigService.ts` add setResponseStyle method with 5 options from data-model.md)
 
 ### Services - Player Identity
-- [ ] **T036** PortalPlayerService (`backend/src/services/PortalPlayerService.ts` create player identity, unique character name validation per clarifications)
-- [ ] **T037** PortalPlayerService - Session management (`backend/src/services/PortalPlayerService.ts` express-session integration, session_id FK per research.md)
+- [ ] **T020** PortalPlayerService - Player creation with crypto tokens (`backend/src/services/PortalPlayerService.ts` generate sessionToken with crypto.randomBytes(32), check UNIQUE constraint per research.md Topic 1)
+- [ ] **T021** PortalPlayerService - Token lookup (`backend/src/services/PortalPlayerService.ts` add getPlayerByToken method for session verification)
 
 ### Services - Portal AI & Filtering
-- [ ] **T038** InformationFilterService integration (`backend/src/services/InformationFilterService.ts` extend Feature 004 ViewModeService to filter Common Knowledge + Player Knowledge ONLY per research.md)
-- [ ] **T039** PortalAIService (`backend/src/services/PortalAIService.ts` AI question answering with information filtering integration)
-- [ ] **T040** PortalAIService - Context building (`backend/src/services/PortalAIService.ts` build LLM context from filtered cards, knowledge graphs, Session Recaps per research.md)
-- [ ] **T041** SessionRecapFilterService (`backend/src/services/SessionRecapFilterService.ts` granular Session Recap filtering piece-by-piece for DM Secret content per research.md)
-
-### Services - Citations & Token Tracking
-- [ ] **T042** CitationGeneratorService (`backend/src/services/CitationGeneratorService.ts` generate clickable citations from AI response sources per research.md)
-- [ ] **T043** TokenTrackerService (`backend/src/services/TokenTrackerService.ts` track token usage per player/campaign, aggregation for monitoring panel per research.md)
+- [ ] **T022** CitationGeneratorService (`backend/src/services/CitationGeneratorService.ts` generate() and formatResponse() methods per research.md Topic 4)
+- [ ] **T023** PortalTokenTrackerService (`backend/src/services/PortalTokenTrackerService.ts` record(), getPlayerUsage(), getCampaignUsage(), getPerPlayerUsage() per research.md Topic 5)
+- [ ] **T024** PortalAIService - Context building (`backend/src/services/PortalAIService.ts` buildContext() using SessionRecapService.list(), ItemService.list(), KnowledgeGraphService.getFilteredNodes() per research.md Topic 3)
+- [ ] **T025** PortalAIService - Question answering (`backend/src/services/PortalAIService.ts` answerQuestion() integrating viewMode filtering, BYOLLMConfigService credentials, CitationGeneratorService, PortalTokenTrackerService per research.md Topic 3)
 
 ### Services - Conversations
-- [ ] **T044** PortalConversationService (`backend/src/services/PortalConversationService.ts` CRUD for conversations, history retrieval, per-player conversation isolation)
+- [ ] **T026** PortalConversationService (`backend/src/services/PortalConversationService.ts` CRUD for conversations and messages, history retrieval per data-model.md Entities 3-4)
 
 ### Routes
-- [ ] **T045** Portal management routes (`backend/src/routes/portal-management.ts` POST /config, GET /config, PUT /enable, PUT /password, PUT /response-style, GET /monitoring per plan.md)
-- [ ] **T046** Portal public routes (`backend/src/routes/portal-public.ts` POST /identify, POST /ask, GET /history per plan.md)
-- [ ] **T047** Portal preview route (`backend/src/routes/portal-preview.ts` POST /preview for DM Preview Mode per plan.md)
+- [ ] **T027** Portal management routes (`backend/src/routes/portal-management.ts` POST /config, GET /config, PUT /enable, PUT /password, PUT /response-style, GET /monitoring)
+- [ ] **T028** Portal public routes (`backend/src/routes/portal-public.ts` POST /identify with sessionToken cookie, POST /ask, GET /history per research.md Topic 1)
 
 ---
 
 ## Phase 3.5: Frontend - GM Portal Management
 
-### Portal Management UI
-- [ ] **T048** PortalManagementPage (`frontend/src/pages/PortalManagementPage.tsx` main GM portal management page)
-- [ ] **T049** PortalSettings component (`frontend/src/components/portal/PortalSettings.tsx` enable/disable portal, password protection, response style selector)
-- [ ] **T050** PortalMonitoring component (`frontend/src/components/portal/PortalMonitoring.tsx` per-player question logs, token usage display)
-- [ ] **T051** DMPreviewMode component (`frontend/src/components/portal/DMPreviewMode.tsx` test portal with filtered view before sharing)
-- [ ] **T052** ResponseStyleSelector component (`frontend/src/components/portal/ResponseStyleSelector.tsx` Friendly Sage, Scholarly Tome, Tavern Gossip, Factual, Custom dropdown)
-- [ ] **T053** PasswordProtection component (`frontend/src/components/portal/PasswordProtection.tsx` set/remove password, bcrypt strength indicator)
-- [ ] **T054** PublicURLDisplay component (`frontend/src/components/portal/PublicURLDisplay.tsx` display portal URL with copy button)
+- [ ] **T029** [P] PortalManagementPage (`frontend/src/pages/PortalManagementPage.tsx` main GM portal management page with tabs: Settings, Monitoring, Preview)
+- [ ] **T030** [P] PortalSettings component (`frontend/src/components/portal/PortalSettings.tsx` enable/disable toggle, password input with show/hide, response style dropdown)
+- [ ] **T031** [P] PortalMonitoring component (`frontend/src/components/portal/PortalMonitoring.tsx` display per-player token usage from getPerPlayerUsage() query)
+- [ ] **T032** [P] DMPreviewMode component (`frontend/src/components/portal/DMPreviewMode.tsx` test portal with player_view filtering, shows exact filtered view)
+- [ ] **T033** [P] ResponseStyleSelector component (`frontend/src/components/portal/ResponseStyleSelector.tsx` dropdown with 5 styles: friendly-sage, scholarly-tome, tavern-gossip, factual, custom + textarea)
+- [ ] **T034** [P] PasswordProtection component (`frontend/src/components/portal/PasswordProtection.tsx` password set/remove UI, bcrypt strength indicator)
+- [ ] **T035** [P] PublicURLDisplay component (`frontend/src/components/portal/PublicURLDisplay.tsx` display http://localhost:3000/portal/{campaign-id} with copy button)
 
 ---
 
 ## Phase 3.6: Frontend - Public Player Portal
 
-### Player Portal UI
-- [ ] **T055** PlayerPortalPage (`frontend/src/pages/PlayerPortalPage.tsx` public player Q&A interface)
-- [ ] **T056** PlayerIdentity component (`frontend/src/components/portal/PlayerIdentity.tsx` "Who are you in-game?" prompt with character name input)
-- [ ] **T057** PortalChat component (`frontend/src/components/portal/PortalChat.tsx` chat interface with AI responses, streaming support)
-- [ ] **T058** CitationLink component (`frontend/src/components/portal/CitationLink.tsx` clickable citation linking to source card)
-- [ ] **T059** PasswordEntry component (`frontend/src/components/portal/PasswordEntry.tsx` password entry UI for password-protected portals)
-- [ ] **T060** PortalWarning component (`frontend/src/components/portal/PortalWarning.tsx` prominent warning about GM's token usage)
-
-### API Clients
-- [ ] **T061** [P] PortalService API client (`frontend/src/services/portal.service.ts` API calls for GM portal management endpoints)
-- [ ] **T062** [P] PortalPublicService API client (`frontend/src/services/portal-public.service.ts` API calls for public player endpoints)
+- [ ] **T036** [P] PlayerPortalPage (`frontend/src/pages/PlayerPortalPage.tsx` public player Q&A interface at /portal/:campaignId)
+- [ ] **T037** [P] PlayerIdentity component (`frontend/src/components/portal/PlayerIdentity.tsx` "Who are you in-game?" prompt, unique name validation error display)
+- [ ] **T038** [P] PortalChat component (`frontend/src/components/portal/PortalChat.tsx` chat interface with messages, citations display, scroll to bottom)
+- [ ] **T039** [P] CitationLink component (`frontend/src/components/portal/CitationLink.tsx` clickable [1] button navigating to /cards/{cardId} per research.md Topic 4)
+- [ ] **T040** [P] PasswordEntry component (`frontend/src/components/portal/PasswordEntry.tsx` password entry before identity prompt if portal password-protected)
+- [ ] **T041** [P] PortalWarning component (`frontend/src/components/portal/PortalWarning.tsx` warning: "This portal uses your GM's LLM credentials...")
+- [ ] **T042** [P] portalService API client (`frontend/src/services/portalService.ts` GM management endpoints: getConfig, enable, setPassword, setResponseStyle, getMonitoring)
+- [ ] **T043** [P] portalPublicService API client (`frontend/src/services/portalPublicService.ts` player endpoints: identify, ask, getHistory)
 
 ---
 
 ## Phase 3.7: Integration & Polish
 
 ### Integration Tasks
-- [ ] **T063** Integrate ViewModeService filtering with PortalAI (verify only Common Knowledge + Player Knowledge cards accessible per research.md)
-- [ ] **T064** Integrate citation generation with card linking (verify citations link to source cards, clickable navigation)
-- [ ] **T065** Integrate token tracking with monitoring panel (verify per-player token aggregation, display in GM monitoring UI)
-- [ ] **T066** Integrate unique character name validation (verify duplicate rejection with error message per clarifications)
-- [ ] **T067** Integrate Session Recap granular filtering (verify piece-by-piece DM Secret detection, exclude from portal AI context)
-- [ ] **T068** Integrate express-session with player identity (verify session_id persistence, player identification across page refreshes)
-- [ ] **T069** Test DM Preview Mode (verify filtered view shows exact player experience before portal enabled)
+- [ ] **T044** Integrate viewMode middleware with PortalAI (verify BaseCategoryService.list() with player_view filters correctly per research.md Topic 3)
+- [ ] **T045** Integrate BYOLLMConfigService credentials (verify PortalAIService uses getConfig() to get GM's LLM credentials, not separate portal credentials)
+- [ ] **T046** Integrate citation card linking (verify CitationLink navigates to existing /cards/{cardId} route from Feature 003)
+- [ ] **T047** Integrate token tracking with monitoring (verify PortalMonitoring displays getPerPlayerUsage() data)
+- [ ] **T048** Test unique character name enforcement (verify UNIQUE constraint error caught and displayed properly)
+- [ ] **T049** Test crypto sessionToken persistence (verify player sessionToken in HTTP-only cookie works across page refreshes)
+- [ ] **T050** Test DM Preview Mode filtering (verify shows exact player_view, no dm-secret content visible)
 
 ### Frontend Component Tests
-- [ ] **T070** [P] Component test PortalSettings (`frontend/tests/components/PortalSettings.test.tsx` with Vitest + RTL)
-- [ ] **T071** [P] Component test PlayerIdentity (`frontend/tests/components/PlayerIdentity.test.tsx` test unique name validation)
-- [ ] **T072** [P] Component test CitationLink (`frontend/tests/components/CitationLink.test.tsx` test card navigation)
+- [ ] **T051** [P] Component test PortalSettings (`frontend/tests/unit/PortalSettings.test.tsx` with Vitest + RTL, test enable toggle, password input, style selector)
+- [ ] **T052** [P] Component test PlayerIdentity (`frontend/tests/unit/PlayerIdentity.test.tsx` test unique name error display when UNIQUE constraint fails)
+- [ ] **T053** [P] Component test CitationLink (`frontend/tests/unit/CitationLink.test.tsx` test onClick navigates to /cards/{cardId})
 
 ### E2E Tests
-- [ ] **T073** E2E test: Portal enable → player access → Q&A workflow (`frontend/tests/e2e/portal-flow.spec.ts` with Playwright per quickstart.md)
-- [ ] **T074** E2E test: Player identity with duplicate name rejection (`frontend/tests/e2e/player-identity.spec.ts`)
-- [ ] **T075** E2E test: Portal AI filtering validation (`frontend/tests/e2e/portal-filtering.spec.ts` verify DM Secrets NOT accessible to player)
-- [ ] **T076** E2E test: Citation click navigation (`frontend/tests/e2e/citation-navigation.spec.ts`)
+- [ ] **T054** E2E test: Complete portal flow (`frontend/tests/e2e/portal-complete-flow.spec.ts` GM enables → player identifies → asks question → receives AI response with citations)
+- [ ] **T055** E2E test: Password protection flow (`frontend/tests/e2e/portal-password.spec.ts` player enters correct password → access granted, wrong password → denied)
+- [ ] **T056** E2E test: Information filtering validation (`frontend/tests/e2e/portal-filtering.spec.ts` verify dm-secret cards NOT in portal responses, only common-knowledge + player-knowledge)
+- [ ] **T057** E2E test: Citation click navigation (`frontend/tests/e2e/citation-navigation.spec.ts` click [1] → navigate to card detail page)
 
-### Documentation & Cleanup
-- [ ] **T077** Validate quickstart.md (execute all steps: enable portal → set password → test DM Preview → player access → Q&A → monitor token usage)
-- [ ] **T078** [P] Add inline comments to filtering logic (ViewModeService integration, Session Recap granular filtering per research.md)
-- [ ] **T079** [P] Security audit: Verify DM Secrets NEVER accessible to portal AI (audit filtered context, test with various secret cards)
-- [ ] **T080** [P] Performance test portal response (<3s per plan.md)
-- [ ] **T081** [P] Performance test citation generation (<100ms per plan.md)
+### Documentation & Security
+- [ ] **T058** Update CLAUDE.md (`run .specify/scripts/bash/update-agent-context.sh claude` to add Feature 009: portal services, viewMode reuse, crypto tokens, citations, token tracking)
+- [ ] **T059** [P] Add inline comments to PortalAIService (document viewMode filtering integration, BaseCategoryService usage, BYOLLM integration per research.md)
+- [ ] **T060** [P] Security audit - DM Secrets verification (manually verify no dm-secret cards accessible via PortalAIService.buildContext(), test with various secret cards in different categories)
 
 ---
 
 ## Dependencies
 
 ### Strict Ordering
-1. **Database migrations before everything**: T001-T003 before all other tasks
-2. **Shared types before tests**: T004-T009 before T010-T028
-3. **Tests before implementation**: T010-T028 MUST complete (and fail) before T029-T047
-4. **Backend services before routes**: T034-T044 before T045-T047
-5. **Backend routes before frontend API clients**: T045-T047 before T061-T062
-6. **ViewModeService integration before PortalAI**: T038 before T039-T041 (filtering prerequisite)
-7. **API clients before UI components**: T061-T062 before T048-T060 (components need API)
-8. **All core before integration**: T001-T062 before T063-T069
-9. **Implementation before E2E tests**: T001-T069 before T073-T076
+1. **Database migration before everything**: T001-T002 before all other tasks
+2. **Models before tests**: T003-T007 before T008-T016
+3. **Tests before implementation**: T008-T016 MUST complete (and fail) before T017-T028
+4. **Services before routes**: T017-T026 before T027-T028
+5. **Backend routes before frontend API clients**: T027-T028 before T042-T043
+6. **API clients before UI components**: T042-T043 before T029-T041 (components need API)
+7. **All core before integration**: T001-T043 before T044-T050
+8. **Implementation before E2E tests**: T001-T050 before T054-T057
 
 ### Specific Dependencies
-- T003 (Unique character names constraint) blocks T023, T066 (unique name tests need constraint)
-- T034 (PortalConfigService) blocks T045 (management routes need service)
-- T036-T037 (PortalPlayerService) blocks T046 (public routes need player service)
-- T038 (InformationFilterService) blocks T039-T041 (PortalAI needs filtering service)
-- T039-T041 (PortalAIService) blocks T046, T047 (routes need AI service)
-- T042 (CitationGeneratorService) blocks T039 (PortalAI uses citations)
-- T043 (TokenTrackerService) blocks T045 (monitoring route needs tracker)
-- T061-T062 (API clients) block T048-T060 (UI components need API)
+- T001 (Migration) blocks everything (all services need tables)
+- T017-T019 (PortalConfigService) blocks T027 (management routes)
+- T020-T021 (PortalPlayerService) blocks T028 (public routes)
+- T022 (CitationGeneratorService) blocks T025 (PortalAI needs citations)
+- T023 (PortalTokenTrackerService) blocks T025, T027 (AI and monitoring need tracker)
+- T024-T025 (PortalAIService) blocks T028 (public routes need AI)
+- T042-T043 (API clients) block T029-T041 (UI components need API)
+- T045 (BYOLLM integration) blocks T025 (PortalAI needs credentials)
 
 ---
 
 ## Parallel Execution Examples
 
-### Example 1: Shared Types (Phase 3.2)
+### Example 1: Models (Phase 3.2)
 ```bash
-# Launch T004-T009 together (different type files):
-Task: "PortalConfig type in shared/types/PortalConfig.ts"
-Task: "PortalPlayer type in shared/types/PortalPlayer.ts"
-Task: "PortalConversation type in shared/types/PortalConversation.ts"
-Task: "PortalMessage type in shared/types/PortalMessage.ts"
-Task: "PortalTokenUsage type in shared/types/PortalTokenUsage.ts"
-Task: "Citation type in shared/types/Citation.ts"
-```
-
-### Example 2: Contract Tests (Phase 3.3)
-```bash
-# Launch T010-T019 together (same contract test file, different describe blocks):
-Task: "Contract test POST /api/portal/config in backend/tests/contract/portal.contract.test.ts"
-Task: "Contract test GET /api/portal/config in backend/tests/contract/portal.contract.test.ts"
-Task: "Contract test PUT /api/portal/config/enable in backend/tests/contract/portal.contract.test.ts"
-Task: "Contract test PUT /api/portal/config/password in backend/tests/contract/portal.contract.test.ts"
-Task: "Contract test PUT /api/portal/config/response-style in backend/tests/contract/portal.contract.test.ts"
-Task: "Contract test GET /api/portal/monitoring in backend/tests/contract/portal.contract.test.ts"
-Task: "Contract test POST /api/portal/public/:campaignId/identify in backend/tests/contract/portal.contract.test.ts"
-Task: "Contract test POST /api/portal/public/:campaignId/ask in backend/tests/contract/portal.contract.test.ts"
-Task: "Contract test GET /api/portal/public/:campaignId/history in backend/tests/contract/portal.contract.test.ts"
-Task: "Contract test POST /api/portal/preview in backend/tests/contract/portal.contract.test.ts"
-```
-
-### Example 3: Unit Tests (Phase 3.3)
-```bash
-# Launch T020-T024 together (different unit test files):
-Task: "Unit test ViewModeService filtering integration in backend/tests/unit/services/PortalAI-filtering.test.ts"
-Task: "Unit test citation generation in backend/tests/unit/services/CitationGenerator.test.ts"
-Task: "Unit test token usage tracking in backend/tests/unit/services/TokenTracker.test.ts"
-Task: "Unit test unique character name validation in backend/tests/unit/services/PortalPlayer-unique-names.test.ts"
-Task: "Unit test Session Recap granular filtering in backend/tests/unit/services/SessionRecapFilter.test.ts"
-```
-
-### Example 4: Models (Phase 3.4)
-```bash
-# Launch T029-T033 together (different model files):
+# Launch T003-T007 together (different model files):
 Task: "PortalConfig model in backend/src/models/PortalConfig.ts"
 Task: "PortalPlayer model in backend/src/models/PortalPlayer.ts"
 Task: "PortalConversation model in backend/src/models/PortalConversation.ts"
@@ -260,19 +193,48 @@ Task: "PortalMessage model in backend/src/models/PortalMessage.ts"
 Task: "PortalTokenUsage model in backend/src/models/PortalTokenUsage.ts"
 ```
 
-### Example 5: API Clients (Phase 3.6)
+### Example 2: Unit Tests (Phase 3.3)
 ```bash
-# Launch T061-T062 together (different service files):
-Task: "PortalService API client in frontend/src/services/portal.service.ts"
-Task: "PortalPublicService API client in frontend/src/services/portal-public.service.ts"
+# Launch T008-T012 together (different unit test files):
+Task: "Unit test crypto tokens in backend/tests/unit/PortalPlayerService-tokens.test.ts"
+Task: "Unit test unique names in backend/tests/unit/PortalPlayerService-unique-names.test.ts"
+Task: "Unit test bcrypt passwords in backend/tests/unit/PortalConfigService-password.test.ts"
+Task: "Unit test citations in backend/tests/unit/CitationGeneratorService.test.ts"
+Task: "Unit test token aggregation in backend/tests/unit/PortalTokenTrackerService.test.ts"
 ```
 
-### Example 6: Component Tests (Phase 3.7)
+### Example 3: Integration Tests (Phase 3.3)
 ```bash
-# Launch T070-T072 together (different component test files):
-Task: "Component test PortalSettings in frontend/tests/components/PortalSettings.test.tsx"
-Task: "Component test PlayerIdentity in frontend/tests/components/PlayerIdentity.test.tsx"
-Task: "Component test CitationLink in frontend/tests/components/CitationLink.test.tsx"
+# Launch T013-T016 together (different integration test files):
+Task: "Integration test password in backend/tests/integration/portal-enable-password.integration.test.ts"
+Task: "Integration test tokens in backend/tests/integration/player-identity-token.integration.test.ts"
+Task: "Integration test filtering in backend/tests/integration/portal-filtering.integration.test.ts"
+Task: "Integration test citations in backend/tests/integration/citation-card-links.integration.test.ts"
+```
+
+### Example 4: GM Components (Phase 3.5)
+```bash
+# Launch T029-T035 together (different component files):
+Task: "PortalManagementPage in frontend/src/pages/PortalManagementPage.tsx"
+Task: "PortalSettings in frontend/src/components/portal/PortalSettings.tsx"
+Task: "PortalMonitoring in frontend/src/components/portal/PortalMonitoring.tsx"
+Task: "DMPreviewMode in frontend/src/components/portal/DMPreviewMode.tsx"
+Task: "ResponseStyleSelector in frontend/src/components/portal/ResponseStyleSelector.tsx"
+Task: "PasswordProtection in frontend/src/components/portal/PasswordProtection.tsx"
+Task: "PublicURLDisplay in frontend/src/components/portal/PublicURLDisplay.tsx"
+```
+
+### Example 5: Player Portal (Phase 3.6)
+```bash
+# Launch T036-T043 together (different files):
+Task: "PlayerPortalPage in frontend/src/pages/PlayerPortalPage.tsx"
+Task: "PlayerIdentity in frontend/src/components/portal/PlayerIdentity.tsx"
+Task: "PortalChat in frontend/src/components/portal/PortalChat.tsx"
+Task: "CitationLink in frontend/src/components/portal/CitationLink.tsx"
+Task: "PasswordEntry in frontend/src/components/portal/PasswordEntry.tsx"
+Task: "PortalWarning in frontend/src/components/portal/PortalWarning.tsx"
+Task: "portalService in frontend/src/services/portalService.ts"
+Task: "portalPublicService in frontend/src/services/portalPublicService.ts"
 ```
 
 ---
@@ -280,76 +242,67 @@ Task: "Component test CitationLink in frontend/tests/components/CitationLink.tes
 ## Validation Checklist
 *GATE: Must pass before marking Phase 3 complete*
 
-- [x] All contracts have corresponding tests (T010-T019 cover portal.yaml 10 endpoints)
-- [x] All entities have model tasks (T029-T033 for PortalConfig, PortalPlayer, PortalConversation, PortalMessage, PortalTokenUsage)
-- [x] All tests come before implementation (T010-T028 before T029-T047)
+- [x] All entities have model tasks (T003-T007 for 5 entities)
+- [x] All tests come before implementation (T008-T016 before T017-T028)
 - [x] Parallel tasks truly independent (verified: different files, no shared dependencies)
 - [x] Each task specifies exact file path (all tasks include full paths)
-- [x] No task modifies same file as another [P] task (verified: no conflicts except T010-T019 same file but different test cases)
-- [x] Critical filtering logic has unit tests (T020, T024, T027, T063, T067, T075, T079 for information filtering security)
-- [x] Portal workflow has E2E validation (T073-T076)
+- [x] No task modifies same file as another [P] task (verified: no conflicts)
+- [x] Critical filtering logic has tests (T015, T044, T050, T056, T060 for information filtering security)
+- [x] Portal workflow has E2E validation (T054-T057)
 
 ---
 
 ## Notes
 
 - **[P] tasks** = different files, no dependencies, can run in parallel
-- **Verify tests fail** before implementing (TDD critical for information filtering security)
-- **ViewModeService integration** (T020, T038, T063) - reuse Feature 004 filtering for Common Knowledge + Player Knowledge ONLY per research.md
-- **express-session** (T037, T068) - lightweight player identity, session_id FK, survives page refresh
-- **Unique character names** (T003, T023, T066) - UNIQUE(campaign_id, character_name) constraint, reject duplicates per clarifications
-- **Citation generation** (T021, T042, T064) - clickable citations with card links, <100ms generation per plan.md
-- **Token tracking** (T022, T043, T065) - per-player aggregation, display in GM monitoring panel
-- **Session Recap filtering** (T024, T041, T067) - granular piece-by-piece DM Secret detection per research.md
-- **DM Preview Mode** (T051, T069) - test portal with filtered view before sharing
-- **Password protection** (T053, T059) - bcrypt hashing, optional per portal config
-- **Response styles** (T052) - Friendly Sage, Scholarly Tome, Tavern Gossip, Factual, Custom
-- **BYOLLM credentials** (Feature 008 dependency) - Portal AI uses GM's LLM credentials with prominent token usage warning
-- **Performance** (T080-T081) - Portal response <3s, citation generation <100ms per plan.md
+- **Verify tests fail** before implementing (TDD critical for security)
+- **crypto tokens** (T008, T014, T020, T049) - crypto.randomBytes(32).toString('hex') produces 64-char hex, stored in portal_players.session_token, sent as HTTP-only cookie per research.md Topic 1
+- **viewMode middleware reuse** (T015, T044) - use existing `getPlayerKnowledgeFilter()` with BaseCategoryService.list(), no new filtering service per research.md Topic 3
+- **Unique character names** (T009, T048) - UNIQUE(campaign_id, character_name) constraint, SQL error rejected with clear message per data-model.md Entity 2
+- **Citations** (T011, T022, T046) - numbered [1][2] format linking to /cards/{cardId} per research.md Topic 4
+- **Token tracking** (T012, T023, T047) - SQL SUM aggregation per research.md Topic 5
+- **BYOLLM integration** (T045) - BYOLLMConfigService.getConfig() provides GM's credentials per research.md Topic 3
+- **Password protection** (T010, T018, T055) - bcrypt hashing, optional per portal config per research.md Topic 2
+- **Response styles** (T019, T033) - 5 options from data-model.md Entity 1
+- **WAL concurrency** (research.md Topic 6) - already enabled, no additional tasks needed
 
 ---
 
 ## Critical Risk Areas
 
-1. **Information Filtering Security** (T020, T038, T063, T079):
-   - Portal AI MUST access ONLY Common Knowledge + Player Knowledge
-   - System and DM Secret cards completely filtered out
-   - ViewModeService integration from Feature 004
-   - Security audit critical (T079) - manually verify no DM Secrets accessible
+1. **Information Filtering Security** (T015, T044, T060):
+   - Portal AI MUST use viewMode.getPlayerKnowledgeFilter()
+   - BaseCategoryService.list() with player_view mode
+   - Security audit critical - manually verify no dm-secret accessible
 
-2. **Unique Character Name Enforcement** (T003, T023, T066):
-   - UNIQUE constraint on (campaign_id, character_name)
-   - Reject duplicate names with clear error message per clarifications
-   - Prevents confusion in monitoring panel and conversation tracking
+2. **Unique Character Name Enforcement** (T009, T048):
+   - UNIQUE(campaign_id, character_name) SQL constraint
+   - Clear error message when rejected
 
-3. **Session Recap Granular Filtering** (T024, T041, T067):
-   - Session Recaps verified piece-by-piece for DM Secret content
-   - Can't just filter entire recap - must parse and filter individual elements
-   - Complex logic per research.md
+3. **Citation Card Linking** (T011, T022, T046):
+   - Link to existing /cards/{cardId} route from Feature 003
+   - Numbered format [1][2]
 
-4. **Citation Generation & Linking** (T021, T042, T064):
-   - Citations link to source cards with cardId
-   - Clickable navigation to card detail page
-   - <100ms generation per plan.md
+4. **Token Tracking Aggregation** (T012, T023, T047):
+   - SQL SUM queries per research.md Topic 5
+   - Display in PortalMonitoring
 
-5. **Token Tracking & Aggregation** (T022, T043, T065):
-   - Track tokens per player per campaign
-   - Aggregate for monitoring panel display
-   - Prominent warning about GM's token usage
-
-6. **express-session Player Identity** (T037, T068):
-   - session_id FK to express-session
-   - Lightweight account linkage (no password, just character name)
+5. **Crypto Session Tokens** (T008, T020, T049):
+   - crypto.randomBytes(32).toString('hex')
+   - HTTP-only cookie
    - Persists across page refreshes
 
-7. **DM Preview Mode** (T051, T069):
-   - Shows exact filtered view players will see
-   - Allows GM to test before enabling portal
-   - Must use same filtering logic as player view (ViewModeService)
+6. **BYOLLM Integration** (T045):
+   - BYOLLMConfigService.getConfig() for credentials
+   - No separate portal credentials
+
+7. **DM Preview Mode** (T032, T050):
+   - Uses same viewMode filtering as player view
+   - Allows GM to test before enabling
 
 ---
 
-**Total Tasks**: 81
-**Estimated Completion**: 8-12 days (ViewModeService integration complex, citation generation, Session Recap filtering, express-session, BYOLLM integration)
-**Critical Path**: T001-T003 → T004-T009 → T010-T028 → T029-T047 → T048-T062 → T063-T069 → T073-T081
-**Security Priority**: Information filtering (T020, T038, T063, T079) is CRITICAL - DM Secrets must NEVER be accessible to player portal AI
+**Total Tasks**: 60
+**Estimated Completion**: 7-10 days
+**Critical Path**: T001-T002 → T003-T007 → T008-T016 → T017-T028 → T029-T043 → T044-T050 → T054-T060
+**Security Priority**: Information filtering (T015, T044, T060) is CRITICAL - dm-secret must NEVER be accessible to player portal AI

@@ -63,6 +63,8 @@ export function useDashboardCanvas(campaignId: string): UseDashboardCanvasResult
 
   // Debounce timer ref
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // Mount tracking ref to prevent state updates after unmount
+  const isMountedRef = useRef(true);
 
   // Fetch config on mount
   const fetchConfig = useCallback(async () => {
@@ -110,7 +112,16 @@ export function useDashboardCanvas(campaignId: string): UseDashboardCanvasResult
   }, [campaignId]);
 
   useEffect(() => {
+    isMountedRef.current = true;
     fetchConfig();
+    return () => {
+      isMountedRef.current = false;
+      // Clear any pending timers on unmount
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = null;
+      }
+    };
   }, [fetchConfig]);
 
   // Debounced save function
@@ -123,6 +134,8 @@ export function useDashboardCanvas(campaignId: string): UseDashboardCanvasResult
 
       // Set new timer
       saveTimerRef.current = setTimeout(async () => {
+        // Check if still mounted before updating state
+        if (!isMountedRef.current) return;
         if (!config) return;
 
         setSaving(true);
@@ -135,12 +148,18 @@ export function useDashboardCanvas(campaignId: string): UseDashboardCanvasResult
           };
 
           const updatedConfig = await updateDashboardConfig(config.id, updatedLayout);
-          setConfig(updatedConfig);
+          if (isMountedRef.current) {
+            setConfig(updatedConfig);
+          }
         } catch (err: any) {
           console.error('Failed to save dashboard config:', err);
-          setError(err.message || 'Failed to save dashboard configuration');
+          if (isMountedRef.current) {
+            setError(err.message || 'Failed to save dashboard configuration');
+          }
         } finally {
-          setSaving(false);
+          if (isMountedRef.current) {
+            setSaving(false);
+          }
         }
       }, 500); // 500ms debounce delay
     },
@@ -238,14 +257,6 @@ export function useDashboardCanvas(campaignId: string): UseDashboardCanvasResult
     }
   }, [config]);
 
-  // Cleanup timer on unmount
-  useEffect(() => {
-    return () => {
-      if (saveTimerRef.current) {
-        clearTimeout(saveTimerRef.current);
-      }
-    };
-  }, []);
 
   return {
     layout,

@@ -33,16 +33,16 @@ export class QuestService extends BaseCategoryService<Quest> {
         id, campaign_id, name, description, core_status, player_knowledge,
         tags, created_at, updated_at, custom_fields,
         status, objectives, rewards, quest_giver_id, started_session_id,
-        completed_session_id, related_npcs, related_locations, faction_id,
+        completed_session_id, related_npcs, related_locations,
         dm_true_objective, dm_consequences
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       data.id, data.campaign_id, data.name, data.description, data.core_status,
       data.player_knowledge, JSON.stringify(data.tags), data.created_at, data.updated_at,
       JSON.stringify(data.custom_fields), data.status || null, JSON.stringify(data.objectives || []),
       data.rewards || null, data.quest_giver_id || null, data.started_session_id || null,
       data.completed_session_id || null, JSON.stringify(data.related_npcs || []),
-      JSON.stringify(data.related_locations || []), data.faction_id || null,
+      JSON.stringify(data.related_locations || []),
       data.dm_true_objective || null, data.dm_consequences || null
     );
   }
@@ -203,7 +203,7 @@ export class QuestService extends BaseCategoryService<Quest> {
     const updatableFields: (keyof Quest)[] = [
       'name', 'description', 'core_status', 'player_knowledge', 'tags',
       'custom_fields', 'status', 'objectives', 'rewards', 'quest_giver_id',
-      'started_session_id', 'completed_session_id', 'faction_id',
+      'started_session_id', 'completed_session_id',
       'dm_true_objective', 'dm_consequences',
       'updated_at' // CRITICAL: Include updated_at to ensure timestamp refresh
     ];

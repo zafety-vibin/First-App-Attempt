@@ -5,7 +5,7 @@
 
 import Database from 'better-sqlite3';
 import { BaseCategoryService, EntityFilters, Pagination, ListResult, OperationOptions } from './BaseCategoryService';
-import { SessionPrep } from '../models/sessionPrep';
+import { SessionPrep } from '../models/SessionPrep';
 
 export interface SessionPrepFilters extends EntityFilters {
   status?: string;
@@ -18,9 +18,9 @@ export class SessionPrepService extends BaseCategoryService<SessionPrep> {
   }
 
   protected validateCategoryFields(data: Partial<SessionPrep>, options?: OperationOptions): void {
-    // SessionPrep is always dm_only (hypothetical planning)
-    if (data.player_knowledge && data.player_knowledge !== 'dm_only') {
-      throw new Error('SessionPrep must have player_knowledge=dm_only (hypothetical content)');
+    // SessionPrep is always dm-secret (hypothetical planning)
+    if (data.player_knowledge && data.player_knowledge !== 'dm-secret') {
+      throw new Error('SessionPrep must have player_knowledge=dm-secret (hypothetical content)');
     }
   }
 
@@ -30,17 +30,16 @@ export class SessionPrepService extends BaseCategoryService<SessionPrep> {
         id, campaign_id, name, description, core_status, player_knowledge,
         tags, created_at, updated_at, custom_fields,
         planned_date, status, planned_events, possible_encounters, plot_hooks,
-        dm_notes, plot_threads, npcs_to_prep, locations_to_prep, quests_to_advance
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        dm_notes, plot_threads, npcs_to_prep, locations_to_prep
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       data.id, data.campaign_id, data.name, data.description, data.core_status,
-      'dm_only', // Always dm_only for session prep
+      'dm-secret', // Always dm-secret for session prep
       JSON.stringify(data.tags), data.created_at, data.updated_at,
       JSON.stringify(data.custom_fields), data.planned_date || null, data.status || null,
       data.planned_events || null, data.possible_encounters || null, data.plot_hooks || null,
       data.dm_notes || null, JSON.stringify(data.plot_threads || []),
-      JSON.stringify(data.npcs_to_prep || []), JSON.stringify(data.locations_to_prep || []),
-      JSON.stringify(data.quests_to_advance || [])
+      JSON.stringify(data.npcs_to_prep || []), JSON.stringify(data.locations_to_prep || [])
     );
   }
 
@@ -137,7 +136,7 @@ export class SessionPrepService extends BaseCategoryService<SessionPrep> {
     }
 
     // Apply view mode row filtering (Feature 004 - Information Filtering)
-    // SessionPrep is always dm_only, so player_view will return no results (correct behavior)
+    // SessionPrep is always dm-secret, so player_view will return no results (correct behavior)
     if (viewMode === 'player_view') {
       // Player view: Exclude hierarchical levels (dm_only + custom hierarchical)
       // Show everything else (common_knowledge, player_knowledge, null, custom non-hierarchical)

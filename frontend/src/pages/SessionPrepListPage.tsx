@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { GenericCategoryListView } from '../components/pages/GenericCategoryListView';
 import { ColumnDef } from '@tanstack/react-table';
 import { RelationshipCell } from '../components/table/RelationshipCell';
+import { SESSION_PREP_STATUS_OPTIONS } from '../constants/fieldValues';
 
 export const SessionPrepListPage: React.FC = () => {
   const { campaignId } = useParams<{ campaignId: string }>();
@@ -46,12 +47,7 @@ export const SessionPrepListPage: React.FC = () => {
       meta: {
         editable: true,
         editableType: 'dropdown',
-        dropdownOptions: [
-          { value: 'planning', label: 'Planning' },
-          { value: 'ready', label: 'Ready' },
-          { value: 'in_progress', label: 'In Progress' },
-          { value: 'completed', label: 'Completed' },
-        ],
+        dropdownOptions: SESSION_PREP_STATUS_OPTIONS,
       },
     },
     {

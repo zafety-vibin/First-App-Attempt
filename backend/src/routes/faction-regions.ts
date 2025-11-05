@@ -139,9 +139,14 @@ router.get('/:id/regions', (req: Request, res: Response) => {
 
         if (!faction) return false;
 
-        return !faction.player_knowledge ||
-               faction.player_knowledge === 'common_knowledge' ||
-               faction.player_knowledge === 'player_knowledge';
+        // Include if null (contextual) or if non-hierarchical level
+        if (!faction.player_knowledge) return true;
+
+        const level = db
+          .prepare('SELECT hierarchical FROM information_levels WHERE id = ?')
+          .get(faction.player_knowledge) as { hierarchical: number } | undefined;
+
+        return level ? !level.hierarchical : false;
       });
     }
 

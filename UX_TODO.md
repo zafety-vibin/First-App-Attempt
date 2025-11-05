@@ -68,21 +68,8 @@ This document tracks small UX improvements and polish items that are deferred to
 
 ---
 
-### 🔍 Custom Level Filtering in Player View
-**Context**: Custom hierarchical levels should auto-hide in player_view, but backend currently only filters hardcoded values.
-
-**Proposed Enhancement**:
-- Update BaseCategoryService to check `information_levels.hierarchical` flag
-- Filter ANY hierarchical level (not just dm_only)
-- Enables custom secret levels to work correctly
-
-**Files to Modify**:
-- `backend/src/services/BaseCategoryService.ts` (list method)
-- `backend/src/middleware/informationFilter.ts` (query builder)
-
-**Priority**: ⭐⭐⭐ High (functional gap)
-
-**Note**: This is mentioned in UNIFICATION_STATUS.md as next step. (**Note**: I believe the filtering is working as intended based on my testing. It is filtering the hierarchical custom information levels and displaying them. But review if code says otherwise or it is missing something.)
+### ✅ Custom Level Filtering - COMPLETE
+**Fixed**: BaseCategoryService queries `information_levels.hierarchical` flag. Works correctly.
 
 ---
 
@@ -160,6 +147,79 @@ This document tracks small UX improvements and polish items that are deferred to
 ---
 
 ## Database Table UX
+
+### 🔧 Autosave Focus Loss in Inline Editing - IN PROGRESS
+**Context**: When editing fields inline in database tables, the autosave functionality removes focus from the editor after each save, forcing users to click back into the field after typing each word.
+
+**Current Issue**:
+1. Double-click field to edit
+2. Type a word
+3. Autosave triggers (500ms delay)
+4. Focus is removed from editor
+5. Must click back into field to continue typing
+6. Repeat for every word - very frustrating
+
+**Proposed Fix**:
+- Maintain focus on the editor during autosave operation
+- Only blur/unfocus when user explicitly clicks away or presses Escape
+- Ensure cursor position is preserved during save
+- Consider debouncing autosave to reduce frequency
+
+**Files to Modify**:
+- `frontend/src/components/table/EditableCell.tsx` (autosave focus handling)
+- May need to refactor save callback to maintain focus state
+
+**Priority**: ⭐⭐⭐ High (actively breaks editing workflow)
+
+**Note**: This significantly impacts usability of inline editing feature. User has to click into field repeatedly, making it nearly impossible to type full sentences.
+
+---
+
+### 📝 Markdown Syntax Highlighting for Textareas
+**Context**: Long text fields (description, dm_notes, etc.) are plain textareas with no formatting hints.
+
+**Proposed Enhancement**:
+- Add syntax highlighting for markdown: `**bold**`, `*italic*`, `# headers`, `- lists`
+- Visual color coding while typing
+- Still stores as plain text (not rich text)
+- Makes long-form content more readable while editing
+
+**Implementation**:
+- Use CodeMirror or react-simplemde-editor
+- Markdown mode with preview disabled (just highlighting)
+- Apply to EditableCell textarea mode
+
+**Files to Modify**:
+- `frontend/src/components/table/EditableCell.tsx` (textarea rendering)
+- Add dependency: `@uiw/react-codemirror` or similar
+
+**Priority**: ⭐⭐ Medium
+
+---
+
+### 📐 Fullscreen Editor Modal for Text Fields
+**Context**: Editing long text in small table cells is cramped and hard to read.
+
+**Proposed Enhancement**:
+- Double-click text field with Shift key → Opens fullscreen modal editor
+- Clean document view with TipTap rich text or markdown editor
+- Formatting toolbar (bold, italic, headers, lists)
+- Save/Cancel buttons
+- Supports both markdown and rich text modes
+
+**Implementation**:
+- Radix Dialog (fullscreen variant)
+- TipTap editor in markdown mode
+- Convert TEXT field ↔ markdown/TipTap JSON
+- Keyboard shortcut: Shift+Enter to save
+
+**Files to Create**:
+- `frontend/src/components/table/FullscreenTextEditor.tsx` (new modal)
+- Update `EditableCell.tsx` to detect Shift+double-click
+
+**Priority**: ⭐⭐⭐ High (major UX improvement for long-form content)
+
+---
 
 ### 📏 Column Width Persistence
 **Context**: Users can resize columns but widths reset on page refresh.
@@ -241,6 +301,103 @@ This document tracks small UX improvements and polish items that are deferred to
 - `frontend/src/components/table/QuickAddRow.tsx`
 
 **Priority**: ⭐ Low
+
+---
+
+## Document-to-Database Workflow
+
+### 📝 Schema-Driven Document Editor
+**Context**: Need a fluid way to author content in a document format and seamlessly populate database entries without switching between editing modes. Currently, users must use forms to create/edit database entries, which breaks the creative flow when drafting campaign content.
+
+**Proposed Feature**:
+A document editor that bridges free-form writing with structured database entry creation/editing. Users can write naturally, then highlight text to populate database fields.
+
+**Core Functionality**:
+1. **Document Editor Page**:
+   - Blank canvas accessible from database/category pages
+   - Full TipTap rich text editing with slash commands (from wiki feature - Feature 003)
+   - Easy formatting: headings, lists, bold/italic, etc.
+   - Natural writing flow without form constraints
+
+2. **Schema Sidebar**:
+   - When editing within database context, sidebar displays:
+     - Current category's schema fields
+     - Field types and requirements
+     - Current values (if editing existing entry)
+     - Visual indicators for filled vs empty fields
+   - Always visible to guide content creation
+
+3. **Highlight-to-Create Workflow**:
+   - Highlight text in document
+   - Right-click or toolbar button: "Create New [Category]"
+   - Modal appears with schema fields
+   - Highlighted text auto-populates appropriate field (e.g., name or description)
+   - Fill remaining fields
+   - Click "Create" - entry added to database
+   - Document text can be linked/tagged to created entry
+
+4. **Highlight-to-Update Workflow**:
+   - Highlight text in document
+   - Right-click or toolbar button: "Update Existing Entry"
+   - Search/select existing entry from dropdown
+   - Choose target field to update
+   - **Merge or Overwrite options**:
+     - Merge: Append highlighted text to existing field value
+     - Overwrite: Replace field value with highlighted text
+   - Preview changes before confirming
+   - Auto-save with confirmation
+
+5. **Visual Feedback**:
+   - Highlighted text that's been "sent" to database shows subtle indicator (background tint, icon)
+   - Hover over tagged text shows which entry/field it populated
+   - Quick-jump from document to related database entry
+
+**Use Case Example**:
+User writes: "The towering city of Ironforge sits beneath the Frostpeak Mountains, ruled by King Thrain Ironhammer, a stern dwarf with a legendary axe named Skullcleaver."
+
+Workflow:
+1. Highlight "Ironforge" → Create Location → auto-fills name field → add description/tags → Create
+2. Highlight "Frostpeak Mountains" → Create Location → auto-fills name → Create
+3. Highlight "King Thrain Ironhammer, a stern dwarf with a legendary axe" → Create NPC → use portion for name, portion for description → Create
+4. Highlight "Skullcleaver" → Create Item → auto-fills name → Create
+5. Later: Highlight additional text about Ironforge → Update Existing → select Ironforge entry → choose "description" field → Merge (appends new details)
+
+**Technical Implementation**:
+- Extend TipTap with custom mark/node for database-linked text
+- Add ProseMirror commands for highlight-to-create/update actions
+- Schema introspection: read category field definitions to build sidebar
+- API integration: use existing category CRUD endpoints (BaseCategoryService)
+- State management: track document-to-entry mappings
+- Modal/dialog components for field selection and merge/overwrite choice
+
+**Files to Create/Modify**:
+- `frontend/src/pages/DocumentEditorPage.tsx` (new)
+- `frontend/src/components/document/Schemasidebar.tsx` (new)
+- `frontend/src/components/document/HighlightActions.tsx` (new - toolbar/context menu)
+- `frontend/src/components/document/EntryLinkMark.tsx` (new - TipTap custom mark)
+- `frontend/src/components/document/CreateEntryModal.tsx` (new)
+- `frontend/src/components/document/UpdateEntryModal.tsx` (new - with merge/overwrite)
+- `frontend/src/hooks/useDocumentToDatabase.ts` (new - orchestration logic)
+- `frontend/src/config/tiptap.ts` (extend with document-to-database extensions)
+- Backend: potentially new route for document templates/saving (optional)
+
+**Priority**: ⭐⭐⭐ High (major workflow enhancement, addresses creative flow vs structured data tension)
+
+**Benefits**:
+- Reduces friction between creative writing and data entry
+- Allows GMs to draft content naturally, then structure it afterward
+- Enables iterative refinement (write → tag → enhance → re-tag)
+- Leverages existing wiki editor (slash commands) users already know
+- Makes database population feel less like "work"
+
+**Alternative Names**:
+- Document-to-Database Flow
+- Schema Painter (original suggestion)
+- Content Scaffolding Editor
+- Freeform Database Composer
+- Write-Then-Structure Editor
+
+**Note**: This is a substantial feature that could be its own numbered feature (e.g., Feature 022) rather than a UX polish item. Consider full spec if prioritized.
 
 ---
 

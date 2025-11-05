@@ -66,6 +66,66 @@ export const migrations: Migration[] = [
       console.log('Migration 18: API requests audit table created');
     },
   },
+  {
+    version: 22,
+    description: 'Feature 021 - Campaign Bible table for world-building reference',
+    up: (db) => {
+      const migrationPath = path.join(__dirname, 'migrations', '022-campaign-bible.sql');
+      const sql = fs.readFileSync(migrationPath, 'utf8');
+      db.exec(sql);
+      console.log('Migration 22: Campaign Bible table created');
+    },
+  },
+  {
+    version: 23,
+    description: 'Feature 021 - Spatial Navigator columns (map_pin_x, map_pin_y) for geographic visualization',
+    up: (db) => {
+      const migrationPath = path.join(__dirname, 'migrations', '023-spatial-navigator.sql');
+      const sql = fs.readFileSync(migrationPath, 'utf8');
+      db.exec(sql);
+      console.log('Migration 23: Spatial Navigator columns added to locations');
+    },
+  },
+  {
+    version: 24,
+    description: 'Fix information level IDs (dm_only → dm-secret, common_knowledge → common-knowledge)',
+    up: (db) => {
+      const migrationPath = path.join(__dirname, 'migrations', '024-fix-information-level-ids.sql');
+      const sql = fs.readFileSync(migrationPath, 'utf8');
+      db.exec(sql);
+      console.log('Migration 24: Information level IDs fixed across all tables');
+    },
+  },
+  {
+    version: 25,
+    description: 'Feature 014 - Junction tables for relationships (28 tables replacing JSON arrays)',
+    up: (db) => {
+      const migrationPath = path.join(__dirname, 'migrations', '025-junction-tables.sql');
+      const sql = fs.readFileSync(migrationPath, 'utf8');
+      db.exec(sql);
+      console.log('Migration 25: Junction tables created (28 relationship tables)');
+    },
+  },
+  {
+    version: 26,
+    description: 'Feature 014 - Migrate JSON array data to junction tables',
+    up: (db) => {
+      const migrationPath = path.join(__dirname, 'migrations', '026-migrate-json-to-junctions.sql');
+      const sql = fs.readFileSync(migrationPath, 'utf8');
+      db.exec(sql);
+      console.log('Migration 26: JSON array data migrated to junction tables');
+    },
+  },
+  {
+    version: 27,
+    description: 'Cleanup information level values (public/partial → correct hyphenated IDs)',
+    up: (db) => {
+      const migrationPath = path.join(__dirname, 'migrations', '027-cleanup-information-level-values.sql');
+      const sql = fs.readFileSync(migrationPath, 'utf8');
+      db.exec(sql);
+      console.log('Migration 27: Information level values cleaned (public/partial/underscores → hyphens)');
+    },
+  },
 ];
 
 /**

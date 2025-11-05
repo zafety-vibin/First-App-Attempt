@@ -135,10 +135,14 @@ router.get('/:id/maps', (req: Request, res: Response) => {
 
         if (!entity) return false;
 
-        // Include if player_knowledge is common_knowledge, player_knowledge, or null
-        return !entity.player_knowledge ||
-               entity.player_knowledge === 'common_knowledge' ||
-               entity.player_knowledge === 'player_knowledge';
+        // Include if null (contextual) or if non-hierarchical level
+        if (!entity.player_knowledge) return true;
+
+        const level = db
+          .prepare('SELECT hierarchical FROM information_levels WHERE id = ?')
+          .get(entity.player_knowledge) as { hierarchical: number } | undefined;
+
+        return level ? !level.hierarchical : false;
       });
 
       // Filter regions by faction visibility
@@ -149,9 +153,14 @@ router.get('/:id/maps', (req: Request, res: Response) => {
 
         if (!faction) return false;
 
-        return !faction.player_knowledge ||
-               faction.player_knowledge === 'common_knowledge' ||
-               faction.player_knowledge === 'player_knowledge';
+        // Include if null (contextual) or if non-hierarchical level
+        if (!faction.player_knowledge) return true;
+
+        const level = db
+          .prepare('SELECT hierarchical FROM information_levels WHERE id = ?')
+          .get(faction.player_knowledge) as { hierarchical: number } | undefined;
+
+        return level ? !level.hierarchical : false;
       });
     }
 

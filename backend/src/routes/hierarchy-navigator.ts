@@ -211,8 +211,15 @@ router.get('/locations/:id/breadcrumb', (req: Request, res: Response) => {
 
       // Check view mode visibility
       if (viewMode === 'player_view') {
-        if (loc.player_knowledge && !['common_knowledge', 'player_knowledge'].includes(loc.player_knowledge)) {
-          break; // Stop traversal if parent is dm_only
+        if (loc.player_knowledge) {
+          const level = db
+            .prepare('SELECT hierarchical FROM information_levels WHERE id = ?')
+            .get(loc.player_knowledge) as { hierarchical: number } | undefined;
+
+          // Stop traversal if parent is hierarchical (DM secret)
+          if (level && level.hierarchical) {
+            break;
+          }
         }
       }
 

@@ -14,6 +14,7 @@ import { InformationLevelProvider } from './contexts/InformationLevelContext';
 import { CardProvider } from './contexts/CardContext';
 import { DashboardProvider } from './contexts/DashboardContext';
 import { SidebarProvider } from './contexts/SidebarContext';
+import { EntityCacheProvider } from './contexts/EntityCacheContext';
 import { PublicLanding } from './components/PublicLanding';
 import { CampaignManagement } from './components/CampaignManagement';
 import { CampaignHomepage } from './components/CampaignHomepage';
@@ -548,15 +549,17 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <ViewModeProvider>
-        <InformationLevelProvider>
-          <CardProvider>
-            <BrowserRouter>
-              <AppContent />
-            </BrowserRouter>
-          </CardProvider>
-        </InformationLevelProvider>
-      </ViewModeProvider>
+      <EntityCacheProvider>
+        <ViewModeProvider>
+          <InformationLevelProvider>
+            <CardProvider>
+              <BrowserRouter>
+                <AppContent />
+              </BrowserRouter>
+            </CardProvider>
+          </InformationLevelProvider>
+        </ViewModeProvider>
+      </EntityCacheProvider>
     </AuthProvider>
   );
 }

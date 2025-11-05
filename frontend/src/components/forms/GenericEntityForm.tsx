@@ -11,6 +11,8 @@ import { DatePicker } from '../form/DatePicker';
 import { TagInput } from '../form/TagInput';
 import { RelationshipSelector } from '../form/RelationshipSelector';
 import { CustomFieldEditor } from '../form/CustomFieldEditor';
+import { useInformationLevel } from '../../contexts/InformationLevelContext';
+import { CORE_STATUS_OPTIONS, QUEST_STATUS_OPTIONS, SESSION_PREP_STATUS_OPTIONS } from '../../constants/fieldValues';
 import './GenericEntityForm.css';
 
 export interface GenericEntityFormProps {
@@ -56,6 +58,26 @@ export const GenericEntityForm: React.FC<GenericEntityFormProps> = ({
     resolver: zodResolver(schema),
     defaultValues: entity || getDefaultValues(category),
   });
+
+  // Load information levels from database for player_knowledge dropdown
+  const { levels, loading } = useInformationLevel();
+
+  // Generate playerKnowledgeOptions dynamically from database
+  const playerKnowledgeOptions = useMemo(() => {
+    const options: SelectOption[] = [{ value: '', label: 'Contextual (freely available)' }];
+
+    // Load ALL levels from database (default + custom), exclude only 'system'
+    const nonSystemLevels = levels.filter(level => level.id !== 'system');
+
+    nonSystemLevels.forEach(level => {
+      options.push({
+        value: level.id, // Use actual ID: 'common-knowledge', 'player-knowledge', 'dm-secret', or custom UUID
+        label: level.name,
+      });
+    });
+
+    return options;
+  }, [levels]);
 
   // Reset form when entity changes
   useEffect(() => {
@@ -1801,7 +1823,7 @@ function getDefaultValues(category: CategoryName): any {
     case 'session_recaps':
       return { ...baseDefaults, is_canon: 1, canonical_status: 'canon', key_events: [], player_decisions: [], npcs_encountered: [], locations_visited: [], quests_progressed: [], loot_acquired: [] };
     case 'session_prep':
-      return { ...baseDefaults, is_canon: 0, canonical_status: 'hypothetical', player_knowledge: 'dm_only', status: 'draft', plot_threads: [], npcs_to_prep: [], locations_to_prep: [] };
+      return { ...baseDefaults, is_canon: 0, canonical_status: 'hypothetical', player_knowledge: 'dm-secret', status: 'draft', plot_threads: [], npcs_to_prep: [], locations_to_prep: [] };
     case 'quests':
       return { ...baseDefaults, status: 'not_started', objectives: [], related_npcs: [], related_locations: [] };
     default:
@@ -1816,30 +1838,8 @@ function formatCategoryName(category: CategoryName): string {
     .join(' ');
 }
 
-// Dropdown options
-const coreStatusOptions: SelectOption[] = [
-  { value: 'active', label: 'Active' },
-  { value: 'archived', label: 'Archived' },
-  { value: 'draft', label: 'Draft' },
-  { value: 'hidden', label: 'Hidden' },
-];
-
-const playerKnowledgeOptions: SelectOption[] = [
-  { value: 'public', label: 'Public' },
-  { value: 'partial', label: 'Partial' },
-  { value: 'dm_only', label: 'DM Only' },
-];
-
-const questStatusOptions: SelectOption[] = [
-  { value: 'not_started', label: 'Not Started' },
-  { value: 'in_progress', label: 'In Progress' },
-  { value: 'completed', label: 'Completed' },
-  { value: 'failed', label: 'Failed' },
-];
-
-const sessionPrepStatusOptions: SelectOption[] = [
-  { value: 'draft', label: 'Draft' },
-  { value: 'ready', label: 'Ready' },
-  { value: 'completed', label: 'Completed' },
-  { value: 'cancelled', label: 'Cancelled' },
-];
+// Dropdown options - use shared constants from fieldValues.ts
+// Note: playerKnowledgeOptions is generated dynamically inside the component using InformationLevelContext
+const coreStatusOptions = CORE_STATUS_OPTIONS;
+const questStatusOptions = QUEST_STATUS_OPTIONS;
+const sessionPrepStatusOptions = SESSION_PREP_STATUS_OPTIONS;

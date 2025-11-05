@@ -210,6 +210,50 @@
   padding: 0.5rem;
 }
 
+/* CodeMirror wrapper for markdown editing */
+.editable-cell-codemirror-wrapper {
+  width: 100%;
+  min-width: 400px;
+  max-width: 600px;
+  min-height: 120px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.editable-cell-codemirror {
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.editable-cell-codemirror .cm-editor {
+  height: 100%;
+}
+
+.editable-cell-codemirror .cm-scroller {
+  font-family: inherit;
+  line-height: 1.5;
+  padding: 0.5rem;
+}
+
+.editable-cell-codemirror .cm-content {
+  padding: 0;
+}
+
+/* When editing CodeMirror, expand the cell wrapper */
+.editable-cell-editing:has(.editable-cell-codemirror-wrapper) {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 50;
+  min-width: 400px;
+  max-width: 600px;
+  background: white;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .editable-cell-input,
@@ -222,6 +266,16 @@
   }
 
   .editable-cell-editing:has(.editable-cell-textarea) {
+    min-width: 300px;
+    max-width: 90vw;
+  }
+
+  .editable-cell-codemirror-wrapper {
+    min-width: 300px;
+    max-width: 90vw;
+  }
+
+  .editable-cell-editing:has(.editable-cell-codemirror-wrapper) {
     min-width: 300px;
     max-width: 90vw;
   }

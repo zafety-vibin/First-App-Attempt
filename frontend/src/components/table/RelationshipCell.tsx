@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CategoryName } from '../../contexts/SidebarContext';
 import { useThematicLabels } from '../../hooks/useThematicLabels';
+import { useEntityCache } from '../../contexts/EntityCacheContext';
 import './RelationshipCell.css';
 
 export interface RelationshipCellProps {
@@ -36,8 +37,7 @@ export const RelationshipCell: React.FC<RelationshipCellProps> = ({
   onClick,
 }) => {
   const [entities, setEntities] = useState<EntityName[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { getEntity, prefetchCategory } = useEntityCache();
   const { getCategoryLabel } = useThematicLabels(campaignId);
 
   useEffect(() => {
@@ -46,65 +46,30 @@ export const RelationshipCell: React.FC<RelationshipCellProps> = ({
       return;
     }
 
-    const fetchEntityNames = async () => {
-      setLoading(true);
-      setError(null);
+    // Prefetch category if not already cached
+    prefetchCategory(category, campaignId);
 
-      try {
-        // Fetch entities by IDs - need to fetch individually or use filter
-        // For now, fetch all and filter client-side (TODO: add batch endpoint)
-        const response = await fetch(
-          `/api/campaigns/${campaignId}/${category}?limit=1000`,
-          {
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-            },
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch entity names');
-        }
-
-        const data = await response.json();
-        const allEntities = data.data || data;
-
-        // Filter to only the IDs we need
-        const entityIdSet = new Set(entityIds);
-        const fetchedEntities: EntityName[] = allEntities
-          .filter((entity: any) => entityIdSet.has(entity.id))
-          .map((entity: any) => ({
-            id: entity.id,
-            name: entity.name || 'Unnamed',
-          }));
-
-        setEntities(fetchedEntities);
-      } catch (err: any) {
-        setError(err.message || 'Failed to load');
-        console.error('RelationshipCell fetch error:', err);
-        // Fallback: show count
-        setEntities([]);
-      } finally {
-        setLoading(false);
+    // Look up entities from cache
+    const fetchedEntities: EntityName[] = [];
+    for (const id of entityIds) {
+      const entity = getEntity(category, id, campaignId);
+      if (entity) {
+        fetchedEntities.push(entity);
       }
-    };
+    }
 
-    fetchEntityNames();
-  }, [entityIds, category, campaignId]);
+    setEntities(fetchedEntities);
+  }, [entityIds, category, campaignId, getEntity, prefetchCategory]);
 
   if (!entityIds || entityIds.length === 0) {
     return <span className="relationship-cell-empty">—</span>;
   }
 
-  if (loading) {
-    return <span className="relationship-cell-loading">Loading...</span>;
-  }
-
-  if (error || entities.length === 0) {
-    // Fallback: show count
+  if (entities.length === 0) {
+    // Still loading from cache
     const categoryLabel = getCategoryLabel(category);
     return (
-      <span className="relationship-cell-count" title={error || 'Click to view details'}>
+      <span className="relationship-cell-count">
         {entityIds.length} {entityIds.length === 1 ? categoryLabel.slice(0, -1) : categoryLabel}
       </span>
     );

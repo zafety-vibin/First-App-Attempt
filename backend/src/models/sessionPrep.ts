@@ -6,7 +6,7 @@ export interface SessionPrep {
   name: string;
   description: string | null;
   core_status: 'active' | 'archived' | 'draft' | 'hidden';
-  player_knowledge: 'dm_only';  // Always dm_only
+  player_knowledge: 'dm-secret';  // Always dm-secret (DM-only prep notes)
   tags: string[];
   created_at: number;
   updated_at: number;

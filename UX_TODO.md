@@ -429,25 +429,56 @@ Workflow:
 
 ## Pre-Completion Roadblock Items
 
-### 📋 Complete Tool Description Review
-**Context**: MCP tools (Feature 011) and their schemas may have outdated descriptions that don't reflect current architecture.
+### 📋 MCP Tools Architecture Update (Feature 011)
+**Context**: MCP tools implemented October 2025 before major architecture changes (information level unification, junction tables, viewMode.ts merger, BaseCategoryService).
 
-**Required Action**:
-- Review all 29 MCP tool descriptions in `backend/src/mcp/tools/`
-- Review all tool schemas in `backend/src/mcp/schemas/`
-- Verify descriptions match current architecture (post-unification)
-- Update any references to old view mode values (dm/player)
-- Ensure parameter descriptions are accurate
-- Check that examples reflect current database schema
+**See**: `MCP_TOOLS_AUDIT.md` for comprehensive analysis
 
-**Priority**: 🚨 BLOCKER (must complete before saying we're 100% done)
+**Critical Issues**:
+- player_knowledge docs show `dm_only` (wrong - should be `dm-secret`)
+- player_knowledge docs show underscores (wrong - should be hyphens)
+- 29 tools + 3 resources + 2 prompts need value updates
+- Documentation doesn't explain junction tables
+- No mention of BaseCategoryService standardization
 
-**Files to Review**:
-- `backend/src/mcp/tools/` - All 29 tool implementations
-- `backend/src/mcp/schemas/` - All Zod schemas
-- `backend/src/mcp/server.ts` - Tool registration and descriptions
+**Effort**: 13-20 hours (docs 2-3h, schemas 3-4h, implementations 4-6h, testing 4-7h)
 
-**Note**: This is a comprehensive audit task that ensures external tools (Claude Desktop) have accurate documentation and understand the current system architecture correctly.
+**Priority**: 🚨 BLOCKER (must complete before v1.0 release)
+
+**Files**: See MCP_TOOLS_AUDIT.md for complete list
+
+---
+
+### 💻 MCP Code Execution for Context Savings (Optional Enhancement)
+**Context**: New MCP feature allows Claude to execute code in sandbox instead of processing large datasets in-context.
+
+**Opportunity**:
+- Campaign analytics: Execute SQL aggregations, return summary (99% context reduction)
+- Graph queries: Execute traversal code, return paths (95% context reduction)
+- Entity extraction: Pre-process text, return candidates (90% context reduction)
+
+**Example**:
+```javascript
+// Instead of sending 200 NPCs (50KB context)
+// Execute query, send results (1KB context):
+SELECT faction, COUNT(*) as count
+FROM faction_members GROUP BY faction_id
+// Returns: [{faction: "Thieves Guild", count: 15}, ...]
+```
+
+**Implementation**:
+- New MCP tool: `execute_campaign_query`
+- vm2 sandboxing (safe execution)
+- Read-only database wrapper
+- Timeout + memory limits
+
+**Effort**: 4-6 hours
+
+**Priority**: ⭐⭐ Medium (performance optimization for Claude Desktop usage)
+
+**Risks**: Requires careful sandboxing, read-only enforcement
+
+**See**: MCP_TOOLS_AUDIT.md "Code Execution MCP - Context Saving Opportunity" section
 
 ---
 

@@ -31,7 +31,11 @@
       "mcp__chrome-devtools__navigate_page",
       "Read(//tmp/chrome-devtools-mcp-2gbpxb/**)",
       "Read(//c/Users/zmanl/projects/VVD-mimic/frontend/src/services/**)",
-      "Read(//c/Users/zmanl/projects/VVD-mimic/frontend/src/pages/**)"
+      "Read(//c/Users/zmanl/projects/VVD-mimic/frontend/src/pages/**)",
+      "Bash(npm test:*)",
+      "Bash(npx tsx:*)",
+      "Bash(node -e:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

@@ -204,13 +204,20 @@ export class SessionRecapService extends BaseCategoryService<SessionRecap> {
 
     const rows = dataStmt.all(...params, pagination.limit, pagination.offset);
 
+    // Batch fetch all relationships at once (N+1 query optimization)
+    const recapIds = rows.map((r: any) => r.id);
+    const npcsMap = this.batchGetNPCsEncountered(recapIds);
+    const locationsMap = this.batchGetLocationsVisited(recapIds);
+    const questsMap = this.batchGetQuestsProgressed(recapIds);
+    const lootMap = this.batchGetLootAcquired(recapIds);
+
     // Populate relationships from junction tables for each recap
     const recaps = rows.map((row) => {
       const recap = this.rowToSessionRecap(row as any);
-      recap.npcs_encountered = this.getNPCsEncountered(recap.id);
-      recap.locations_visited = this.getLocationsVisited(recap.id);
-      recap.quests_progressed = this.getQuestsProgressed(recap.id);
-      recap.loot_acquired = this.getLootAcquired(recap.id);
+      recap.npcs_encountered = npcsMap.get(recap.id) || [];
+      recap.locations_visited = locationsMap.get(recap.id) || [];
+      recap.quests_progressed = questsMap.get(recap.id) || [];
+      recap.loot_acquired = lootMap.get(recap.id) || [];
       return recap;
     });
 
@@ -242,6 +249,32 @@ export class SessionRecapService extends BaseCategoryService<SessionRecap> {
       .all(recapId) as { npc_id: string }[];
 
     return rows.map(r => r.npc_id);
+  }
+
+  /**
+   * Batch fetch NPCs encountered for multiple session recaps (N+1 query optimization)
+   * @param recapIds - Array of session recap IDs
+   * @returns Map of recap_id -> array of NPC IDs
+   */
+  protected batchGetNPCsEncountered(recapIds: string[]): Map<string, string[]> {
+    if (recapIds.length === 0) return new Map();
+
+    const placeholders = recapIds.map(() => '?').join(',');
+    const rows = this.db.prepare(`
+      SELECT recap_id, npc_id
+      FROM recap_npcs_encountered
+      WHERE recap_id IN (${placeholders})
+    `).all(...recapIds) as { recap_id: string; npc_id: string }[];
+
+    const map = new Map<string, string[]>();
+    rows.forEach(row => {
+      if (!map.has(row.recap_id)) {
+        map.set(row.recap_id, []);
+      }
+      map.get(row.recap_id)!.push(row.npc_id);
+    });
+
+    return map;
   }
 
   /**
@@ -319,6 +352,32 @@ export class SessionRecapService extends BaseCategoryService<SessionRecap> {
   }
 
   /**
+   * Batch fetch locations visited for multiple session recaps (N+1 query optimization)
+   * @param recapIds - Array of session recap IDs
+   * @returns Map of recap_id -> array of location IDs
+   */
+  protected batchGetLocationsVisited(recapIds: string[]): Map<string, string[]> {
+    if (recapIds.length === 0) return new Map();
+
+    const placeholders = recapIds.map(() => '?').join(',');
+    const rows = this.db.prepare(`
+      SELECT recap_id, location_id
+      FROM recap_locations_visited
+      WHERE recap_id IN (${placeholders})
+    `).all(...recapIds) as { recap_id: string; location_id: string }[];
+
+    const map = new Map<string, string[]>();
+    rows.forEach(row => {
+      if (!map.has(row.recap_id)) {
+        map.set(row.recap_id, []);
+      }
+      map.get(row.recap_id)!.push(row.location_id);
+    });
+
+    return map;
+  }
+
+  /**
    * Add visited location to session recap
    * @param recapId - Session recap ID
    * @param locationId - Location ID
@@ -393,6 +452,32 @@ export class SessionRecapService extends BaseCategoryService<SessionRecap> {
   }
 
   /**
+   * Batch fetch quests progressed for multiple session recaps (N+1 query optimization)
+   * @param recapIds - Array of session recap IDs
+   * @returns Map of recap_id -> array of quest IDs
+   */
+  protected batchGetQuestsProgressed(recapIds: string[]): Map<string, string[]> {
+    if (recapIds.length === 0) return new Map();
+
+    const placeholders = recapIds.map(() => '?').join(',');
+    const rows = this.db.prepare(`
+      SELECT recap_id, quest_id
+      FROM recap_quests_progressed
+      WHERE recap_id IN (${placeholders})
+    `).all(...recapIds) as { recap_id: string; quest_id: string }[];
+
+    const map = new Map<string, string[]>();
+    rows.forEach(row => {
+      if (!map.has(row.recap_id)) {
+        map.set(row.recap_id, []);
+      }
+      map.get(row.recap_id)!.push(row.quest_id);
+    });
+
+    return map;
+  }
+
+  /**
    * Add progressed quest to session recap
    * @param recapId - Session recap ID
    * @param questId - Quest ID
@@ -464,6 +549,32 @@ export class SessionRecapService extends BaseCategoryService<SessionRecap> {
       .all(recapId) as { item_id: string }[];
 
     return rows.map(r => r.item_id);
+  }
+
+  /**
+   * Batch fetch loot acquired for multiple session recaps (N+1 query optimization)
+   * @param recapIds - Array of session recap IDs
+   * @returns Map of recap_id -> array of item IDs
+   */
+  protected batchGetLootAcquired(recapIds: string[]): Map<string, string[]> {
+    if (recapIds.length === 0) return new Map();
+
+    const placeholders = recapIds.map(() => '?').join(',');
+    const rows = this.db.prepare(`
+      SELECT recap_id, item_id
+      FROM recap_loot_acquired
+      WHERE recap_id IN (${placeholders})
+    `).all(...recapIds) as { recap_id: string; item_id: string }[];
+
+    const map = new Map<string, string[]>();
+    rows.forEach(row => {
+      if (!map.has(row.recap_id)) {
+        map.set(row.recap_id, []);
+      }
+      map.get(row.recap_id)!.push(row.item_id);
+    });
+
+    return map;
   }
 
   /**

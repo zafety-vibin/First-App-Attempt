@@ -19,10 +19,10 @@ CREATE INDEX IF NOT EXISTS idx_npc_pc_encounters_composite ON npc_pc_encounters(
 CREATE INDEX IF NOT EXISTS idx_location_connections_composite ON location_connections(location_id, connected_location_id);
 
 -- Session Recap relationships (4 tables)
-CREATE INDEX IF NOT EXISTS idx_recap_npcs_encountered_composite ON recap_npcs_encountered(recap_id, npc_id);
-CREATE INDEX IF NOT EXISTS idx_recap_locations_visited_composite ON recap_locations_visited(recap_id, location_id);
-CREATE INDEX IF NOT EXISTS idx_recap_quests_progressed_composite ON recap_quests_progressed(recap_id, quest_id);
-CREATE INDEX IF NOT EXISTS idx_recap_loot_acquired_composite ON recap_loot_acquired(recap_id, item_id);
+CREATE INDEX IF NOT EXISTS idx_recap_npcs_encountered_composite ON recap_npcs_encountered(session_recap_id, npc_id);
+CREATE INDEX IF NOT EXISTS idx_recap_locations_visited_composite ON recap_locations_visited(session_recap_id, location_id);
+CREATE INDEX IF NOT EXISTS idx_recap_quests_progressed_composite ON recap_quests_progressed(session_recap_id, quest_id);
+CREATE INDEX IF NOT EXISTS idx_recap_loot_acquired_composite ON recap_loot_acquired(session_recap_id, item_id);
 
 -- Quest relationships (2 tables)
 CREATE INDEX IF NOT EXISTS idx_quest_related_npcs_composite ON quest_related_npcs(quest_id, npc_id);
@@ -38,12 +38,12 @@ CREATE INDEX IF NOT EXISTS idx_lore_entry_locations_composite ON lore_entry_loca
 CREATE INDEX IF NOT EXISTS idx_lore_entry_factions_composite ON lore_entry_factions(lore_entry_id, faction_id);
 
 -- World Rule relationships (1 table)
-CREATE INDEX IF NOT EXISTS idx_world_rule_relations_composite ON world_rule_relations(world_rule_id, related_rule_id);
+CREATE INDEX IF NOT EXISTS idx_world_rule_relations_composite ON world_rule_relations(rule_id, related_rule_id);
 
 -- Planar Force relationships (3 tables)
-CREATE INDEX IF NOT EXISTS idx_planar_force_alliances_composite ON planar_force_alliances(planar_force_id, allied_force_id);
-CREATE INDEX IF NOT EXISTS idx_planar_force_rivalries_composite ON planar_force_rivalries(planar_force_id, rival_force_id);
-CREATE INDEX IF NOT EXISTS idx_planar_force_worshipers_composite ON planar_force_worshipers(planar_force_id, npc_id);
+CREATE INDEX IF NOT EXISTS idx_planar_force_alliances_composite ON planar_force_alliances(planar_force_id, allied_planar_force_id);
+CREATE INDEX IF NOT EXISTS idx_planar_force_rivalries_composite ON planar_force_rivalries(planar_force_id, rival_planar_force_id);
+CREATE INDEX IF NOT EXISTS idx_planar_force_worshipers_composite ON planar_force_worshipers(planar_force_id, faction_id);
 
 -- Creature relationships (1 table)
 CREATE INDEX IF NOT EXISTS idx_creature_habitats_composite ON creature_habitats(creature_id, location_id);

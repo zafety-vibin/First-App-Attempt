@@ -194,15 +194,15 @@ export const SessionTimelineCard: React.FC<SessionTimelineCardProps> = ({ campai
             >
               <div className="timeline-item-content">
                 <div className="timeline-item-header">
-                  <span className="timeline-item-session">Session {nextPrep.session_number}</span>
+                  <span className="timeline-item-session">Next Session</span>
                   {nextPrep.planned_date && (
                     <span className="timeline-item-date">{formatDate(nextPrep.planned_date)}</span>
                   )}
                 </div>
                 <span className="timeline-item-title">{nextPrep.name}</span>
-                {nextPrep.prep_status && (
+                {nextPrep.status && (
                   <span className="timeline-item-badge timeline-item-badge-status">
-                    {nextPrep.prep_status}
+                    {nextPrep.status}
                   </span>
                 )}
                 {nextPrep.description && (

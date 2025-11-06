@@ -5,12 +5,15 @@ import { z } from 'zod';
  * Shared across all 13 categories from Feature 014
  */
 export const UniversalFieldsSchema = z.object({
+  id: z.string().optional(), // UUID, optional for create operations
   name: z.string().min(1, 'Name is required').max(255, 'Name too long'),
   description: z.string().nullable().optional(),
   core_status: z.enum(['active', 'archived', 'draft', 'hidden']).default('active'),
   player_knowledge: z.string().nullable().optional(), // Validated against campaign's info levels
   tags: z.array(z.string()).default([]),
-  custom_fields: z.record(z.any()).default({}),
+  custom_fields: z.record(z.string(), z.any()).default({}),
+  created_at: z.number().optional(), // Unix timestamp, set by backend
+  updated_at: z.number().optional(), // Unix timestamp, set by backend
 });
 
 /**
@@ -72,6 +75,7 @@ export const FactionSchema = UniversalFieldsSchema.extend({
  * Note: is_canon and canonical_status are hardcoded to 'canon' at backend
  */
 export const SessionRecapSchema = UniversalFieldsSchema.extend({
+  session_number: z.number().int().positive(), // Required sequential number (1, 2, 3, ...)
   session_date: z.number().int().nullable().optional(),
   in_game_date_start: z.string().nullable().optional(),
   in_game_date_end: z.string().nullable().optional(),

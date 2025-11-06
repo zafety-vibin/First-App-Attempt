@@ -129,6 +129,58 @@ export class QuestService extends BaseCategoryService<Quest> {
   }
 
   /**
+   * Batch fetch related NPCs for multiple quests (N+1 query optimization)
+   * @param questIds - Array of quest IDs
+   * @returns Map of quest_id -> array of NPC IDs
+   */
+  protected batchGetRelatedNPCs(questIds: string[]): Map<string, string[]> {
+    if (questIds.length === 0) return new Map();
+
+    const placeholders = questIds.map(() => '?').join(',');
+    const rows = this.db.prepare(`
+      SELECT quest_id, npc_id
+      FROM quest_related_npcs
+      WHERE quest_id IN (${placeholders})
+    `).all(...questIds) as { quest_id: string; npc_id: string }[];
+
+    const map = new Map<string, string[]>();
+    rows.forEach(row => {
+      if (!map.has(row.quest_id)) {
+        map.set(row.quest_id, []);
+      }
+      map.get(row.quest_id)!.push(row.npc_id);
+    });
+
+    return map;
+  }
+
+  /**
+   * Batch fetch related locations for multiple quests (N+1 query optimization)
+   * @param questIds - Array of quest IDs
+   * @returns Map of quest_id -> array of location IDs
+   */
+  protected batchGetRelatedLocations(questIds: string[]): Map<string, string[]> {
+    if (questIds.length === 0) return new Map();
+
+    const placeholders = questIds.map(() => '?').join(',');
+    const rows = this.db.prepare(`
+      SELECT quest_id, location_id
+      FROM quest_related_locations
+      WHERE quest_id IN (${placeholders})
+    `).all(...questIds) as { quest_id: string; location_id: string }[];
+
+    const map = new Map<string, string[]>();
+    rows.forEach(row => {
+      if (!map.has(row.quest_id)) {
+        map.set(row.quest_id, []);
+      }
+      map.get(row.quest_id)!.push(row.location_id);
+    });
+
+    return map;
+  }
+
+  /**
    * Add related location to quest
    * @param questId - Quest ID
    * @param locationId - Location ID
@@ -301,11 +353,16 @@ export class QuestService extends BaseCategoryService<Quest> {
 
     const jsonFields = ['tags', 'custom_fields', 'objectives', 'related_npcs', 'related_locations'];
 
+    // Batch fetch all relationships at once (N+1 query optimization)
+    const questIds = rows.map((r: any) => r.id);
+    const npcsMap = this.batchGetRelatedNPCs(questIds);
+    const locationsMap = this.batchGetRelatedLocations(questIds);
+
     // Populate relationships from junction tables for each quest
     const quests = rows.map((row) => {
       const quest = this.parseJsonFields(row, jsonFields) as Quest;
-      quest.related_npcs = this.getRelatedNPCs(quest.id);
-      quest.related_locations = this.getRelatedLocations(quest.id);
+      quest.related_npcs = npcsMap.get(quest.id) || [];
+      quest.related_locations = locationsMap.get(quest.id) || [];
       return quest;
     });
 

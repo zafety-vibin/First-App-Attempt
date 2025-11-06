@@ -4,14 +4,19 @@
 export interface Campaign {
   id: string;
   name: string;
-  ownerId: string;
-  settingId: string | null;
-  publicUrlId: string | null;
-  publicAccessEnabled: boolean;
-  publicPassword: string | null;
-  lastPublishedAt: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
+  user_id?: string; // Backend uses user_id
+  ownerId?: string; // Frontend uses ownerId
+  description?: string | null;
+  setting_id?: string | null; // Backend snake_case
+  settingId?: string | null; // Frontend camelCase
+  publicUrlId?: string | null;
+  publicAccessEnabled?: boolean;
+  publicPassword?: string | null;
+  lastPublishedAt?: Date | null;
+  created_at?: Date | number; // Backend uses snake_case and unix timestamp
+  updated_at?: Date | number; // Backend uses snake_case and unix timestamp
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 /**

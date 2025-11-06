@@ -42,8 +42,8 @@ export function CampaignHomepage() {
     coverImageUrl: null,
     iconEmoji: null,
     informationLevelId: 'system', // Feature 004
-    createdAt: campaign.createdAt,
-    updatedAt: campaign.updatedAt,
+    createdAt: campaign.created_at || new Date(),
+    updatedAt: campaign.updated_at || new Date(),
   } : null;
 
   // Feature 004: Information levels and view mode

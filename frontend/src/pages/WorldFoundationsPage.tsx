@@ -246,7 +246,7 @@ const WorldFoundationsPage: React.FC = () => {
   }, [nodes, edges, nodeDegrees]);
 
   // Cytoscape stylesheet for force-directed network with organic category groups
-  const cytoscapeStylesheet: cytoscape.Stylesheet[] = [
+  const cytoscapeStylesheet: cytoscape.StylesheetCSS[] = [
     // Entity node styling with connection-based sizing
     {
       selector: 'node.entity-node',
@@ -1280,7 +1280,7 @@ const WorldFoundationsPage: React.FC = () => {
       if (entityFormMode === 'create') {
         await graphNodeService.createNode(campaignId, graphId, {
           name: name,
-          node_type: formData.entity_type,
+          type: formData.entity_type,
           attributes: {
             entity_type: formData.entity_type,
             tags: formData.tags
@@ -1414,7 +1414,6 @@ const WorldFoundationsPage: React.FC = () => {
         source_node_id: edgeFormData.source,
         target_node_id: edgeFormData.target,
         relationship_type: edgeFormData.relationshipType,
-        edge_type: edgeFormData.relationshipType,
         attributes: {}
       });
 

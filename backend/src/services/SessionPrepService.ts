@@ -164,12 +164,18 @@ export class SessionPrepService extends BaseCategoryService<SessionPrep> {
 
     const jsonFields = ['tags', 'custom_fields', 'plot_threads', 'npcs_to_prep', 'locations_to_prep', 'quests_to_advance'];
 
+    // Batch fetch all relationships at once (N+1 query optimization)
+    const prepIds = rows.map((r: any) => r.id);
+    const npcsMap = this.batchGetNPCsToPrep(prepIds);
+    const locationsMap = this.batchGetLocationsToPrep(prepIds);
+    const questsMap = this.batchGetQuestsToAdvance(prepIds);
+
     // Populate relationships from junction tables for each session prep
     const preps = rows.map((row) => {
       const prep = this.parseJsonFields(row, jsonFields) as SessionPrep;
-      prep.npcs_to_prep = this.getNPCsToPrep(prep.id);
-      prep.locations_to_prep = this.getLocationsToPrep(prep.id);
-      prep.quests_to_advance = this.getQuestsToAdvance(prep.id);
+      prep.npcs_to_prep = npcsMap.get(prep.id) || [];
+      prep.locations_to_prep = locationsMap.get(prep.id) || [];
+      prep.quests_to_advance = questsMap.get(prep.id) || [];
       return prep;
     });
 
@@ -194,6 +200,32 @@ export class SessionPrepService extends BaseCategoryService<SessionPrep> {
       .all(prepId) as { npc_id: string }[];
 
     return rows.map(r => r.npc_id);
+  }
+
+  /**
+   * Batch fetch NPCs to prep for multiple session preps (N+1 query optimization)
+   * @param prepIds - Array of session prep IDs
+   * @returns Map of session_prep_id -> array of NPC IDs
+   */
+  protected batchGetNPCsToPrep(prepIds: string[]): Map<string, string[]> {
+    if (prepIds.length === 0) return new Map();
+
+    const placeholders = prepIds.map(() => '?').join(',');
+    const rows = this.db.prepare(`
+      SELECT session_prep_id, npc_id
+      FROM dm_session_prep_npcs
+      WHERE session_prep_id IN (${placeholders})
+    `).all(...prepIds) as { session_prep_id: string; npc_id: string }[];
+
+    const map = new Map<string, string[]>();
+    rows.forEach(row => {
+      if (!map.has(row.session_prep_id)) {
+        map.set(row.session_prep_id, []);
+      }
+      map.get(row.session_prep_id)!.push(row.npc_id);
+    });
+
+    return map;
   }
 
   /**
@@ -270,6 +302,32 @@ export class SessionPrepService extends BaseCategoryService<SessionPrep> {
   }
 
   /**
+   * Batch fetch locations to prep for multiple session preps (N+1 query optimization)
+   * @param prepIds - Array of session prep IDs
+   * @returns Map of session_prep_id -> array of location IDs
+   */
+  protected batchGetLocationsToPrep(prepIds: string[]): Map<string, string[]> {
+    if (prepIds.length === 0) return new Map();
+
+    const placeholders = prepIds.map(() => '?').join(',');
+    const rows = this.db.prepare(`
+      SELECT session_prep_id, location_id
+      FROM dm_session_prep_locations
+      WHERE session_prep_id IN (${placeholders})
+    `).all(...prepIds) as { session_prep_id: string; location_id: string }[];
+
+    const map = new Map<string, string[]>();
+    rows.forEach(row => {
+      if (!map.has(row.session_prep_id)) {
+        map.set(row.session_prep_id, []);
+      }
+      map.get(row.session_prep_id)!.push(row.location_id);
+    });
+
+    return map;
+  }
+
+  /**
    * Add location to prep for session
    * @param prepId - Session prep ID
    * @param locationId - Location ID
@@ -340,6 +398,32 @@ export class SessionPrepService extends BaseCategoryService<SessionPrep> {
       .all(prepId) as { quest_id: string }[];
 
     return rows.map(r => r.quest_id);
+  }
+
+  /**
+   * Batch fetch quests to advance for multiple session preps (N+1 query optimization)
+   * @param prepIds - Array of session prep IDs
+   * @returns Map of session_prep_id -> array of quest IDs
+   */
+  protected batchGetQuestsToAdvance(prepIds: string[]): Map<string, string[]> {
+    if (prepIds.length === 0) return new Map();
+
+    const placeholders = prepIds.map(() => '?').join(',');
+    const rows = this.db.prepare(`
+      SELECT session_prep_id, quest_id
+      FROM dm_session_prep_quests
+      WHERE session_prep_id IN (${placeholders})
+    `).all(...prepIds) as { session_prep_id: string; quest_id: string }[];
+
+    const map = new Map<string, string[]>();
+    rows.forEach(row => {
+      if (!map.has(row.session_prep_id)) {
+        map.set(row.session_prep_id, []);
+      }
+      map.get(row.session_prep_id)!.push(row.quest_id);
+    });
+
+    return map;
   }
 
   /**

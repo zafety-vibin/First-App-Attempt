@@ -352,7 +352,7 @@ const GeographicGraphPage: React.FC = () => {
   };
 
   // Cytoscape stylesheet - Yggdrasil theme with location_type color-coding
-  const cytoscapeStylesheet: cytoscape.Stylesheet[] = [
+  const cytoscapeStylesheet: cytoscape.StylesheetCSS[] = [
     {
       selector: 'node',
       style: {
@@ -508,7 +508,7 @@ const GeographicGraphPage: React.FC = () => {
       if (locationFormMode === 'create') {
         await graphNodeService.createNode(campaignId, graphId, {
           name: name,
-          node_type: 'Location',
+          type: 'Location',
           attributes: {
             location_type: formData.location_type,
             parent_location_id: parentNodeForCreate?.id || null,

@@ -168,12 +168,18 @@ export class PlanarForceService extends BaseCategoryService<PlanarForce> {
 
     const jsonFields = ['tags', 'custom_fields', 'domains', 'allied_entities', 'rival_entities', 'religious_orders'];
 
+    // Batch fetch all relationships at once (N+1 query optimization)
+    const planarForceIds = rows.map((r: any) => r.id);
+    const alliancesMap = this.batchGetAlliances(planarForceIds);
+    const rivalriesMap = this.batchGetRivalries(planarForceIds);
+    const worshipersMap = this.batchGetWorshipers(planarForceIds);
+
     // Populate relationships from junction tables for each planar force
     const planarForces = rows.map((row) => {
       const planarForce = this.parseJsonFields(row, jsonFields) as PlanarForce;
-      planarForce.allied_entities = this.getAlliances(planarForce.id);
-      planarForce.rival_entities = this.getRivalries(planarForce.id);
-      planarForce.religious_orders = this.getWorshipers(planarForce.id);
+      planarForce.allied_entities = alliancesMap.get(planarForce.id) || [];
+      planarForce.rival_entities = rivalriesMap.get(planarForce.id) || [];
+      planarForce.religious_orders = worshipersMap.get(planarForce.id) || [];
       return planarForce;
     });
 
@@ -197,6 +203,32 @@ export class PlanarForceService extends BaseCategoryService<PlanarForce> {
   }
 
   /**
+   * Batch fetch alliances for multiple planar forces (N+1 query optimization)
+   * @param planarForceIds - Array of planar force IDs
+   * @returns Map of planar_force_id -> array of allied planar force IDs
+   */
+  protected batchGetAlliances(planarForceIds: string[]): Map<string, string[]> {
+    if (planarForceIds.length === 0) return new Map();
+
+    const placeholders = planarForceIds.map(() => '?').join(',');
+    const rows = this.db.prepare(`
+      SELECT planar_force_id, allied_planar_force_id
+      FROM planar_force_alliances
+      WHERE planar_force_id IN (${placeholders})
+    `).all(...planarForceIds) as { planar_force_id: string; allied_planar_force_id: string }[];
+
+    const map = new Map<string, string[]>();
+    rows.forEach(row => {
+      if (!map.has(row.planar_force_id)) {
+        map.set(row.planar_force_id, []);
+      }
+      map.get(row.planar_force_id)!.push(row.allied_planar_force_id);
+    });
+
+    return map;
+  }
+
+  /**
    * Get planar force rivalries from junction table
    * @param planarForceId - Planar force ID
    * @returns Array of rival planar force IDs
@@ -210,6 +242,32 @@ export class PlanarForceService extends BaseCategoryService<PlanarForce> {
   }
 
   /**
+   * Batch fetch rivalries for multiple planar forces (N+1 query optimization)
+   * @param planarForceIds - Array of planar force IDs
+   * @returns Map of planar_force_id -> array of rival planar force IDs
+   */
+  protected batchGetRivalries(planarForceIds: string[]): Map<string, string[]> {
+    if (planarForceIds.length === 0) return new Map();
+
+    const placeholders = planarForceIds.map(() => '?').join(',');
+    const rows = this.db.prepare(`
+      SELECT planar_force_id, rival_planar_force_id
+      FROM planar_force_rivalries
+      WHERE planar_force_id IN (${placeholders})
+    `).all(...planarForceIds) as { planar_force_id: string; rival_planar_force_id: string }[];
+
+    const map = new Map<string, string[]>();
+    rows.forEach(row => {
+      if (!map.has(row.planar_force_id)) {
+        map.set(row.planar_force_id, []);
+      }
+      map.get(row.planar_force_id)!.push(row.rival_planar_force_id);
+    });
+
+    return map;
+  }
+
+  /**
    * Get planar force worshipers from junction table
    * @param planarForceId - Planar force ID
    * @returns Array of faction IDs (religious orders)
@@ -220,6 +278,32 @@ export class PlanarForceService extends BaseCategoryService<PlanarForce> {
       .all(planarForceId) as { faction_id: string }[];
 
     return rows.map(r => r.faction_id);
+  }
+
+  /**
+   * Batch fetch worshipers for multiple planar forces (N+1 query optimization)
+   * @param planarForceIds - Array of planar force IDs
+   * @returns Map of planar_force_id -> array of faction IDs
+   */
+  protected batchGetWorshipers(planarForceIds: string[]): Map<string, string[]> {
+    if (planarForceIds.length === 0) return new Map();
+
+    const placeholders = planarForceIds.map(() => '?').join(',');
+    const rows = this.db.prepare(`
+      SELECT planar_force_id, faction_id
+      FROM planar_force_worshipers
+      WHERE planar_force_id IN (${placeholders})
+    `).all(...planarForceIds) as { planar_force_id: string; faction_id: string }[];
+
+    const map = new Map<string, string[]>();
+    rows.forEach(row => {
+      if (!map.has(row.planar_force_id)) {
+        map.set(row.planar_force_id, []);
+      }
+      map.get(row.planar_force_id)!.push(row.faction_id);
+    });
+
+    return map;
   }
 
   /**

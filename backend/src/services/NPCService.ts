@@ -260,10 +260,14 @@ export class NPCService extends BaseCategoryService<NPC> {
 
     const rows = dataStmt.all(...params, pagination.limit, pagination.offset);
 
-    // Populate locations from junction table for each NPC
+    // Batch fetch all relationships at once (N+1 query optimization)
+    const npcIds = rows.map((r: any) => r.id);
+    const locationsMap = this.batchGetLocations(npcIds);
+
+    // Populate relationships from junction tables for each NPC
     const npcs = rows.map((row) => {
       const npc = this.rowToNPC(row as any);
-      npc.locations = this.getLocations(npc.id);
+      npc.locations = locationsMap.get(npc.id) || [];
       return npc;
     });
 
@@ -313,6 +317,84 @@ export class NPCService extends BaseCategoryService<NPC> {
       .all(npcId) as { location_id: string }[];
 
     return rows.map(r => r.location_id);
+  }
+
+  /**
+   * Batch fetch NPC locations for multiple NPCs (N+1 query optimization)
+   * @param npcIds - Array of NPC IDs
+   * @returns Map of npc_id -> array of location IDs
+   */
+  protected batchGetLocations(npcIds: string[]): Map<string, string[]> {
+    if (npcIds.length === 0) return new Map();
+
+    const placeholders = npcIds.map(() => '?').join(',');
+    const rows = this.db.prepare(`
+      SELECT npc_id, location_id
+      FROM npc_locations
+      WHERE npc_id IN (${placeholders})
+    `).all(...npcIds) as { npc_id: string; location_id: string }[];
+
+    const map = new Map<string, string[]>();
+    rows.forEach(row => {
+      if (!map.has(row.npc_id)) {
+        map.set(row.npc_id, []);
+      }
+      map.get(row.npc_id)!.push(row.location_id);
+    });
+
+    return map;
+  }
+
+  /**
+   * Batch fetch NPC-to-NPC relationships for multiple NPCs (N+1 query optimization)
+   * @param npcIds - Array of NPC IDs
+   * @returns Map of npc_id -> array of related NPC IDs
+   */
+  protected batchGetNPCRelationships(npcIds: string[]): Map<string, string[]> {
+    if (npcIds.length === 0) return new Map();
+
+    const placeholders = npcIds.map(() => '?').join(',');
+    const rows = this.db.prepare(`
+      SELECT npc_id, related_npc_id
+      FROM npc_npc_relationships
+      WHERE npc_id IN (${placeholders})
+    `).all(...npcIds) as { npc_id: string; related_npc_id: string }[];
+
+    const map = new Map<string, string[]>();
+    rows.forEach(row => {
+      if (!map.has(row.npc_id)) {
+        map.set(row.npc_id, []);
+      }
+      map.get(row.npc_id)!.push(row.related_npc_id);
+    });
+
+    return map;
+  }
+
+  /**
+   * Batch fetch PC encounters for multiple NPCs (N+1 query optimization)
+   * @param npcIds - Array of NPC IDs
+   * @returns Map of npc_id -> array of PC IDs
+   */
+  protected batchGetPCEncounters(npcIds: string[]): Map<string, string[]> {
+    if (npcIds.length === 0) return new Map();
+
+    const placeholders = npcIds.map(() => '?').join(',');
+    const rows = this.db.prepare(`
+      SELECT npc_id, pc_id
+      FROM npc_pc_encounters
+      WHERE npc_id IN (${placeholders})
+    `).all(...npcIds) as { npc_id: string; pc_id: string }[];
+
+    const map = new Map<string, string[]>();
+    rows.forEach(row => {
+      if (!map.has(row.npc_id)) {
+        map.set(row.npc_id, []);
+      }
+      map.get(row.npc_id)!.push(row.pc_id);
+    });
+
+    return map;
   }
 
   /**

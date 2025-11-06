@@ -255,11 +255,16 @@ export class PlayerCharacterService extends BaseCategoryService<PlayerCharacter>
 
     const rows = dataStmt.all(...params, pagination.limit, pagination.offset) as PlayerCharacterRow[];
 
+    // Batch fetch all relationships at once (N+1 query optimization)
+    const pcIds = rows.map((r: any) => r.id);
+    const factionAffiliationsMap = this.batchGetFactionAffiliations(pcIds);
+    const npcRelationshipsMap = this.batchGetNPCRelationships(pcIds);
+
     // Populate relationships from junction tables for each player character
     const pcs = rows.map((row) => {
       const pc = this.rowToPlayerCharacter(row);
-      pc.faction_affiliations = this.getFactionAffiliations(pc.id);
-      pc.allied_npcs = this.getNPCRelationships(pc.id);
+      pc.faction_affiliations = factionAffiliationsMap.get(pc.id) || [];
+      pc.allied_npcs = npcRelationshipsMap.get(pc.id) || [];
       return pc;
     });
 
@@ -296,6 +301,32 @@ export class PlayerCharacterService extends BaseCategoryService<PlayerCharacter>
   }
 
   /**
+   * Batch fetch faction affiliations for multiple player characters (N+1 query optimization)
+   * @param pcIds - Array of player character IDs
+   * @returns Map of pc_id -> array of faction IDs
+   */
+  protected batchGetFactionAffiliations(pcIds: string[]): Map<string, string[]> {
+    if (pcIds.length === 0) return new Map();
+
+    const placeholders = pcIds.map(() => '?').join(',');
+    const rows = this.db.prepare(`
+      SELECT pc_id, faction_id
+      FROM pc_faction_affiliations
+      WHERE pc_id IN (${placeholders})
+    `).all(...pcIds) as { pc_id: string; faction_id: string }[];
+
+    const map = new Map<string, string[]>();
+    rows.forEach(row => {
+      if (!map.has(row.pc_id)) {
+        map.set(row.pc_id, []);
+      }
+      map.get(row.pc_id)!.push(row.faction_id);
+    });
+
+    return map;
+  }
+
+  /**
    * Get player character NPC relationships from junction table
    * @param pcId - Player character ID
    * @returns Array of NPC IDs
@@ -306,6 +337,32 @@ export class PlayerCharacterService extends BaseCategoryService<PlayerCharacter>
       .all(pcId) as { npc_id: string }[];
 
     return rows.map(r => r.npc_id);
+  }
+
+  /**
+   * Batch fetch NPC relationships for multiple player characters (N+1 query optimization)
+   * @param pcIds - Array of player character IDs
+   * @returns Map of pc_id -> array of NPC IDs
+   */
+  protected batchGetNPCRelationships(pcIds: string[]): Map<string, string[]> {
+    if (pcIds.length === 0) return new Map();
+
+    const placeholders = pcIds.map(() => '?').join(',');
+    const rows = this.db.prepare(`
+      SELECT pc_id, npc_id
+      FROM pc_npc_relationships
+      WHERE pc_id IN (${placeholders})
+    `).all(...pcIds) as { pc_id: string; npc_id: string }[];
+
+    const map = new Map<string, string[]>();
+    rows.forEach(row => {
+      if (!map.has(row.pc_id)) {
+        map.set(row.pc_id, []);
+      }
+      map.get(row.pc_id)!.push(row.npc_id);
+    });
+
+    return map;
   }
 
   /**

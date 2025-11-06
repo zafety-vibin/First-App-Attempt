@@ -272,13 +272,20 @@ export class FactionService extends BaseCategoryService<Faction> {
 
     const rows = dataStmt.all(...params, pagination.limit, pagination.offset) as FactionRow[];
 
+    // Batch fetch all relationships at once (N+1 query optimization)
+    const factionIds = rows.map((r: any) => r.id);
+    const alliesMap = this.batchGetAlliances(factionIds);
+    const rivalsMap = this.batchGetRivalries(factionIds);
+    const membersMap = this.batchGetMembers(factionIds);
+    const territoryMap = this.batchGetTerritory(factionIds);
+
     // Populate relationships from junction tables for each faction
     const factions = rows.map((row) => {
       const faction = this.rowToFaction(row);
-      faction.allied_factions = this.getAlliances(faction.id);
-      faction.rival_factions = this.getRivalries(faction.id);
-      faction.key_members = this.getMembers(faction.id);
-      faction.territory = this.getTerritory(faction.id);
+      faction.allied_factions = alliesMap.get(faction.id) || [];
+      faction.rival_factions = rivalsMap.get(faction.id) || [];
+      faction.key_members = membersMap.get(faction.id) || [];
+      faction.territory = territoryMap.get(faction.id) || [];
       return faction;
     });
 
@@ -316,6 +323,32 @@ export class FactionService extends BaseCategoryService<Faction> {
   }
 
   /**
+   * Batch fetch alliances for multiple factions (N+1 query optimization)
+   * @param factionIds - Array of faction IDs
+   * @returns Map of faction_id -> array of allied faction IDs
+   */
+  protected batchGetAlliances(factionIds: string[]): Map<string, string[]> {
+    if (factionIds.length === 0) return new Map();
+
+    const placeholders = factionIds.map(() => '?').join(',');
+    const rows = this.db.prepare(`
+      SELECT faction_id, allied_faction_id
+      FROM faction_alliances
+      WHERE faction_id IN (${placeholders})
+    `).all(...factionIds) as { faction_id: string; allied_faction_id: string }[];
+
+    const map = new Map<string, string[]>();
+    rows.forEach(row => {
+      if (!map.has(row.faction_id)) {
+        map.set(row.faction_id, []);
+      }
+      map.get(row.faction_id)!.push(row.allied_faction_id);
+    });
+
+    return map;
+  }
+
+  /**
    * Get faction rivalries from junction table
    * @param factionId - Faction ID
    * @returns Array of rival faction IDs
@@ -326,6 +359,32 @@ export class FactionService extends BaseCategoryService<Faction> {
       .all(factionId) as { rival_faction_id: string }[];
 
     return rows.map(r => r.rival_faction_id);
+  }
+
+  /**
+   * Batch fetch rivalries for multiple factions (N+1 query optimization)
+   * @param factionIds - Array of faction IDs
+   * @returns Map of faction_id -> array of rival faction IDs
+   */
+  protected batchGetRivalries(factionIds: string[]): Map<string, string[]> {
+    if (factionIds.length === 0) return new Map();
+
+    const placeholders = factionIds.map(() => '?').join(',');
+    const rows = this.db.prepare(`
+      SELECT faction_id, rival_faction_id
+      FROM faction_rivalries
+      WHERE faction_id IN (${placeholders})
+    `).all(...factionIds) as { faction_id: string; rival_faction_id: string }[];
+
+    const map = new Map<string, string[]>();
+    rows.forEach(row => {
+      if (!map.has(row.faction_id)) {
+        map.set(row.faction_id, []);
+      }
+      map.get(row.faction_id)!.push(row.rival_faction_id);
+    });
+
+    return map;
   }
 
   /**
@@ -342,6 +401,32 @@ export class FactionService extends BaseCategoryService<Faction> {
   }
 
   /**
+   * Batch fetch members for multiple factions (N+1 query optimization)
+   * @param factionIds - Array of faction IDs
+   * @returns Map of faction_id -> array of NPC IDs
+   */
+  protected batchGetMembers(factionIds: string[]): Map<string, string[]> {
+    if (factionIds.length === 0) return new Map();
+
+    const placeholders = factionIds.map(() => '?').join(',');
+    const rows = this.db.prepare(`
+      SELECT faction_id, npc_id
+      FROM faction_members
+      WHERE faction_id IN (${placeholders})
+    `).all(...factionIds) as { faction_id: string; npc_id: string }[];
+
+    const map = new Map<string, string[]>();
+    rows.forEach(row => {
+      if (!map.has(row.faction_id)) {
+        map.set(row.faction_id, []);
+      }
+      map.get(row.faction_id)!.push(row.npc_id);
+    });
+
+    return map;
+  }
+
+  /**
    * Get faction territory from junction table
    * @param factionId - Faction ID
    * @returns Array of location IDs
@@ -355,6 +440,32 @@ export class FactionService extends BaseCategoryService<Faction> {
   }
 
   /**
+   * Batch fetch territory for multiple factions (N+1 query optimization)
+   * @param factionIds - Array of faction IDs
+   * @returns Map of faction_id -> array of location IDs
+   */
+  protected batchGetTerritory(factionIds: string[]): Map<string, string[]> {
+    if (factionIds.length === 0) return new Map();
+
+    const placeholders = factionIds.map(() => '?').join(',');
+    const rows = this.db.prepare(`
+      SELECT faction_id, location_id
+      FROM faction_territory
+      WHERE faction_id IN (${placeholders})
+    `).all(...factionIds) as { faction_id: string; location_id: string }[];
+
+    const map = new Map<string, string[]>();
+    rows.forEach(row => {
+      if (!map.has(row.faction_id)) {
+        map.set(row.faction_id, []);
+      }
+      map.get(row.faction_id)!.push(row.location_id);
+    });
+
+    return map;
+  }
+
+  /**
    * Get faction presence locations from junction table
    * @param factionId - Faction ID
    * @returns Array of location IDs where faction is present
@@ -365,6 +476,32 @@ export class FactionService extends BaseCategoryService<Faction> {
       .all(factionId) as { location_id: string }[];
 
     return rows.map(r => r.location_id);
+  }
+
+  /**
+   * Batch fetch presence for multiple factions (N+1 query optimization)
+   * @param factionIds - Array of faction IDs
+   * @returns Map of faction_id -> array of location IDs where faction is present
+   */
+  protected batchGetPresence(factionIds: string[]): Map<string, string[]> {
+    if (factionIds.length === 0) return new Map();
+
+    const placeholders = factionIds.map(() => '?').join(',');
+    const rows = this.db.prepare(`
+      SELECT faction_id, location_id
+      FROM faction_presence
+      WHERE faction_id IN (${placeholders})
+    `).all(...factionIds) as { faction_id: string; location_id: string }[];
+
+    const map = new Map<string, string[]>();
+    rows.forEach(row => {
+      if (!map.has(row.faction_id)) {
+        map.set(row.faction_id, []);
+      }
+      map.get(row.faction_id)!.push(row.location_id);
+    });
+
+    return map;
   }
 
   /**

@@ -241,12 +241,18 @@ export class LoreEntryService extends BaseCategoryService<LoreEntry> {
 
     const rows = dataStmt.all(...params, pagination.limit, pagination.offset) as LoreEntryRow[];
 
+    // Batch fetch all relationships at once (N+1 query optimization)
+    const loreEntryIds = rows.map((r: any) => r.id);
+    const npcsMap = this.batchGetRelatedNPCs(loreEntryIds);
+    const locationsMap = this.batchGetRelatedLocations(loreEntryIds);
+    const factionsMap = this.batchGetRelatedFactions(loreEntryIds);
+
     // Populate relationships from junction tables for each lore entry
     const loreEntries = rows.map((row) => {
       const loreEntry = this.rowToLoreEntry(row);
-      loreEntry.related_npcs = this.getRelatedNPCs(loreEntry.id);
-      loreEntry.related_locations = this.getRelatedLocations(loreEntry.id);
-      loreEntry.related_factions = this.getRelatedFactions(loreEntry.id);
+      loreEntry.related_npcs = npcsMap.get(loreEntry.id) || [];
+      loreEntry.related_locations = locationsMap.get(loreEntry.id) || [];
+      loreEntry.related_factions = factionsMap.get(loreEntry.id) || [];
       return loreEntry;
     });
 
@@ -280,6 +286,32 @@ export class LoreEntryService extends BaseCategoryService<LoreEntry> {
   }
 
   /**
+   * Batch fetch related NPCs for multiple lore entries (N+1 query optimization)
+   * @param loreEntryIds - Array of lore entry IDs
+   * @returns Map of lore_entry_id -> array of NPC IDs
+   */
+  protected batchGetRelatedNPCs(loreEntryIds: string[]): Map<string, string[]> {
+    if (loreEntryIds.length === 0) return new Map();
+
+    const placeholders = loreEntryIds.map(() => '?').join(',');
+    const rows = this.db.prepare(`
+      SELECT lore_entry_id, npc_id
+      FROM lore_entry_npcs
+      WHERE lore_entry_id IN (${placeholders})
+    `).all(...loreEntryIds) as { lore_entry_id: string; npc_id: string }[];
+
+    const map = new Map<string, string[]>();
+    rows.forEach(row => {
+      if (!map.has(row.lore_entry_id)) {
+        map.set(row.lore_entry_id, []);
+      }
+      map.get(row.lore_entry_id)!.push(row.npc_id);
+    });
+
+    return map;
+  }
+
+  /**
    * Get related locations from junction table
    * @param loreEntryId - Lore entry ID
    * @returns Array of location IDs
@@ -293,6 +325,32 @@ export class LoreEntryService extends BaseCategoryService<LoreEntry> {
   }
 
   /**
+   * Batch fetch related locations for multiple lore entries (N+1 query optimization)
+   * @param loreEntryIds - Array of lore entry IDs
+   * @returns Map of lore_entry_id -> array of location IDs
+   */
+  protected batchGetRelatedLocations(loreEntryIds: string[]): Map<string, string[]> {
+    if (loreEntryIds.length === 0) return new Map();
+
+    const placeholders = loreEntryIds.map(() => '?').join(',');
+    const rows = this.db.prepare(`
+      SELECT lore_entry_id, location_id
+      FROM lore_entry_locations
+      WHERE lore_entry_id IN (${placeholders})
+    `).all(...loreEntryIds) as { lore_entry_id: string; location_id: string }[];
+
+    const map = new Map<string, string[]>();
+    rows.forEach(row => {
+      if (!map.has(row.lore_entry_id)) {
+        map.set(row.lore_entry_id, []);
+      }
+      map.get(row.lore_entry_id)!.push(row.location_id);
+    });
+
+    return map;
+  }
+
+  /**
    * Get related factions from junction table
    * @param loreEntryId - Lore entry ID
    * @returns Array of faction IDs
@@ -303,6 +361,32 @@ export class LoreEntryService extends BaseCategoryService<LoreEntry> {
       .all(loreEntryId) as { faction_id: string }[];
 
     return rows.map(r => r.faction_id);
+  }
+
+  /**
+   * Batch fetch related factions for multiple lore entries (N+1 query optimization)
+   * @param loreEntryIds - Array of lore entry IDs
+   * @returns Map of lore_entry_id -> array of faction IDs
+   */
+  protected batchGetRelatedFactions(loreEntryIds: string[]): Map<string, string[]> {
+    if (loreEntryIds.length === 0) return new Map();
+
+    const placeholders = loreEntryIds.map(() => '?').join(',');
+    const rows = this.db.prepare(`
+      SELECT lore_entry_id, faction_id
+      FROM lore_entry_factions
+      WHERE lore_entry_id IN (${placeholders})
+    `).all(...loreEntryIds) as { lore_entry_id: string; faction_id: string }[];
+
+    const map = new Map<string, string[]>();
+    rows.forEach(row => {
+      if (!map.has(row.lore_entry_id)) {
+        map.set(row.lore_entry_id, []);
+      }
+      map.get(row.lore_entry_id)!.push(row.faction_id);
+    });
+
+    return map;
   }
 
   /**

@@ -138,10 +138,14 @@ export class WorldRuleService extends BaseCategoryService<WorldRule> {
     const { count } = this.db.prepare(`SELECT COUNT(*) as count FROM world_rules ${whereClause}`).get(...params) as { count: number };
     const rows = this.db.prepare(`SELECT * FROM world_rules ${whereClause} ORDER BY ${sortBy} ${sortOrder} LIMIT ? OFFSET ?`).all(...params, pagination.limit, pagination.offset);
 
+    // Batch fetch all relationships at once (N+1 query optimization)
+    const ruleIds = rows.map((r: any) => r.id);
+    const relatedRulesMap = this.batchGetRelatedRules(ruleIds);
+
     // Populate relationships from junction tables for each world rule
     const rules = rows.map((row) => {
       const rule = this.parseJsonFields(row, ['tags', 'custom_fields', 'related_rules']) as WorldRule;
-      rule.related_rules = this.getRelatedRules(rule.id);
+      rule.related_rules = relatedRulesMap.get(rule.id) || [];
       return rule;
     });
 
@@ -162,6 +166,32 @@ export class WorldRuleService extends BaseCategoryService<WorldRule> {
       .all(ruleId) as { related_rule_id: string }[];
 
     return rows.map(r => r.related_rule_id);
+  }
+
+  /**
+   * Batch fetch related rules for multiple world rules (N+1 query optimization)
+   * @param ruleIds - Array of world rule IDs
+   * @returns Map of rule_id -> array of related rule IDs
+   */
+  protected batchGetRelatedRules(ruleIds: string[]): Map<string, string[]> {
+    if (ruleIds.length === 0) return new Map();
+
+    const placeholders = ruleIds.map(() => '?').join(',');
+    const rows = this.db.prepare(`
+      SELECT rule_id, related_rule_id
+      FROM world_rule_relations
+      WHERE rule_id IN (${placeholders})
+    `).all(...ruleIds) as { rule_id: string; related_rule_id: string }[];
+
+    const map = new Map<string, string[]>();
+    rows.forEach(row => {
+      if (!map.has(row.rule_id)) {
+        map.set(row.rule_id, []);
+      }
+      map.get(row.rule_id)!.push(row.related_rule_id);
+    });
+
+    return map;
   }
 
   /**

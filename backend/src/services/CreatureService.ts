@@ -142,10 +142,14 @@ export class CreatureService extends BaseCategoryService<Creature> {
     const { count } = this.db.prepare(`SELECT COUNT(*) as count FROM creatures ${whereClause}`).get(...params) as { count: number };
     const rows = this.db.prepare(`SELECT * FROM creatures ${whereClause} ORDER BY ${sortBy} ${sortOrder} LIMIT ? OFFSET ?`).all(...params, pagination.limit, pagination.offset);
 
+    // Batch fetch all relationships at once (N+1 query optimization)
+    const creatureIds = rows.map((r: any) => r.id);
+    const habitatsMap = this.batchGetHabitats(creatureIds);
+
     // Populate relationships from junction tables for each creature
     const creatures = rows.map((row) => {
       const creature = this.parseJsonFields(row, ['tags', 'custom_fields', 'habitats']) as Creature;
-      creature.habitats = this.getHabitats(creature.id);
+      creature.habitats = habitatsMap.get(creature.id) || [];
       return creature;
     });
 
@@ -166,6 +170,32 @@ export class CreatureService extends BaseCategoryService<Creature> {
       .all(creatureId) as { location_id: string }[];
 
     return rows.map(r => r.location_id);
+  }
+
+  /**
+   * Batch fetch habitats for multiple creatures (N+1 query optimization)
+   * @param creatureIds - Array of creature IDs
+   * @returns Map of creature_id -> array of location IDs
+   */
+  protected batchGetHabitats(creatureIds: string[]): Map<string, string[]> {
+    if (creatureIds.length === 0) return new Map();
+
+    const placeholders = creatureIds.map(() => '?').join(',');
+    const rows = this.db.prepare(`
+      SELECT creature_id, location_id
+      FROM creature_habitats
+      WHERE creature_id IN (${placeholders})
+    `).all(...creatureIds) as { creature_id: string; location_id: string }[];
+
+    const map = new Map<string, string[]>();
+    rows.forEach(row => {
+      if (!map.has(row.creature_id)) {
+        map.set(row.creature_id, []);
+      }
+      map.get(row.creature_id)!.push(row.location_id);
+    });
+
+    return map;
   }
 
   /**

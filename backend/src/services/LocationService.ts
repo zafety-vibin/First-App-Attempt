@@ -252,12 +252,18 @@ export class LocationService extends BaseCategoryService<Location> {
 
     const rows = dataStmt.all(...params, pagination.limit, pagination.offset) as LocationRow[];
 
+    // Batch fetch all relationships at once (N+1 query optimization)
+    const locationIds = rows.map((r: any) => r.id);
+    const connectionsMap = this.batchGetConnections(locationIds);
+    const notableNPCsMap = this.batchGetNotableNPCs(locationIds);
+    const factionsPresentMap = this.batchGetFactionsPresent(locationIds);
+
     // Populate relationships from junction tables for each location
     const locations = rows.map((row) => {
       const location = this.rowToLocation(row);
-      location.connected_locations = this.getConnections(location.id);
-      location.notable_npcs = this.getNotableNPCs(location.id);
-      location.factions_present = this.getFactionsPresent(location.id);
+      location.connected_locations = connectionsMap.get(location.id) || [];
+      location.notable_npcs = notableNPCsMap.get(location.id) || [];
+      location.factions_present = factionsPresentMap.get(location.id) || [];
       return location;
     });
 
@@ -774,6 +780,84 @@ export class LocationService extends BaseCategoryService<Location> {
       .all(locationId) as { connected_location_id: string }[];
 
     return rows.map(r => r.connected_location_id);
+  }
+
+  /**
+   * Batch fetch connections for multiple locations (N+1 query optimization)
+   * @param locationIds - Array of location IDs
+   * @returns Map of location_id -> array of connected location IDs
+   */
+  protected batchGetConnections(locationIds: string[]): Map<string, string[]> {
+    if (locationIds.length === 0) return new Map();
+
+    const placeholders = locationIds.map(() => '?').join(',');
+    const rows = this.db.prepare(`
+      SELECT location_id, connected_location_id
+      FROM location_connections
+      WHERE location_id IN (${placeholders})
+    `).all(...locationIds) as { location_id: string; connected_location_id: string }[];
+
+    const map = new Map<string, string[]>();
+    rows.forEach(row => {
+      if (!map.has(row.location_id)) {
+        map.set(row.location_id, []);
+      }
+      map.get(row.location_id)!.push(row.connected_location_id);
+    });
+
+    return map;
+  }
+
+  /**
+   * Batch fetch notable NPCs for multiple locations (N+1 query optimization)
+   * @param locationIds - Array of location IDs
+   * @returns Map of location_id -> array of notable NPC IDs
+   */
+  protected batchGetNotableNPCs(locationIds: string[]): Map<string, string[]> {
+    if (locationIds.length === 0) return new Map();
+
+    const placeholders = locationIds.map(() => '?').join(',');
+    const rows = this.db.prepare(`
+      SELECT location_id, npc_id
+      FROM npc_locations
+      WHERE location_id IN (${placeholders}) AND is_notable = 1
+    `).all(...locationIds) as { location_id: string; npc_id: string }[];
+
+    const map = new Map<string, string[]>();
+    rows.forEach(row => {
+      if (!map.has(row.location_id)) {
+        map.set(row.location_id, []);
+      }
+      map.get(row.location_id)!.push(row.npc_id);
+    });
+
+    return map;
+  }
+
+  /**
+   * Batch fetch factions present for multiple locations (N+1 query optimization)
+   * @param locationIds - Array of location IDs
+   * @returns Map of location_id -> array of faction IDs
+   */
+  protected batchGetFactionsPresent(locationIds: string[]): Map<string, string[]> {
+    if (locationIds.length === 0) return new Map();
+
+    const placeholders = locationIds.map(() => '?').join(',');
+    const rows = this.db.prepare(`
+      SELECT location_id, faction_id
+      FROM faction_presence
+      WHERE location_id IN (${placeholders})
+    `).all(...locationIds) as { location_id: string; faction_id: string }[];
+
+    const map = new Map<string, string[]>();
+    rows.forEach(row => {
+      if (!map.has(row.location_id)) {
+        map.set(row.location_id, []);
+      }
+      map.get(row.location_id)!.push(row.faction_id);
+    });
+
+    return map;
   }
 
   /**

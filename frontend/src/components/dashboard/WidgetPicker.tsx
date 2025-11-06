@@ -13,7 +13,7 @@
 
 import React, { useState, useMemo } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
-import { WidgetRegistry, type WidgetSize, type CategoryName } from './WidgetRegistry';
+import { WidgetRegistry, type CategoryName } from './WidgetRegistry';
 
 interface WidgetPickerProps {
   open: boolean;

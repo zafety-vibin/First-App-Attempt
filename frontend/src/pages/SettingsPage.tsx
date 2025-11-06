@@ -3,7 +3,7 @@
  * Feature: 004-create-a-tagging
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useInformationLevel } from '../contexts/InformationLevelContext';
 import { CustomLevelForm } from '../components/CustomLevelForm';
@@ -14,7 +14,6 @@ export function SettingsPage() {
   const { campaignId } = useParams<{ campaignId: string }>();
   const navigate = useNavigate();
   const {
-    levels,
     loading,
     loadLevels,
     deleteLevel,

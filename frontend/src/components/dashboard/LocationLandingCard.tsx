@@ -1,8 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCategory } from '../../hooks/useCategory';
 import { useThematicLabels } from '../../hooks/useThematicLabels';
-import { getLocationStats } from '../../services/locationService';
 import { Location } from '../../utils/validationSchemas';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { EmptyState } from '../common/EmptyState';

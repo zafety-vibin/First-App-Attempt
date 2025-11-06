@@ -45,7 +45,6 @@ const CATEGORY_DISPLAY_NAMES: Record<CategoryName, string> = {
  * Simple TipTap editor for category landing page descriptions
  */
 export const CategoryLandingTextEditor: React.FC<CategoryLandingTextEditorProps> = ({
-  campaignId,
   category,
   content,
   onChange,

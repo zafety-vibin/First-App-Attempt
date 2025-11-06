@@ -10,7 +10,7 @@
  */
 
 import React from 'react';
-import { WidgetRegistry, type BaseWidgetProps, type WidgetSize } from './WidgetRegistry';
+import { WidgetRegistry, type WidgetSize } from './WidgetRegistry';
 import { ErrorBoundary } from '../common/ErrorBoundary';
 
 interface BaseWidgetWrapperProps {
@@ -23,7 +23,6 @@ interface BaseWidgetWrapperProps {
 }
 
 export const BaseWidget: React.FC<BaseWidgetWrapperProps> = ({
-  instanceId,
   widgetId,
   size,
   viewMode,

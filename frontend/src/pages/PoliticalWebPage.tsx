@@ -224,7 +224,7 @@ const PoliticalWebPage: React.FC = () => {
     }
 
     // Convert to Cytoscape format with initial positions
-    const cyNodes = visibleNodes.map((n: any, index: number) => {
+    const cyNodes = visibleNodes.map((n: any) => {
       const isPC = n.node_type === 'PC';
       const isFaction = n.attributes?.is_faction_node || false;
       const faction = n.attributes?.faction || 'Unaffiliated';
@@ -671,7 +671,6 @@ const PoliticalWebPage: React.FC = () => {
 
     const factionNodes = cy.nodes('[?isFaction]').filter((n: any) => n.data('faction') !== 'The Party');
     const npcNodes = cy.nodes('[!isFaction][!isPC]');
-    const pcNodes = cy.nodes('[?isPC]');
 
     // RING 1: Factions centered in their pie slices
     const factionArray = factionNodes.toArray();
@@ -1316,7 +1315,7 @@ const PoliticalWebPage: React.FC = () => {
 
         // Position words along the curve from merge → target
         const totalWords = words.length;
-        words.forEach((word, wordIndex) => {
+        words.forEach((word: string, wordIndex: number) => {
           // Position along curve (evenly spaced)
           const t = (wordIndex + 1) / (totalWords + 1); // 0.25, 0.5, 0.75 for 3 words
 
@@ -1428,11 +1427,10 @@ const PoliticalWebPage: React.FC = () => {
     return totalStrength;
   };
 
-  const drawMetaballAOE = (
+  const _drawMetaballAOE = (
     ctx: CanvasRenderingContext2D,
     points: Array<{ x: number; y: number; radius: number }>,
-    color: string,
-    factionName: string
+    color: string
   ) => {
     if (points.length === 0) return;
 
@@ -1893,7 +1891,7 @@ const PoliticalWebPage: React.FC = () => {
             cy.removeAllListeners();
 
             // Set up event listeners
-            cy.on('tap', 'node', (evt) => {
+            cy.on('tap', 'node', (evt: any) => {
               const node = evt.target;
               const nodeData = node.data();
 
@@ -1935,7 +1933,7 @@ const PoliticalWebPage: React.FC = () => {
             });
 
             // Right-click faction to expand (removed double-click)
-            cy.on('cxttap', 'node[isFaction]', (evt) => {
+            cy.on('cxttap', 'node[isFaction]', (evt: any) => {
               const node = evt.target;
               const factionName = node.data('faction');
               const position = node.position();
@@ -1943,7 +1941,7 @@ const PoliticalWebPage: React.FC = () => {
             });
 
             // Edge click handler
-            cy.on('tap', 'edge', (evt) => {
+            cy.on('tap', 'edge', (evt: any) => {
               const edge = evt.target;
               const edgeData = edge.data();
 
@@ -1960,7 +1958,7 @@ const PoliticalWebPage: React.FC = () => {
               setSelectedNode(null); // Close node panel
             });
 
-            cy.on('tap', (evt) => {
+            cy.on('tap', (evt: any) => {
               if (evt.target === cy) {
                 // Clear selections and restore viewport
                 setSelectedNode(null);
@@ -1981,7 +1979,7 @@ const PoliticalWebPage: React.FC = () => {
             });
 
             // Right-click on NPC/PC to collapse back to faction
-            cy.on('cxttap', 'node', (evt) => {
+            cy.on('cxttap', 'node', (evt: any) => {
               const node = evt.target;
 
               if (!node.data('isFaction')) {

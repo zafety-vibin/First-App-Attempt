@@ -23,7 +23,6 @@ export function CampaignHomepage() {
 
   // Feature 016: Wizard integration
   const { status: wizardStatus, loading: wizardLoading } = useWizardStatus(id || '');
-  const { completeWizard } = useWizardCompletion();
   const [showWizard, setShowWizard] = useState(false);
 
   // Create a virtual "homepage card" to act as parent for root-level cards
@@ -47,8 +46,7 @@ export function CampaignHomepage() {
   } : null;
 
   // Feature 004: Information levels and view mode
-  const { loadLevels, levels, loading: levelsLoading } = useInformationLevel();
-  const { viewMode } = useViewMode();
+  const { loadLevels } = useInformationLevel();
 
   useEffect(() => {
     if (id) {

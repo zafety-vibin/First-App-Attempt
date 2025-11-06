@@ -35,7 +35,6 @@ export function DatabaseTableView({ databaseCard, campaignId }: DatabaseTableVie
   const [availableCards, setAvailableCards] = useState<any[]>([]);
   const navigate = useNavigate();
 
-  const metadata = databaseCard.metadata || { schema: { columns: [] }, views: [], defaultViewId: '' };
   const columns = schema.columns || [];
 
   useEffect(() => {

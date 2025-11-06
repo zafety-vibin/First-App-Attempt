@@ -12,7 +12,7 @@ interface ImageBlockProps {
   campaignId: string;
 }
 
-export function ImageBlock({ card, campaignId }: ImageBlockProps) {
+export function ImageBlock({ card }: ImageBlockProps) {
   const { updateCard } = useCards();
   const [uploading, setUploading] = useState(false);
   const [imageUrl, setImageUrl] = useState(card.metadata?.url || '');

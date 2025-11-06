@@ -156,7 +156,7 @@ const GraphsListPage: React.FC = () => {
         ? `custom:${formData.custom_type}`
         : formData.graph_type;
 
-      const newGraph = await graphService.createGraph(campaignId, {
+      await graphService.createGraph(campaignId, {
         graph_type: graphType,
         graph_name: graphName,
         toggle_state: true,

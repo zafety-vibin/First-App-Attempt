@@ -5,7 +5,7 @@
  * Manages list of blocks with Enter key creating siblings
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cardService } from '../../services/cardService';
 import { useCards } from '../../hooks/useCards';
@@ -177,7 +177,7 @@ export function BlockList({ parentCard, campaignId }: BlockListProps) {
   const navigate = useNavigate();
   const { updateCard, createCard, deleteCard, reorderCard } = useCards();
   const { viewMode } = useViewMode();
-  const { levels, selectedLevelId, getLevelById } = useInformationLevel();
+  const { selectedLevelId, getLevelById } = useInformationLevel();
 
   // Filter children based on view mode (Feature 004)
   const visibleChildren = useMemo(() => {
@@ -527,7 +527,7 @@ export function BlockList({ parentCard, campaignId }: BlockListProps) {
     // Update ALL positions to match new order (prevents conflicts)
     try {
       // Assign sequential positions based on new order
-      const positionUpdates = await Promise.all(
+      await Promise.all(
         newChildren.map((card, index) =>
           reorderCard(card.id, { position: index })
         )

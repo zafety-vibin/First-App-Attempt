@@ -114,9 +114,6 @@ export const CategoryLandingCanvas: React.FC<CategoryLandingCanvasProps> = ({
   // Check if canvas is empty
   const isEmpty = layout.length === 0;
 
-  // Filter widgets by category
-  const availableWidgets = WidgetRegistry.getAllByCategory(category);
-
   return (
     <div className="dashboard-page">
       {/* Header with category name, buttons, and ViewModeToggle */}

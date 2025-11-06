@@ -9,7 +9,7 @@
  * - Detailed (4x4+): Map with controls, pins, regions
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { BaseWidgetProps } from '../WidgetRegistry';
 import { LoadingSpinner } from '../../common/LoadingSpinner';
 import { useMapViewportWidget } from '../../../hooks/useMapViewportWidget';
@@ -27,7 +27,6 @@ export interface MapViewportWidgetConfig {
 
 export const MapViewportWidget: React.FC<BaseWidgetProps & { config?: MapViewportWidgetConfig }> = ({
   size,
-  viewMode,
   campaignId,
   config = {},
 }) => {
@@ -40,16 +39,10 @@ export const MapViewportWidget: React.FC<BaseWidgetProps & { config?: MapViewpor
     loading,
     error,
     selectLocation,
-    selectMap,
   } = useMapViewportWidget(campaignId, config.locationId, config.mapId);
-
-  // Local pan/zoom state (persisted via config in future)
-  const [panPosition, setPanPosition] = useState({ x: config.panX || 0, y: config.panY || 0 });
-  const [zoomLevel, setZoomLevel] = useState(config.zoom || 1);
 
   const isCompact = size === '2x2';
   const isMedium = size === '3x3';
-  const isDetailed = size === '4x4' || size === '4x3';
 
   // Calculate widget dimensions based on size (generous viewport for maps)
   // Maps need horizontal space - make them wide, not square

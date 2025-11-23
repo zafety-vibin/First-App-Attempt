@@ -44,14 +44,15 @@ Feature 009 provides Player Question Portal, a public Q&A interface per campaign
 **Constraints**: Uses GM's BYOLLM credentials (no separate portal credentials), information filtering MUST prevent any DM Secret leakage, unique character names enforced per campaign
 **Scale/Scope**: Support 10 concurrent players per campaign portal, 100+ questions per player conversation history, token tracking for all usage
 
-**Current Architecture Context** (as of 2025-10-31):
+**Current Architecture Context** (as of 2025-11-05):
 - **ViewMode System**: Unified middleware in `backend/src/middleware/viewMode.ts` with `extractViewMode()`, `stripDmFields()`, `getPlayerKnowledgeFilter()`. X-View-Mode header sets `dm_view` or `player_view`.
 - **Information Levels**: Stored in `information_levels` table with IDs like `common-knowledge`, `player-knowledge`, `dm-secret`, `system`. Custom levels supported with `hierarchical` flag.
 - **BaseCategoryService**: All 13 categories extend BaseCategoryService with standardized `.list(filters, pagination, sort?, order?)` that respects view mode filtering.
 - **Session Recaps**: SessionRecapService extends BaseCategoryService, has `player_knowledge` field, filtered via standard view mode middleware.
 - **Junction Tables**: 28 junction tables implemented (Feature 014+), relationships stored in proper relational structure, not JSON arrays.
+- **Batch Fetching**: All 11 category services use batch fetching pattern (N+1 queries eliminated, 98%+ reduction). Template: `backend/docs/BATCH-FETCH-TEMPLATE.md`.
 - **External API**: Feature 018 provides localhost:3002 AI-friendly API pattern with two-phase delete, audit logging, information filtering.
-- **BYOLLM**: Feature 008 provides BYOLLMConfigService with OAuth flow, encrypted credentials (AES-256-GCM), custom endpoints, provider clients.
+- **BYOLLM**: Feature 008 provides BYOLLMConfigService with OAuth flow, encrypted credentials (AES-256-GCM), custom endpoints, provider clients. **EXCLUSIVE to Player Portal** (all other AI features removed).
 
 ## Constitution Check
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
@@ -81,8 +82,8 @@ Feature 009 provides Player Question Portal, a public Q&A interface per campaign
 **Rationale**: Portal AI queries knowledge graphs (Feature 006 integration) to answer player questions with rich context. Graph filtering ensures nodes with player_knowledge = 'dm-secret' or custom hierarchical levels excluded. Political-Web, Campaign-Story, Geographical, World-Foundations graphs all accessible with appropriate filtering. Citations link to graph node source cards. Enhances player experience by providing structured lore access. Graphs optional per query (user controls context).
 
 ### V. BYOLLM & Privacy
-**Status**: ✅ PASS (Feature 008 dependency)
-**Rationale**: Portal uses GM's BYOLLM credentials from BYOLLMConfigService. Prominent warning ensures GM understands players will consume their tokens. No separate portal API credentials (local-only principle maintained). All AI calls use GM's configured provider (OpenAI/Anthropic/custom). Trust-based usage model aligns with privacy-first approach. Token tracking provides transparency. Conversation history stored locally in SQLite.
+**Status**: ✅ PASS (Feature 008 dependency - EXCLUSIVE to Player Portal)
+**Rationale**: Portal uses GM's BYOLLM credentials from BYOLLMConfigService. **IMPORTANT**: As of 2025-11-05, BYOLLM (Feature 008) is ONLY used by Player Portal - all other AI features removed (Feature 017 stateless API scrapped, chat import/planning removed in favor of Claude Desktop MCP). GM configures BYOLLM API keys exclusively for player Q&A. Prominent warning ensures GM understands players will consume their tokens. No separate portal API credentials (local-only principle maintained). All AI calls use GM's configured provider (OpenAI/Anthropic/custom). Trust-based usage model aligns with privacy-first approach. Token tracking provides transparency. Conversation history stored locally in SQLite.
 
 ### VI. Local-Only & Prototype-First
 **Status**: ✅ PASS

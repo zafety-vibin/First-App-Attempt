@@ -43,6 +43,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ campaignId }) => {
     navigate(`/campaigns/${campaignId}/dashboard`);
   };
 
+  const handlePortalClick = (): void => {
+    setActiveCategory(null);
+    navigate(`/campaigns/${campaignId}/portal/management`);
+  };
+
   const handleWikiClick = (): void => {
     setActiveCategory(null);
     navigate(`/campaigns/${campaignId}`);
@@ -70,6 +75,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ campaignId }) => {
 
   const isDashboardActive = (): boolean => {
     return location.pathname.endsWith('/dashboard');
+  };
+
+  const isPortalActive = (): boolean => {
+    return location.pathname.includes('/portal/management');
   };
 
   const isWikiActive = (): boolean => {
@@ -111,6 +120,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ campaignId }) => {
           onClick={handleBibleClick}
         >
           📖 Bible
+        </button>
+        <button
+          type="button"
+          className={`sidebar-item sidebar-portal ${isPortalActive() ? 'active' : ''}`}
+          onClick={handlePortalClick}
+        >
+          Player Portal
         </button>
         <button
           type="button"

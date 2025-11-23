@@ -126,6 +126,16 @@ export const migrations: Migration[] = [
       console.log('Migration 27: Information level values cleaned (public/partial/underscores → hyphens)');
     },
   },
+  {
+    version: 29,
+    description: 'Feature 009 - Player Question Portal tables (portal_configs, portal_players, portal_conversations, portal_messages, portal_token_usage)',
+    up: (db) => {
+      const migrationPath = path.join(__dirname, 'migrations', '029-add-portal-tables.sql');
+      const sql = fs.readFileSync(migrationPath, 'utf8');
+      db.exec(sql);
+      console.log('Migration 29: Player Question Portal tables created');
+    },
+  },
 ];
 
 /**

@@ -60,6 +60,8 @@ import { CampaignStoryPage } from './pages/CampaignStoryPage';
 import { WorldFoundationsPage } from './pages/WorldFoundationsPage';
 import { BiblePage } from './pages/BiblePage';
 import { GeographicNavigatorPage } from './pages/GeographicNavigatorPage';
+import { PortalManagementPage } from './pages/PortalManagementPage';
+import { PlayerPortalPage } from './pages/PlayerPortalPage';
 
 /**
  * CampaignLayout - Wraps campaign pages with Sidebar and DashboardProvider
@@ -144,6 +146,21 @@ function AppContent() {
             </ProtectedRoute>
           }
         />
+
+        {/* Feature 009: Player Portal Management (GM - protected) */}
+        <Route
+          path="/campaigns/:campaignId/portal/management"
+          element={
+            <ProtectedRoute>
+              <CampaignLayoutWrapper>
+                <PortalManagementPage />
+              </CampaignLayoutWrapper>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Feature 009: Public Player Portal (NO auth) */}
+        <Route path="/portal/:campaignId" element={<PlayerPortalPage />} />
 
         {/* Feature 006: Knowledge Graphs Routes */}
         <Route

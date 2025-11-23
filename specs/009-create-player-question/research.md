@@ -181,10 +181,10 @@ export class PortalConfigService {
 
 ## Research Topic 3: viewMode Middleware Integration for Information Filtering
 
-**Decision**: Reuse existing viewMode middleware with `getPlayerKnowledgeFilter()` for portal filtering
+**Decision**: Reuse existing viewMode middleware with `getPlayerKnowledgeFilter()` for portal filtering + batch fetching for performance
 
 **Rationale**:
-- **Current architecture** (as of 2025-10-31): `backend/src/middleware/viewMode.ts` provides filtering
+- **Current architecture** (as of 2025-11-05): `backend/src/middleware/viewMode.ts` provides filtering
 - `getPlayerKnowledgeFilter()` returns SQL WHERE clause excluding hierarchical levels
 - BaseCategoryService `.list()` method already uses this filtering
 - Portal AI calls BaseCategoryService with `player_view` mode
@@ -193,6 +193,9 @@ export class PortalConfigService {
 - Knowledge graphs: Filter nodes by `player_knowledge` field
 - **No new service needed** - reuse existing middleware
 - Ensures consistency between Player View UI and portal responses
+- **PERFORMANCE**: All 11 category services now use batch fetching (N+1 queries eliminated, 98%+ reduction)
+- **Batch pattern reference**: See `backend/docs/BATCH-FETCH-TEMPLATE.md` for junction table optimization
+- PortalAIService benefits from existing batch methods when building context (no additional N+1 risk)
 
 **Implementation**:
 ```typescript
